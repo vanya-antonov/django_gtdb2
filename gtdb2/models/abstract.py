@@ -3,7 +3,7 @@ from django.db import models
 
 class AbstractUnit(models.Model):
     c_date = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     descr = models.CharField(max_length=255, default=None, blank=True, null=True)
 
     class Meta:
