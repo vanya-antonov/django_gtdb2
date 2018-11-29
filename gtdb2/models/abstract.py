@@ -1,10 +1,16 @@
 from django.db import models
 
+from gtdb2.lib.db import GeneTackDB
+from gtdb2.models.user import User
+
 
 class AbstractUnit(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     c_date = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255, unique=True)
     descr = models.CharField(max_length=255, default=None, blank=True, null=True)
+
+    db = GeneTackDB()
 
     class Meta:
         abstract = True

@@ -4,6 +4,8 @@ import shutil
 
 from django.conf import settings
 
+from gtdb2.models.user import User
+
 
 class GeneTackDB:
     """A class to perform basic tasks with GeneTackDB-2 and associated files."""
@@ -11,6 +13,13 @@ class GeneTackDB:
     def __init__(self):
         """Initialize with a path to gtdb_dir on the local machine."""
         self.gtdb_dir = settings.GTDB_DIR
+
+    def get_default_user(self):
+        """Returns 'default' user for manage.py commands."""
+        user, created = User.objects.get_or_create(
+            name='gtdb_manage.py',
+            descr='Default GeneTackDB user')
+        return user
 
     def delete_file(self, fn):
         """Argument is the path RELATIVE to the GTDB dir."""

@@ -1,13 +1,11 @@
 from django.db import models
 
-from .abstract import AbstractUnit, AbstractParam
-from .user import User
+from gtdb2.models.abstract import AbstractUnit, AbstractParam
 from .org import Org
 
 
 class Seq(AbstractUnit):
     id = models.CharField(max_length=255, primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     org = models.ForeignKey(Org, on_delete=models.CASCADE)
     type = models.CharField(max_length=255)
     ext_id = models.CharField(max_length=255)

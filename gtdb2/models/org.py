@@ -1,25 +1,36 @@
+import sys
+
+from Bio import SeqIO
+
 from django.db import models
 
-from .abstract import AbstractUnit, AbstractParam
-from .user import User
+from gtdb2.lib.db import GeneTackDB
+from gtdb2.models.abstract import AbstractUnit, AbstractParam
 
 
 class Org(AbstractUnit):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     genus = models.CharField(max_length=255)
     phylum = models.CharField(max_length=255)
     kingdom = models.CharField(max_length=255)
 
     class Meta:
         db_table = 'orgs'
-    
+
+    @classmethod
+    def _create_from_SeqRecord(cls, record, user=None):
+        if user is None:
+            user = cls.db.get_default_user()
+        print(user)
+        print(user.name)
+        sys.exit()
+
     @classmethod
     def create_from_gbk(cls, fn, user=None):
         org = None
         for record in SeqIO.parse(fn, "genbank"):
             if org is None:
-                # This is the 1st record - check if org already exists
-                org = cls.create_from_SeqRecord(record, user)
+                # This is the 1st record in the file
+                org = cls._create_from_SeqRecord(record, user)
             elif record.annotations['organism'] != org.name:
                 raise Exception('')
 
@@ -51,7 +62,7 @@ class Org(AbstractUnit):
                 """
 
 class OrgParam(AbstractParam):
-    org = models.ForeignKey(User, on_delete=models.CASCADE)
+    org = models.ForeignKey(Org, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'org_params'
