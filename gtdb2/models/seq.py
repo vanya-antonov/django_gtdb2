@@ -16,7 +16,7 @@ class Seq(AbstractUnit):
 
 
 class SeqParam(AbstractParam):
-    seq = models.ForeignKey(Seq, on_delete=models.CASCADE)
+    parent = models.ForeignKey(Seq, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'seq_params'

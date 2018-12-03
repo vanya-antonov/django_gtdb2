@@ -4,7 +4,7 @@ from gtdb2.models.org import Org
 
 
 class Command(BaseCommand):
-    help = "Deletes org from database and all associated files from gtdb_dir"
+    help = "Deletes org from database and all associated files from GTDB dir"
 
     def add_arguments(self, parser):
         parser.add_argument('id', type=int, help="database id")

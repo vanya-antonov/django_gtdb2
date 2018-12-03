@@ -1,6 +1,10 @@
+import os
 import sys
+import re
 
 from Bio import SeqIO
+
+from ivanya.biopython.genbank import get_genus_phylum_kingdom
 
 from django.db import models
 
@@ -17,52 +21,74 @@ class Org(AbstractUnit):
         db_table = 'orgs'
 
     @classmethod
-    def _create_from_SeqRecord(cls, record, user=None):
-        if user is None:
-            user = cls.db.get_default_user()
-        print(user)
-        print(user.name)
-        sys.exit()
-
-    @classmethod
-    def create_from_gbk(cls, fn, user=None):
+    def create_from_gbk(cls, user, fn):
         org = None
         for record in SeqIO.parse(fn, "genbank"):
             if org is None:
                 # This is the 1st record in the file
-                org = cls._create_from_SeqRecord(record, user)
-            elif record.annotations['organism'] != org.name:
-                raise Exception('')
-
-            gtdb.save_SeqRecord(record, 'fasta')
-            gtdb.save_SeqRecord(record, 'genbank')
-        org.update_org_params()
-        org.make_genetack_model()
-        org.make_blastdb()
-        gtdb.make_global_blastdb()
-        """
-                org = Org.objects. ... .first()
-                if org is not None:
-
-
-            # Create new org, if needed
-            org_id = Org.get_db_id_by_SeqRecord(gtdb, record)
-            if org_id is None:
-                org_id = Org.create_new_in_db_from_SeqRecord(gtdb, record, args.user_id)
-                org = Org(gtdb, org_id)
+                org = cls._create_from_SeqRecord(user, record)
                 org.add_param('source_fn', fn)
-                logging.info("New org '{}' has been created ({})".format(record.annotations['organism'], org_id))
-           
-            # Create new seq, if needed
-            seq_id = Seq.get_db_id_by_ext_id(gtdb, record.id)
-            if seq_id is None:
-                org = Org(gtdb, org_id)
-                seq_id = Seq.create_new_in_db_from_SeqRecord(gtdb, record, org, args.user_id)
-                logging.info("New seq '{}' has been created ({})".format(record.id, seq_id))
-                """
+                return org
+            elif record.annotations['organism'] != org.name:
+                # Make sure that all seqs corresponds to the same org
+                raise Exception("Seq '%s' does NOT belong to '%s' in file '%s'" %
+                                (record.id, org.name, fn))
+            #gtdb.save_SeqRecord(record, 'fasta')
+            #gtdb.save_SeqRecord(record, 'genbank')
+        org.update_org_params()
+        #org.make_genetack_model()
+        #org.make_blastdb()
+        #gtdb.make_global_blastdb()
+        return org
+
+    @classmethod
+    def _create_from_SeqRecord(cls, user, record):
+        genus, phylum, kingdom = get_genus_phylum_kingdom(record)
+        org = Org(user=user,
+                  name=record.annotations['organism'],
+                  genus=genus,
+                  phylum=phylum,
+                  kingdom=kingdom)
+        org.save()
+        return org
+        org_dir = cls._create_org_dir(name)
+
+        db_id = gtdb.get_random_db_id('orgs', 'id')
+        gtdb.exec_sql_in(
+            "INSERT INTO orgs (id, user_id, name, genus, phylum, kingdom, dir_path)",
+            db_id, user_id, name, genus, phylum, kingdom, dir_path)
+        org = Org(gtdb, db_id)
+        
+        # ORG_PARAMS
+        #dbx_dict = db_xref_list_to_dict(record.dbxrefs)
+        #for (name,value) in dbx_dict.items():
+        #    org.add_param(name, value)
+        
+        #num = 0
+        #for value in record.annotations.get('taxonomy',[]):
+        #    org.add_param('taxonomy', value, num)
+        #    num += 1
+        
+        return db_id
+        print(user)
+        print(user.name)
+        exit()
+
+    @classmethod
+    def _create_org_dir(cls, org_name):
+        """The function returns new path RELATIVE to the GTDB root dir."""
+        # 'Natranaerobius thermophilus JW/NM-WN-LF'  =>  'Natranaerobius_thermophilus_JW_NM_WN_LF'
+        folder = re.compile('[^\w\d]+').sub('_', org_name).strip('_')
+        subdir = os.path.join(cls.gtdb.root_dir, 'orgs')
+        print(folder)
+        exit()
+        full_path = make_new_fullpath_for_basename(subdir, folder)
+        os.makedirs(full_path)
+        return os.path.relpath(full_path, gtdb.gtdb_dir)
+
 
 class OrgParam(AbstractParam):
-    org = models.ForeignKey(Org, on_delete=models.CASCADE)
+    parent = models.ForeignKey(Org, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'org_params'
