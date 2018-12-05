@@ -50,8 +50,8 @@ class Org(AbstractUnit):
                 org.add_param('source_fn', fn)
             elif record.annotations['organism'] != org.name:
                 # Make sure that all seqs correspond to the same org
-                raise Exception("Seq '%s' does NOT belong to '%s' in file '%s'" %
-                                (record.id, org.name, fn))
+                raise ValueError("Sequence '%s' does NOT belong to org '%s'" %
+                                 (record.id, org.name))
             org._create_seq_file(record, 'fasta-2line')
             org._create_seq_file(record, 'genbank')
         org.make_all_params()
@@ -65,8 +65,8 @@ class Org(AbstractUnit):
         "Creates a new org in db, creates org dir and adds some basic params."
         sp, ge, ph, ki = _get_species_genus_phylum_kingdom(record)
         if None in (sp, ge, ph, ki):
-            raise Exception("Can't determine species, genus, phylum or "
-                            "kingdom: %s, %s, %s, %s" % (sp, ge, ph, ki))
+            raise ValueError("Can't determine species, genus, phylum or "
+                             "kingdom: %s, %s, %s, %s" % (sp, ge, ph, ki))
         org = Org(user=user, name=sp, genus=ge, phylum=ph, kingdom=ki)
         org.save()
 
