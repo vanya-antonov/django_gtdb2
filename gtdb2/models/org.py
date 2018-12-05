@@ -142,7 +142,6 @@ def on_org_delete(sender, instance, using, **kwargs):
     Django signals: https://stackoverflow.com/a/12678428/310453
     """
     shutil.rmtree(instance.get_full_path_to())
-    print('Deleting org dir: ' + instance.get_full_path_to())
 
 def _get_species_genus_phylum_kingdom(record):
     taxa_l = record.annotations.get('taxonomy')
