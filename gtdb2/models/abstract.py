@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from django.db import models
@@ -12,10 +13,11 @@ class AbstractUnit(models.Model):
     name = models.CharField(max_length=255, unique=True)
     descr = models.CharField(max_length=255, default=None, blank=True, null=True)
 
-    gtdb = GeneTackDB()
-
     class Meta:
         abstract = True
+
+    gtdb = GeneTackDB()
+    prm_info = {}
 
     def __str__(self):
         return self.name
@@ -41,9 +43,48 @@ class AbstractUnit(models.Model):
         >>> list_A == list_B
         """)
 
+    def _get_prm(self):
+        prm = {}
+        for key, param_list in self.param_dict.items():
+            info = self.prm_info.get(key, None)
+            if info is None:
+                continue
+
+            # Sort the list by one of the attributes if needed
+            if 'sort_attr' in info:
+                param_list = sorted(param_list,
+                                    key=lambda p: getattr(p, info['sort_attr']),
+                                    reverse=info.get('reverse', False))
+
+            # Select one of the param attributes only
+            param_list = [getattr(p, info['prm_attr']) for p in param_list]
+
+            # Convert it to another type if needed
+            if 'type_fun' in info:
+                type_fun = info['type_fun']
+                param_list = [type_fun(p) for p in param_list]
+
+            if info.get('is_list', False):
+                prm[key] = param_list
+            else:
+                if len(param_list) > 1:
+                    logging.error("param_list contains '%s' elements for the "
+                                  "non list prm '%s'" % (len(param_list)), key)
+                prm[key] = param_list[0]
+        return prm
+    prm = property(
+        fget=_get_prm,
+        doc="A computed dictionary with parameters represented by simple types.")
+
+    def set_param(self, name, value=None, num=None, data=None):
+        "Deletes and adds param."
+        self.delete_param(name)
+        self.add_param(name, value, num, data)
+
     def add_param(self, name, value=None, num=None, data=None):
         """E.g. for Org object it will call:
         >>> param = OrgParam(...)
+        >>> param.save()
         """
         # https://stackoverflow.com/a/41236263/310453
         # Org => 'gtdb2.models.org'
@@ -57,6 +98,11 @@ class AbstractUnit(models.Model):
         param = cls(parent=self, name=name, value=value, num=num, data=data)
         param.save()
         return param
+
+    def delete_param(self, name):
+        "Deletes all unit params with the given name."
+        self.param_set.filter(name=name).delete()
+
 
 class AbstractParam(models.Model):
     name = models.CharField(max_length=255)
