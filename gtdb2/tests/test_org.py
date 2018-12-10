@@ -1,20 +1,17 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 import os
-from pprint import pprint
-
-from django.conf import settings
-from django.test import TestCase
 
 from gtdb2.lib.db import GeneTackDB
 from gtdb2.models.org import Org
+from gtdb2.tests import GtdbTestCase
 
 
-class OrgModelTests(TestCase):
+class OrgModelTests(GtdbTestCase):
     def test_org_create_from_gbk(self):
         gtdb = GeneTackDB()
         user = gtdb.get_default_user()
-        fn = os.path.join(settings.BASE_DIR, 'gtdb2/data/N_mexicana.gbk')
+        fn = self.get_full_path_to_test_file('N_mexicana.gbk')
 
         # All the seq files will be created in a temporary folder
         #Org.subdir = gtdb.make_tmp_dir(keep=True)
