@@ -18,12 +18,14 @@ class SeqModelTests(GtdbTestCase):
 
         seq = Seq.create_from_ext_id(user, org, 'NZ_BDBV01000005.1')
 
+        # Check created params
+        self.assertTrue('gbk_fn' in seq.prm)
+
         self.assertEqual(seq.id, 'NZ_BDBV01000005.1')
         self.assertEqual(seq.name, 'NZ_BDBV01000005')
         self.assertEqual(seq.type, 'DNA')
         self.assertEqual(seq.len, 34847)
 
         # Make sure seq can be read from file
-        record = seq.as_SeqRecord(with_seq=True)
-        self.assertTrue(record.seq.startswith('GAAGCGATAGCCAAGCAACTACA'))
+        self.assertTrue(seq.record.seq.startswith('GAAGCGATAGCCAAGCAACTACA'))
 

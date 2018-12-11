@@ -1,5 +1,7 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+import os
+
 from django.db import models
 
 import Bio
@@ -19,26 +21,29 @@ class Seq(AbstractUnit):
     class Meta:
         db_table = 'seqs'
 
-    def as_SeqRecord(self, with_seq=False):
-        "Returns SeqRecord object with seq from fasta file if requested."
-        if with_seq:
-            fasta_fn = self.org.get_full_path_to('seq_fna', self.id)
-            seq = SeqIO.read(fasta_fn, "fasta").seq
-        else:
-            seq = Bio.Seq.UnknownSeq(self.len)
-        return SeqRecord(
-            seq, id=self.id, name=self.name, description=self.descr,
-            annotations={'molecule_type': self.type})
+    prm_info = {
+        'gbk_fn': {'prm_attr': 'value'},
+    }
+
+    def _get_record(self):
+        if not hasattr(self, '_record'):
+            gbk_path = self.gtdb.get_full_path_to(self.prm['gbk_fn'])
+            self._record = SeqIO.read(gbk_path, "genbank")
+        return self._record
+    record = property(
+        fget=_get_record,
+        doc="Reads gbk_fn and returns SeqRecord object.")
 
     @classmethod
     def create_from_ext_id(cls, user, org, ext_id):
         "Reads gbk file from org_dir and creates seq from SeqRecord."
-        gbk_fn = org.get_full_path_to('seq_gbk', ext_id)
-        record = SeqIO.read(gbk_fn, "genbank")
+        gbk_fn = os.path.join(org.prm['dir_path'], 'seq_gbk', ext_id)
+        record = SeqIO.read(cls.gtdb.get_full_path_to(gbk_fn), "genbank")
         seq = cls(user=user, org=org,
                   id=record.id, name=record.name, descr=record.description,
                   type=record.annotations['molecule_type'], len=len(record.seq))
         seq.save()
+        seq.add_param('gbk_fn', gbk_fn)
         return seq
 
 
