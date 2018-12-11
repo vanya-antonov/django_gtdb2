@@ -28,6 +28,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'chelatase_db.apps.ChelataseDbConfig',
+    'gtdb1.apps.Gtdb1Config',
     'gtdb2.apps.Gtdb2Config',
     'django.contrib.admin',
     'django.contrib.auth',
