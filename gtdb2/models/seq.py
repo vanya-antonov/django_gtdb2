@@ -14,7 +14,6 @@ class Seq(AbstractUnit):
     id = models.CharField(max_length=255, primary_key=True)
     org = models.ForeignKey(Org, on_delete=models.CASCADE)
     type = models.CharField(max_length=255)
-    ext_id = models.CharField(max_length=255)
     len = models.IntegerField()
 
     class Meta:
