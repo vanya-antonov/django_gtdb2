@@ -1,7 +1,10 @@
+# Copyright 2018 by Ivan Antonov. All rights reserved.
+
 import logging
 import sys
 
 from django.db import models
+from django.utils import timezone
 
 from gtdb2.lib.db import GeneTackDB
 from gtdb2.models.user import User
@@ -9,7 +12,7 @@ from gtdb2.models.user import User
 
 class AbstractUnit(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    c_date = models.DateTimeField(auto_now_add=True)
+    c_date = models.DateTimeField(default=timezone.now)
     name = models.CharField(max_length=255, unique=True)
     descr = models.CharField(max_length=255, default=None, blank=True, null=True)
 
