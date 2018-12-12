@@ -1,16 +1,15 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 import pickle
-from pprint import pprint
 
 from gtdb2.lib.db import GeneTackDB
-from gtdb2.models.fshift import FShift
+from gtdb2.models.fshift import Fshift
 from gtdb2.models.org import Org
 from gtdb2.models.seq import Seq
 from gtdb2.tests import GtdbTestCase
 
 
-class FShiftModelTests(GtdbTestCase):
+class FshiftModelTests(GtdbTestCase):
     def test_fshift_create_from_gtdb1(self):
         """While testing I can't get access to the data in any production
         database. So, the gtdb1_fs object was stored in a pickle file that
@@ -40,7 +39,7 @@ class FShiftModelTests(GtdbTestCase):
         with open(fs_fn, 'rb') as handle:
             gtdb1_fs = pickle.load(handle)
 
-        fshift = FShift.create_from_gtdb1_fs(user, seq, gtdb1_fs)
+        fshift = Fshift.create_from_gtdb1_fs(user, seq, gtdb1_fs)
 
         # Make sure the old date was preserved
         self.assertTrue(fshift.c_date.year == 2010)

@@ -1,7 +1,6 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 import re
-from pprint import pprint
 
 from django.db import models
 
@@ -9,7 +8,7 @@ from gtdb2.models.abstract import AbstractUnit, AbstractParam
 from gtdb2.models.seq import Seq
 
 
-class FShift(AbstractUnit):
+class Fshift(AbstractUnit):
     seq = models.ForeignKey(Seq, on_delete=models.CASCADE)
     type = models.CharField(max_length=255)
     coord = models.IntegerField()
@@ -26,7 +25,7 @@ class FShift(AbstractUnit):
         "Creates Fshift based on the info from GTDB1 fs."
         fs = _validate_gtdb1_fs(gtdb1_fs, seq)
 
-        fshift = FShift(
+        fshift = Fshift(
             user=user, seq=seq, c_date=fs.job.c_date, type='genetack',
             name=_get_fshift_name(seq, fs.fs_coord, int(fs.type)),
             descr=fs.descr, coord=fs.fs_coord, len=int(fs.type),
@@ -38,8 +37,8 @@ class FShift(AbstractUnit):
         return fshift
 
 
-class FShiftParam(AbstractParam):
-    parent = models.ForeignKey(FShift, on_delete=models.CASCADE)
+class FshiftParam(AbstractParam):
+    parent = models.ForeignKey(Fshift, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'fshift_params'
