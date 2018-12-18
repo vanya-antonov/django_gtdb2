@@ -21,9 +21,8 @@ class Seq(AbstractUnit):
     class Meta:
         db_table = 'seqs'
 
-    prm_info = {
-        'gbk_fn': {'prm_attr': 'value'},
-    }
+    # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
+    # prm_info = dict(list(AbstractUnit.prm_info.items()) + list({}.items()))
 
     def _get_record(self):
         if not hasattr(self, '_record'):

@@ -3,7 +3,7 @@
 import pickle
 
 from gtdb2.lib.db import GeneTackDB
-from gtdb2.models.fshift import Fshift
+from gtdb2.models.fshift import Fshift, FshiftParam
 from gtdb2.models.org import Org
 from gtdb2.models.seq import Seq
 from gtdb2.tests import GtdbTestCase
@@ -50,4 +50,9 @@ class FshiftModelTests(GtdbTestCase):
         self.assertEqual(fshift.coord, 1122957)
         self.assertEqual(fshift.len, -1)
         self.assertEqual(fshift.strand, 1)
+
+        # Make sure the gtdb1 ID was added to xrefs
+        fshift_by_ext_id = FshiftParam.get_parent_by_xref('gtdb1', 33540948)
+        self.assertIsNotNone(fshift_by_ext_id)
+        self.assertEqual(fshift, fshift_by_ext_id)
 

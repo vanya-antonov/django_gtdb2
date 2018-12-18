@@ -25,15 +25,77 @@ class Org(AbstractUnit):
         db_table = 'orgs'
 
     subdir = 'orgs'
-    prm_info = {
-        'dir_path': {'prm_attr': 'value'},
-        'num_seqs': {'prm_attr': 'num', 'type_fun': int},
-        'short_name': {'prm_attr': 'value'},
-        'source_fn': {'prm_attr': 'value'},
-        'taxonomy': {'prm_attr': 'value', 'is_list': True, 'sort_attr': 'num'},
-        'transl_table': {'prm_attr': 'value', 'type_fun': int, 'is_list': True,
+
+    # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
+    prm_info = dict(list(AbstractUnit.prm_info.items()) + list({
+        'num_seqs': {'value_attr': 'num', 'type_fun': int},
+        'taxonomy': {'value_attr': 'value', 'is_list': True, 'sort_attr': 'num'},
+        'transl_table': {'value_attr': 'value', 'type_fun': int, 'is_list': True,
                          'sort_attr': 'num', 'reverse': True},
-    }
+    }.items()))
+
+    dir_path = property(
+        fget=lambda self: self.gtdb.get_full_path_to(self.prm['dir_path']),
+        doc="Returns a full path to the org dir.")
+
+    def get_all_seq_ids(self, seq_dir='seq_gbk', fullpath=False):
+        """Returns a list of all seq ids that are the names of the files in
+        the seq_gbk/seq_fna folder.
+
+        Arguments:
+         - seq_dir - name of the folder with sequence files
+         - fullpath - if True appends full paths to the sequence files.
+        """
+        seq_dir = os.path.join(self.dir_path, seq_dir)
+        all_ids = os.listdir(seq_dir)
+        if fullpath:
+            all_ids = [os.path.join(seq_dir, fn) for fn in all_ids]
+        return all_ids
+
+    def make_all_params(self):
+        "Generates/updates the majority of org params."
+        self._make_param_short_name()
+
+        # Get all org gbk files with full paths
+        all_gbk = self.get_all_seq_ids(seq_dir='seq_gbk', fullpath=True)
+        self.set_param('num_seqs', num=len(all_gbk))
+
+        record = SeqIO.read(all_gbk[0], "genbank")
+        self._make_param_taxonomy(record)
+
+        self._make_param_xref(record)
+
+    def update_seqs_with_gbk(self, gbk_fn):
+        """Compares current list of org seqs with the seqs from the gbk file.
+        Removes seqs that are not present in gbk. Adds seqs that are present
+        in gbk, but not in org_dir and replaces seqs with records from the
+        file if they have newer versions. Returns a tuple with info about
+        the update statistics.
+        """
+        # gbk file may be very large, so get a list of IDs first
+        gbk_seq_ids = [r.id for r in SeqIO.parse(gbk_fn, "genbank")]
+        org_seq_ids = self.get_all_seq_ids()
+        if set(org_seq_ids) == set(gbk_seq_ids):
+            return {"n_new": 0, "n_updated": 0, "n_deleted": 0}
+        raise NotImplementedError("Some org seqs should be updated!")
+
+    @classmethod
+    def get_or_create_from_gbk(cls, user, gbk_fn):
+        "Returns existing or a newly created Org object."
+        record = next(SeqIO.parse(gbk_fn, "genbank"))
+        org = cls.get_by_SeqRecord(record)
+        if org is None:
+            org = cls.create_from_gbk(user, gbk_fn)
+        return org
+
+    @classmethod
+    def get_by_SeqRecord(cls, record):
+        "Returns existing Org object or None."
+        org_name = record.annotations['organism']
+        org = cls.objects.filter(name=org_name).first()
+
+        # TODO: validate org and record xrefs!
+        return org
 
     @classmethod
     def create_from_gbk(cls, user, fn):
@@ -95,30 +157,15 @@ class Org(AbstractUnit):
         file_path = os.path.join(full_path, record.id)
         SeqIO.write(record, file_path, fmt)
 
-    def get_full_path_to(self, *args):
-        "Returns a full path for a path relative to ORG dir."
-        return self.gtdb.get_full_path_to(self.prm['dir_path'], *args)
-
-    def make_all_params(self):
-        "Generates/updates the majority of org params."
-        # Get all org gbk files with full paths
-        all_gbk = os.listdir(self.get_full_path_to('seq_gbk'))
-        all_gbk = [self.get_full_path_to('seq_gbk', fn) for fn in all_gbk]
-
-        self.set_param('num_seqs', num=len(all_gbk))
-
-        record = SeqIO.read(all_gbk[0], "genbank")
-        self._make_param_taxonomy(record)
-
-        #print(record.dbxrefs)
-        #dbx_dict = db_xref_list_to_dict(record.dbxrefs)
-        #for (name,value) in dbx_dict.items():
-        #    org.add_param(name, value)
-
-        self._make_param_short_name()
+    def _make_param_xref(self, record):
+        "Creates the 'xref' params from the given SeqRecord."
+        all_xrefs = record.dbxrefs
+        all_xrefs += _get_source_feature_xrefs(record)
+        for xref in all_xrefs:
+            self.add_gbk_xref_param(xref)
 
     def _make_param_taxonomy(self, record):
-        "Creates the 'taxonomy' param from the given SeqRecord."
+        "Creates the 'taxonomy' params from the given SeqRecord."
         self.delete_param('taxonomy')
         num = 0
         for value in record.annotations.get('taxonomy', []):
@@ -136,12 +183,19 @@ class Org(AbstractUnit):
             logging.warning("Can't generate short name from '%s'" % self.name)
 
 
+class OrgParam(AbstractParam):
+    parent = models.ForeignKey(Org, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'org_params'
+
+
 @receiver(signals.pre_delete, sender=Org)
 def on_org_delete(sender, instance, using, **kwargs):
     """Make sure to remove org dir if the org is deleted. This is done using
     Django signals: https://stackoverflow.com/a/12678428/310453
     """
-    shutil.rmtree(instance.get_full_path_to())
+    shutil.rmtree(instance.dir_path)
 
 def _get_species_genus_phylum_kingdom(record):
     taxa_l = record.annotations.get('taxonomy')
@@ -171,10 +225,10 @@ def _get_species_genus_phylum_kingdom(record):
     phylum = taxa_l[1]
     return species, genus, phylum, kingdom
 
-
-class OrgParam(AbstractParam):
-    parent = models.ForeignKey(Org, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'org_params'
+def _get_source_feature_xrefs(record):
+    "Feature with type='source' has an important xref = 'taxon:1210089'."
+    for f in record.features:
+        if f.type == 'source':
+            return f.qualifiers['db_xref']
+    return []
 

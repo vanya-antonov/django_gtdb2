@@ -32,7 +32,8 @@ class Fshift(AbstractUnit):
             start=fs.start, end=fs.end, strand=fs.strand)
         fshift.save()
 
-        # TODO: add gtdb1 ID to xrefs
+        # add gtdb1 ID to xrefs
+        fshift.add_xref_param('gtdb1', fs.fs_id)
 
         return fshift
 

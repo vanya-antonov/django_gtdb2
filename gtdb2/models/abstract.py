@@ -1,5 +1,6 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+import json
 import logging
 import sys
 
@@ -20,7 +21,10 @@ class AbstractUnit(models.Model):
         abstract = True
 
     gtdb = GeneTackDB()
-    prm_info = {}
+
+    prm_info = {
+        'xref': {'value_attr': 'data', 'type_fun': json.loads, 'is_list': True},
+    }
 
     def __str__(self):
         return self.name
@@ -51,7 +55,7 @@ class AbstractUnit(models.Model):
         for key, param_list in self.param_dict.items():
             info = self.prm_info.get(key, None)
             if info is None:
-                continue
+                info = {'value_attr': 'value'}
 
             # Sort the list by one of the attributes if needed
             if 'sort_attr' in info:
@@ -60,7 +64,7 @@ class AbstractUnit(models.Model):
                                     reverse=info.get('reverse', False))
 
             # Select one of the param attributes only
-            param_list = [getattr(p, info['prm_attr']) for p in param_list]
+            param_list = [getattr(p, info['value_attr']) for p in param_list]
 
             # Convert it to another type if needed
             if 'type_fun' in info:
@@ -106,6 +110,27 @@ class AbstractUnit(models.Model):
         "Deletes all unit params with the given name."
         self.param_set.filter(name=name).delete()
 
+    def add_gbk_xref_param(self, gbk_xref):
+        "gbk_xref is a string like 'Assembly:GCF_001613165.1'."
+        parts = gbk_xref.split(':')
+        if len(parts) != 2:
+            raise ValueError("Wrong gbk_xref='%s'" % gbk_xref)
+        return self.add_xref_param(parts[0], parts[1])
+
+    def add_xref_param(self, db_name, ext_id, data_dict=None):
+        "Creates a new param with name='xref', value and data (json)."
+        if data_dict is None:
+            data_dict = {'db_name': db_name, 'ext_id': ext_id}
+        else:
+            # Validate the content of data_dict
+            if data_dict['db_name'] != db_name:
+                raise ValueError("Wrong db_name in data_dict: %s", data_dict)
+            if data_dict['ext_id'] != ext_id:
+                raise ValueError("Wrong ext_id in data_dict: %s", data_dict)
+        json_str = json.dumps(data_dict)
+        value = db_name + ':' + str(ext_id)
+        return self.add_param('xref', value, data=json_str)
+
 
 class AbstractParam(models.Model):
     name = models.CharField(max_length=255)
@@ -118,4 +143,17 @@ class AbstractParam(models.Model):
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def get_parent_by_xref(cls, db_name, ext_id):
+        "Returns a Unit object (or None) by external database ID."
+        value = db_name + ':' + str(ext_id)
+        all_params = cls.objects.filter(name='xref', value=value).all()
+        if len(all_params) == 0:
+            return None
+        elif len(all_params) == 1:
+            return all_params[0].parent
+        else:
+            raise ValueError("xref value '%s' is not unique in model '%s'" %
+                             (value, cls.__name__))
 
