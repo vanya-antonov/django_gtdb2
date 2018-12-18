@@ -20,6 +20,7 @@ class GeneTackDB:
         "Make sure the delete all created tmp dirs and files."
         for path in self.all_tmp_dirs:
             shutil.rmtree(path)
+            logging.debug("Tmp folder '%s' has been removed." % path)
 
     def get_default_user(self):
         """Returns 'default' user for manage.py commands."""
