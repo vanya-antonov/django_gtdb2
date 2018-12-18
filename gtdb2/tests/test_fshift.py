@@ -25,15 +25,11 @@ class FshiftModelTests(GtdbTestCase):
         >>> with open(out_fn, 'wb') as handle:
         >>>     pickle.dump(gtdb1_fs, handle, protocol=pickle.HIGHEST_PROTOCOL)
         """
-        gtdb = GeneTackDB()
-        user = gtdb.get_default_user()
-
-        # All the seq files will be created in a temporary folder
-        Org.subdir = gtdb.make_tmp_dir()
+        user = self.user
 
         # Prepare required objects
         gbk_fn = self.get_full_path_to_test_file('M_fervens.gbk')
-        org = Org.create_from_gbk(user, gbk_fn)
+        org = Org.create_from_gbk(self.user, gbk_fn)
         seq = Seq.create_from_ext_id(user, org, 'NC_013156.1')
         fs_fn = self.get_full_path_to_test_file('gtdb1_fs_33540948.pickle')
         with open(fs_fn, 'rb') as handle:

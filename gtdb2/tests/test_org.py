@@ -5,7 +5,6 @@ from pprint import pprint
 
 from Bio import SeqIO
 
-from gtdb2.lib.db import GeneTackDB
 from gtdb2.models.org import Org, OrgParam
 from gtdb2.tests import GtdbTestCase
 
@@ -13,13 +12,8 @@ from gtdb2.tests import GtdbTestCase
 class OrgModelTests(GtdbTestCase):
 
     def setUp(self):
-        self.gtdb = GeneTackDB()
-        self.user = self.gtdb.get_default_user()
+        super().setUp()
         self.fn = self.get_full_path_to_test_file('N_mexicana.gbk')
-
-        # All the seq files will be created in a temporary folder
-        #Org.subdir = gtdb.make_tmp_dir(keep=True)
-        Org.subdir = self.gtdb.make_tmp_dir()
 
     def test_org_get_all_seq_ids(self):
         org = Org.create_from_gbk(self.user, self.fn)

@@ -16,6 +16,7 @@ class Fshift(AbstractUnit):
     start = models.IntegerField()
     end = models.IntegerField()
     strand = models.IntegerField()
+    seed = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'fshifts'
