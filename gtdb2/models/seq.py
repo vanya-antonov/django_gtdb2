@@ -9,7 +9,7 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
 from gtdb2.models.abstract import AbstractUnit, AbstractParam
-from .org import Org
+from gtdb2.models.org import Org
 
 
 class Seq(AbstractUnit):
@@ -34,6 +34,14 @@ class Seq(AbstractUnit):
         doc="Reads gbk_fn and returns SeqRecord object.")
 
     @classmethod
+    def get_or_create_from_ext_id(cls, user, org, ext_id):
+        "Returns existing or a newly created Seq object."
+        seq = cls.objects.filter(pk=ext_id).first()
+        if seq is None:
+            seq = cls.create_from_ext_id(user, org, ext_id)
+        return seq
+
+    @classmethod
     def create_from_ext_id(cls, user, org, ext_id):
         "Reads gbk file from org_dir and creates seq from SeqRecord."
         gbk_fn = os.path.join(org.prm['dir_path'], 'seq_gbk', ext_id)
@@ -47,7 +55,8 @@ class Seq(AbstractUnit):
 
 
 class SeqParam(AbstractParam):
-    parent = models.ForeignKey(Seq, on_delete=models.CASCADE)
+    parent = models.ForeignKey(Seq, on_delete=models.CASCADE,
+                               related_name='param_set')
 
     class Meta:
         db_table = 'seq_params'

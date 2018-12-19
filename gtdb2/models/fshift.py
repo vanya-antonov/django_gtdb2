@@ -40,7 +40,8 @@ class Fshift(AbstractUnit):
 
 
 class FshiftParam(AbstractParam):
-    parent = models.ForeignKey(Fshift, on_delete=models.CASCADE)
+    parent = models.ForeignKey(Fshift, on_delete=models.CASCADE,
+                               related_name='param_set')
 
     class Meta:
         db_table = 'fshift_params'

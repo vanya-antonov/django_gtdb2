@@ -62,10 +62,7 @@ class OrgModelTests(GtdbTestCase):
         self.assertEqual(org.name, 'Nocardia mexicana NBRC 108244')
         self.assertIn(org.genus, org.name)
 
-        # Make sure the fn was saved as one of the params
-        self.assertEqual(org.orgparam_set.get(name='source_fn').value, self.fn)
-
-        # Test AbstractUnit computed properties
+        # Test the computed attributes & Make sure the fn was saved
         self.assertEqual(org.param_set.get(name='source_fn').value, self.fn)
         self.assertEqual(org.param_dict['source_fn'][0].value, self.fn)
         self.assertEqual(org.prm['source_fn'], self.fn)

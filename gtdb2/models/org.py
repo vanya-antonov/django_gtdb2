@@ -184,7 +184,8 @@ class Org(AbstractUnit):
 
 
 class OrgParam(AbstractParam):
-    parent = models.ForeignKey(Org, on_delete=models.CASCADE)
+    parent = models.ForeignKey(Org, on_delete=models.CASCADE,
+                               related_name='param_set')
 
     class Meta:
         db_table = 'org_params'

@@ -29,14 +29,6 @@ class AbstractUnit(models.Model):
     def __str__(self):
         return self.name
 
-    def _get_param_set(self):
-        # e.g. unit = 'org'
-        unit = self.__class__.__name__.lower()
-        return getattr(self, unit + "param_set")
-    param_set = property(
-        fget=_get_param_set,
-        doc="Convenience property: e.g. org.param_set == org.orgparam_set")
-
     def _get_param_dict(self):
         param_dict = {}
         for p in self.param_set.all():
@@ -93,16 +85,11 @@ class AbstractUnit(models.Model):
         >>> param = OrgParam(...)
         >>> param.save()
         """
-        # https://stackoverflow.com/a/41236263/310453
-        # Org => 'gtdb2.models.org'
-        modulename = "gtdb2.models." + self.__class__.__name__.lower()
-        mod = sys.modules[modulename]
-
-        # Org => 'OrgParam'
-        classname = self.__class__.__name__ + 'Param'
-        cls = getattr(mod, classname)
-
-        param = cls(parent=self, name=name, value=value, num=num, data=data)
+        # E.g. param_cls is 'OrgParam' class object:
+        # https://stackoverflow.com/a/14487781/310453
+        param_cls = self.param_set.model
+        param = param_cls(parent=self, name=name, value=value, num=num,
+                          data=data)
         param.save()
         return param
 
@@ -117,16 +104,9 @@ class AbstractUnit(models.Model):
             raise ValueError("Wrong gbk_xref='%s'" % gbk_xref)
         return self.add_xref_param(parts[0], parts[1])
 
-    def add_xref_param(self, db_name, ext_id, data_dict=None):
-        "Creates a new param with name='xref', value and data (json)."
-        if data_dict is None:
-            data_dict = {'db_name': db_name, 'ext_id': ext_id}
-        else:
-            # Validate the content of data_dict
-            if data_dict['db_name'] != db_name:
-                raise ValueError("Wrong db_name in data_dict: %s", data_dict)
-            if data_dict['ext_id'] != ext_id:
-                raise ValueError("Wrong ext_id in data_dict: %s", data_dict)
+    def add_xref_param(self, db_name, ext_id):
+        "Creates a new param with name='xref' and value='db_name:ext_id'."
+        data_dict = {'db_name': db_name, 'ext_id': ext_id}
         json_str = json.dumps(data_dict)
         value = db_name + ':' + str(ext_id)
         return self.add_param('xref', value, data=json_str)

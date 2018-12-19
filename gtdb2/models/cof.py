@@ -22,11 +22,15 @@ class Cof(AbstractUnit):
         """Creates a new COF in db, associates it with the provided seed
         fshifts and sets the seed flag to them.
         """
+        if len(seed_fshifts) == 0:
+            raise ValueError("The list of seed fshifts is empty!")
+
         # Each fshift can belong to one cof only
         for fshift in seed_fshifts:
             if fshift.cof_set.count() > 0:
                 raise ValueError("Fshift '%s' already belongs to a COF" %
                                  fshift.name)
+
         cof = cls(user=user, name=name, descr=descr, type=type)
         cof.save()
         cof.fshift_set.set(seed_fshifts)
@@ -40,7 +44,8 @@ class Cof(AbstractUnit):
 
 
 class CofParam(AbstractParam):
-    parent = models.ForeignKey(Cof, on_delete=models.CASCADE)
+    parent = models.ForeignKey(Cof, on_delete=models.CASCADE,
+                               related_name='param_set')
 
     class Meta:
         db_table = 'cof_params'

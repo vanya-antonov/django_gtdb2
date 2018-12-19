@@ -14,6 +14,8 @@ class GtdbTestCase(TestCase):
     convenience methods.
     """
 
+    test_data_dir = 'gtdb2/tests/data/'
+
     def setUp(self):
         self.gtdb = GeneTackDB()
         self.user = self.gtdb.get_default_user()
@@ -23,6 +25,5 @@ class GtdbTestCase(TestCase):
         Org.subdir = self.gtdb.make_tmp_dir()
 
     def get_full_path_to_test_file(self, fn):
-        return os.path.join(settings.BASE_DIR, 'gtdb2/tests/data', fn)
-
+        return os.path.join(settings.BASE_DIR, self.test_data_dir, fn)
 
