@@ -1,6 +1,6 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
-from chelatase_db.models.cof import ChelataseCof
+#from chelatase_db.models.cof import ChelataseCof
 from gtdb2.models.org import Org
 
 
@@ -10,8 +10,8 @@ class ChelataseOrg(Org):
 
     # Merge two dicts: https://stackoverflow.com/a/38990/310453
     prm_info = dict(list(Org.prm_info.items()) + list({
-        'num_chld_fshifts': {'prm_attr': 'num', 'type_fun': int},
-        'num_chld_feats': {'prm_attr': 'num', 'type_fun': int},
+        'num_chld_fshifts': {'value_attr': 'num', 'type_fun': int},
+        'num_chld_feats': {'value_attr': 'num', 'type_fun': int},
     }.items()))
 
     # Overwrite the computed property to keep using the parent's param table

@@ -1,27 +1,47 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+from pprint import pprint
+
+from Bio import SeqIO
+
 from django.core.management.base import BaseCommand, CommandError
 
-from gtdb1.models import GtFs
-
+from chelatase_db.models.org import ChelataseOrg
 from gtdb2.lib.db import GeneTackDB
-from gtdb2.models.fshift import FShift
 
 
 class Command(BaseCommand):
-    help = """Copy validated chelatase fs-genes from GTDB1 into GTDB2 fshifts
-    and download/add any corresponding orgs/seqs if needed."""
+    help = """Creates a new org in db (or updates seqs if the org already
+    exists) and generates all the chelatase params. It also creates
+    chelatase seed fshifts and cof if needed."""
 
-#    def add_arguments(self, parser):
-#        parser.add_argument(
-#            'fn', metavar='ALL_SEQS.gbk',
-#            help=".gbk file with all intronless org sequences")
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'fn', metavar='ORG.gbk',
+            help=".gbk file with all intronless org sequences")
 
     def handle(self, *args, **options):
-        
-        user = GeneTackDB().get_default_user()
-        fshift = FShift.create_from_gtdb1(user, gtdb1_id)
-#        org = Org.create_from_gbk(options['fn'])
-#        self.print_success("Successfully created org '%s' with id '%s'" %
-#                           (org.name, org.id))
+        gbk_fn = options['fn']
+        gtdb = GeneTackDB()
+        user = gtdb.get_default_user()
+
+        org = ChelataseOrg.get_or_create_from_gbk(user, gbk_fn)
+        upd_info = org.update_seqs_with_gbk(gbk_fn)
+        if(upd_info['n_new'] == 0 and upd_info['n_updated'] == 0 and
+           'num_chld_feats' in org.prm):
+            self.stdout.write(self.style.SUCCESS(
+                "The '%s' genome is up-to-date (it has '%s' chlD genes)" %
+                (org.name, org.prm['num_chld_feats'])))
+            return
+
+        org.create_chld_fshifts_and_feats(user)
+
+        pprint(vars(org))
+        exit()
+        if org.prm['num_chld_feats'] == 0:
+            self.stdout.write(
+                "The '%s' genome does not have chlD genes!" % org.name)
+            return
+        org.create_chelatase_feats(user)
+        org.make_all_params()
 
