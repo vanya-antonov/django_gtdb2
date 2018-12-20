@@ -165,7 +165,7 @@ class Org(AbstractUnit):
         all_xrefs = record.dbxrefs
         all_xrefs += _get_source_feature_xrefs(record)
         for xref in all_xrefs:
-            self.add_gbk_xref_param(xref)
+            self.add_xref_gbk_str(xref)
 
     def _make_param_taxonomy(self, record):
         "Creates the 'taxonomy' params from the given SeqRecord."

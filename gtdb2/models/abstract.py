@@ -99,19 +99,22 @@ class AbstractUnit(models.Model):
         "Deletes all unit params with the given name."
         self.param_set.filter(name=name).delete()
 
-    def add_gbk_xref_param(self, gbk_xref):
-        "gbk_xref is a string like 'Assembly:GCF_001613165.1'."
-        parts = gbk_xref.split(':')
-        if len(parts) != 2:
-            raise ValueError("Wrong gbk_xref='%s'" % gbk_xref)
-        return self.add_xref_param(parts[0], parts[1])
-
     def add_xref_param(self, db_name, ext_id):
         "Creates a new param with name='xref' and value='db_name:ext_id'."
         data_dict = {'db_name': db_name, 'ext_id': ext_id}
         json_str = json.dumps(data_dict)
         value = db_name + ':' + str(ext_id)
         return self.add_param('xref', value, data=json_str)
+
+    def add_xref_gbk_str(self, gbk_str):
+        "gbk_xref is a string like 'Assembly:GCF_001613165.1'."
+        parts = gbk_str.split(':')
+        if len(parts) != 2:
+            raise ValueError("Wrong gbk_xref='%s'" % gbk_str)
+        return self.add_xref_param(parts[0], parts[1])
+
+    # TODO
+    # def add_xref_data_dict(self, data_dict):
 
 
 class AbstractParam(models.Model):
