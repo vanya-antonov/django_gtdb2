@@ -22,6 +22,7 @@ class AbstractUnit(models.Model):
 
     gtdb = GeneTackDB()
 
+    # All items in the 'prm' dict must be explicitly declared in 'prm_info'
     prm_info = {
         'xref': {'value_attr': 'data', 'type_fun': json.loads, 'is_list': True},
     }
@@ -47,7 +48,7 @@ class AbstractUnit(models.Model):
         for key, param_list in self.param_dict.items():
             info = self.prm_info.get(key, None)
             if info is None:
-                info = {'value_attr': 'value'}
+                continue
 
             # Sort the list by one of the attributes if needed
             if 'sort_attr' in info:
@@ -56,20 +57,21 @@ class AbstractUnit(models.Model):
                                     reverse=info.get('reverse', False))
 
             # Select one of the param attributes only
-            param_list = [getattr(p, info['value_attr']) for p in param_list]
+            value_attr = info.get('value_attr', 'value')
+            value_list = [getattr(p, value_attr) for p in param_list]
 
             # Convert it to another type if needed
             if 'type_fun' in info:
                 type_fun = info['type_fun']
-                param_list = [type_fun(p) for p in param_list]
+                value_list = [type_fun(p) for p in value_list]
 
             if info.get('is_list', False):
-                prm[key] = param_list
+                prm[key] = value_list
             else:
-                if len(param_list) > 1:
-                    logging.error("param_list contains '%s' elements for the "
-                                  "non list prm '%s'" % (len(param_list)), key)
-                prm[key] = param_list[0]
+                if len(value_list) > 1:
+                    logging.error("value_list contains '%s' elements for the "
+                                  "non-list prm '%s'" % (len(value_list)), key)
+                prm[key] = value_list[0]
         return prm
     prm = property(
         fget=_get_prm,

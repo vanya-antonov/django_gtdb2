@@ -22,7 +22,9 @@ class Seq(AbstractUnit):
         db_table = 'seqs'
 
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
-    # prm_info = dict(list(AbstractUnit.prm_info.items()) + list({}.items()))
+    prm_info = dict(list(AbstractUnit.prm_info.items()) + list({
+        'gbk_fn': {},
+    }.items()))
 
     def _get_record(self):
         if not hasattr(self, '_record'):

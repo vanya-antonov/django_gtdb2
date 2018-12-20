@@ -28,7 +28,10 @@ class Org(AbstractUnit):
 
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
     prm_info = dict(list(AbstractUnit.prm_info.items()) + list({
+        'dir_path': {},
         'num_seqs': {'value_attr': 'num', 'type_fun': int},
+        'short_name': {},
+        'source_fn': {},
         'taxonomy': {'value_attr': 'value', 'is_list': True, 'sort_attr': 'num'},
         'transl_table': {'value_attr': 'value', 'type_fun': int, 'is_list': True,
                          'sort_attr': 'num', 'reverse': True},
