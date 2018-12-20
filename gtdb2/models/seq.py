@@ -13,7 +13,12 @@ from gtdb2.models.org import Org
 
 
 class Seq(AbstractUnit):
+    # Overwrite AbstractUnit attribute - id is a string
     id = models.CharField(max_length=255, primary_key=True)
+
+    # Overwrite AbstractUnit attribute - name must be unique and NOT NULL
+    name = models.CharField(max_length=255, unique=True)
+
     org = models.ForeignKey(Org, on_delete=models.CASCADE)
     type = models.CharField(max_length=255)
     len = models.IntegerField()

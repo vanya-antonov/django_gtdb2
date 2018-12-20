@@ -17,6 +17,9 @@ from gtdb2.models.abstract import AbstractUnit, AbstractParam
 
 
 class Org(AbstractUnit):
+    # Overwrite AbstractUnit attribute - name must be unique and NOT NULL
+    name = models.CharField(max_length=255, unique=True)
+
     genus = models.CharField(max_length=255)
     phylum = models.CharField(max_length=255)
     kingdom = models.CharField(max_length=255)

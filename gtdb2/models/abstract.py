@@ -14,7 +14,7 @@ from gtdb2.models.user import User
 class AbstractUnit(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     c_date = models.DateTimeField(default=timezone.now)
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255, default=None, blank=True, null=True)
     descr = models.CharField(max_length=255, default=None, blank=True, null=True)
 
     class Meta:
@@ -28,7 +28,7 @@ class AbstractUnit(models.Model):
     }
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
     def _get_param_dict(self):
         param_dict = {}
