@@ -22,7 +22,7 @@ class GeneTackDB:
             shutil.rmtree(path)
             logging.debug("Tmp folder '%s' has been removed." % path)
 
-    def get_default_user(self):
+    def get_or_create_default_user(self):
         """Returns 'default' user for manage.py commands."""
         user, created = User.objects.get_or_create(
             name='gtdb_manage.py',

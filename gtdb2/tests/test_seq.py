@@ -10,15 +10,10 @@ from gtdb2.tests import GtdbTestCase
 
 class SeqModelTests(GtdbTestCase):
     def test_seq_create_from_ext_id(self):
-        gtdb = GeneTackDB()
-        user = gtdb.get_default_user()
         fn = self.get_full_path_to_test_file('N_mexicana.gbk')
+        org = Org.create_from_gbk(self.user, fn)
 
-        # All the seq files will be created in a temporary folder
-        Org.subdir = gtdb.make_tmp_dir()
-        org = Org.create_from_gbk(user, fn)
-
-        seq = Seq.create_from_ext_id(user, org, 'NZ_BDBV01000005.1')
+        seq = Seq.create_from_ext_id(self.user, org, 'NZ_BDBV01000005.1')
 
         # Check attributes
         self.assertEqual(seq.c_date.year, datetime.now().year)

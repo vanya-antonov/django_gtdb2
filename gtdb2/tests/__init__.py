@@ -18,7 +18,7 @@ class GtdbTestCase(TestCase):
 
     def setUp(self):
         self.gtdb = GeneTackDB()
-        self.user = self.gtdb.get_default_user()
+        self.user = self.gtdb.get_or_create_default_user()
 
         # All the seq files (if any) will be created in a temporary folder
         #Org.subdir = gtdb.make_tmp_dir(keep=True)

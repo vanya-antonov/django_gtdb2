@@ -23,7 +23,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         gbk_fn = options['fn']
         gtdb = GeneTackDB()
-        user = gtdb.get_default_user()
+        user = gtdb.get_or_create_default_user()
 
         org = ChelataseOrg.get_or_create_from_gbk(user, gbk_fn)
         upd_info = org.update_seqs_with_gbk(gbk_fn)
