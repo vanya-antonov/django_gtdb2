@@ -9,11 +9,14 @@ from gtdb2.models.user import User
 
 
 class GeneTackDB:
-    """A class to perform basic tasks with GeneTackDB-2 and associated files."""
+    "A class to perform basic tasks with GeneTackDB-2 and associated files."
+
+    root_dir = property(
+        fget=lambda self: settings.GTDB_DIR,
+        doc="Path to GTDB root dir on the local machine.")
 
     def __init__(self):
-        """Initialize with a path to GTDB root dir on the local machine."""
-        self.root_dir = settings.GTDB_DIR
+        "Creates an empty list for created tmp dirs (if any)."
         self.all_tmp_dirs = []
 
     def __del__(self):
