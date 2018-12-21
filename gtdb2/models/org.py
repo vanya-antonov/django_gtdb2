@@ -3,6 +3,7 @@
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import re
 
@@ -27,11 +28,10 @@ class Org(AbstractUnit):
     class Meta:
         db_table = 'orgs'
 
-    subdir = 'orgs'
-
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
     prm_info = dict(list(AbstractUnit.prm_info.items()) + list({
-        'dir_path': {},
+        'blastdb_nucl_all': {},
+        'dir_name': {},
         'num_seqs': {'value_attr': 'num', 'type_fun': int},
         'short_name': {},
         'source_fn': {},
@@ -40,9 +40,17 @@ class Org(AbstractUnit):
                          'sort_attr': 'num', 'reverse': True},
     }.items()))
 
-    dir_path = property(
-        fget=lambda self: self.gtdb.get_full_path_to(self.prm['dir_path']),
-        doc="Returns a full path to the org dir.")
+    # The '%'s will be substituted with the value of 'dir_name' prm
+    subdir_info = {
+        'main': 'orgs/%s/',
+        'seq_fna': 'orgs/%s/seq_fna/',
+        'seq_gbk': 'orgs/%s/seq_gbk/',
+        'blastdb': 'orgs/%s/blastdb/',}
+
+    def get_full_path_to_subdir(self, name='main'):
+        "Returns a full path to subdir by its name or alias."
+        subdir = self.subdir_info[name] % self.prm['dir_name']
+        return self.gtdb.get_full_path_to(subdir)
 
     def get_all_seq_ids(self, seq_dir='seq_gbk', fullpath=False):
         """Returns a list of all seq ids that are the names of the files in
@@ -52,11 +60,18 @@ class Org(AbstractUnit):
          - seq_dir - name of the folder with sequence files
          - fullpath - if True appends full paths to the sequence files.
         """
-        seq_dir = os.path.join(self.dir_path, seq_dir)
+        seq_dir = self.get_full_path_to_subdir(seq_dir)
         all_ids = os.listdir(seq_dir)
         if fullpath:
             all_ids = [os.path.join(seq_dir, fn) for fn in all_ids]
         return all_ids
+
+    def read_seq_file(self, ext_id, seq_dir='seq_gbk'):
+        "Returns a SeqRecord object."
+        dir2fmt = {'seq_gbk': 'genbank', 'seq_fna': 'fasta'}
+        dir_path = self.get_full_path_to_subdir(seq_dir)
+        seq_path = os.path.join(dir_path, ext_id)
+        return SeqIO.read(seq_path, dir2fmt[seq_dir])
 
     def make_all_params(self):
         "Generates/updates the majority of org params."
@@ -68,8 +83,10 @@ class Org(AbstractUnit):
 
         record = SeqIO.read(all_gbk[0], "genbank")
         self._make_param_taxonomy(record)
-
         self._make_param_xref(record)
+
+        self._make_param_blastdb()
+        #org.make_genetack_model()
 
     def update_seqs_with_gbk(self, gbk_fn):
         """Compares current list of org seqs with the seqs from the gbk file.
@@ -120,12 +137,8 @@ class Org(AbstractUnit):
                 # Make sure that all seqs correspond to the same org
                 raise ValueError("Sequence '%s' does NOT belong to org '%s'" %
                                  (record.id, org.name))
-            org._create_seq_file(record, 'fasta-2line')
-            org._create_seq_file(record, 'genbank')
-        org.make_all_params()
-        #org.make_genetack_model()
-        #org.make_blastdb()
-        #gtdb.make_global_blastdb()
+            org._create_seq_file(record, 'fasta-2line', 'seq_fna')
+            org._create_seq_file(record, 'genbank', 'seq_gbk')
         return org
 
     @classmethod
@@ -143,21 +156,19 @@ class Org(AbstractUnit):
         return org
 
     def _create_org_dir(self):
-        "Creates dir for new org and saves its path in the params table."
+        "Creates dir for the new org and saves its name in the params table."
         # 'Natranaerobius thermophilus JW/NM-WN-LF'  =>
         # 'Natranaerobius_thermophilus_JW_NM_WN_LF'
-        folder = re.compile('[^\w\d]+').sub('_', self.name).strip('_')
-        rel_path = os.path.join(self.subdir, folder)
-        os.makedirs(self.gtdb.get_full_path_to(rel_path))
-        self.add_param('dir_path', rel_path)
+        dir_name = re.compile('[^\w\d]+').sub('_', self.name).strip('_')
+        self.add_param('dir_name', dir_name)
 
-    def _create_seq_file(self, record, fmt):
+        dir_path = self.get_full_path_to_subdir()
+        os.makedirs(dir_path)
+
+    def _create_seq_file(self, record, fmt, subdir):
         "Saves sequence in the org dir in the format specificed as 'fmt'."
-        fmt2dir = {'fasta-2line': 'seq_fna', 'genbank': 'seq_gbk'}
-
         # Create dir like 'orgs/Delftia_acidovorans_SPH_1/seq_fna' if needed
-        org_dir = self.gtdb.get_full_path_to(self.prm['dir_path'])
-        full_path = os.path.join(org_dir, fmt2dir[fmt])
+        full_path = self.get_full_path_to_subdir(subdir)
         os.makedirs(full_path, exist_ok=True)
 
         file_path = os.path.join(full_path, record.id)
@@ -188,6 +199,42 @@ class Org(AbstractUnit):
         else:
             logging.warning("Can't generate short name from '%s'" % self.name)
 
+    def _make_param_blastdb(self):
+        "Creates all blastdbs and saves them as org params."
+        # Remove any existing DBs
+        blastdb_dir = self.get_full_path_to_subdir('blastdb')
+        if os.path.exists(blastdb_dir):
+            shutil.rmtree(blastdb_dir)
+        os.makedirs(blastdb_dir)   # Create empty dir
+
+        # Create blastdbs inside it
+        self._make_param_blastdb_nucl_all(blastdb_dir)
+        #self._make_param_blastdb_nt(blastdb_dir)
+
+    def _make_param_blastdb_nucl_all(self, blastdb_dir):
+        """Creates a blastdb from all org seqs without considering their
+        genetic codes. It is equivalent to genome for prokaryotes and to
+        transcriptome for eukaryotes.
+        """
+        db_path = os.path.join(blastdb_dir, 'nucl_all')
+        cmd_str = 'makeblastdb -dbtype nucl -title "%s" -out %s' % (
+            self.name, db_path)
+        p = subprocess.Popen(
+            cmd_str, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, shell=True, universal_newlines=True)
+
+        all_ext_ids = self.get_all_seq_ids()
+        for ext_id in all_ext_ids:
+            record = self.read_seq_file(ext_id)
+            p.stdin.write('>' + record.id + '\n' +
+                          str(record.seq) + '\n')
+        p.stdin.close()
+
+        # Save relative path to db as param
+        rel_path = os.path.relpath(db_path, self.gtdb.root_dir)
+        return self.add_param('blastdb_nucl_all', rel_path,
+                              num=len(all_ext_ids))
+
 
 class OrgParam(AbstractParam):
     parent = models.ForeignKey(Org, on_delete=models.CASCADE,
@@ -202,7 +249,7 @@ def on_org_delete(sender, instance, using, **kwargs):
     """Make sure to remove org dir if the org is deleted. This is done using
     Django signals: https://stackoverflow.com/a/12678428/310453
     """
-    shutil.rmtree(instance.dir_path)
+    shutil.rmtree(instance.get_full_path_to_subdir())
 
 def _get_species_genus_phylum_kingdom(record):
     taxa_l = record.annotations.get('taxonomy')

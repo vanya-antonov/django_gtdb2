@@ -68,7 +68,7 @@ class OrgModelTests(GtdbTestCase):
         self.assertEqual(org.prm['source_fn'], self.fn)
 
         # Make sure org dir was created
-        org_dir = self.gtdb.get_full_path_to(org.prm['dir_path'])
+        org_dir = org.get_full_path_to_subdir()
         self.assertTrue(os.path.isdir(org_dir))
 
         # Make sure the fna and gbk files were created
@@ -77,7 +77,28 @@ class OrgModelTests(GtdbTestCase):
         gbk_fn = os.path.join(org_dir, 'seq_gbk', seq_id)
         self.assertTrue(os.path.exists(fna_fn) and os.path.getsize(fna_fn) > 0)
         self.assertTrue(os.path.exists(gbk_fn) and os.path.getsize(gbk_fn) > 0)
+
+        # Make sure the org dir is removed if the org is deleted from db
+        org.delete()
+        self.assertFalse(os.path.isdir(org_dir))
+
+    def test_org_make_all_params(self):
+        org = Org.create_from_gbk(self.user, self.fn)
+
+        # The majority of params are created by the make_all_params() call
+        self.assertFalse('short_name' in org.prm)
+        self.assertFalse('taxonomy' in org.prm)
+
+        org.make_all_params()
+
+        self.assertTrue('short_name' in org.prm)
+        self.assertTrue('taxonomy' in org.prm)
+
+        # Check the param values
         self.assertEqual(org.prm['num_seqs'], 3)
+        self.assertEqual(org.prm['short_name'], 'N. mexicana')
+        self.assertEqual(org.prm['taxonomy'][0], 'Bacteria')
+        self.assertEqual(org.prm['taxonomy'][-1], org.genus)
 
         # Make sure external IDs were added
         self.assertEqual(org, OrgParam.get_parent_by_xref(
@@ -89,12 +110,9 @@ class OrgModelTests(GtdbTestCase):
         self.assertEqual(org, OrgParam.get_parent_by_xref(
             'taxon', 1210089))
 
-        # Check other generated params
-        self.assertEqual(org.prm['short_name'], 'N. mexicana')
-        self.assertEqual(org.prm['taxonomy'][0], 'Bacteria')
-        self.assertEqual(org.prm['taxonomy'][-1], org.genus)
-
-        # Make sure the org dir is removed if the org is deleted from db
-        org.delete()
-        self.assertFalse(os.path.isdir(org_dir))
+        # Make sure blastdbs were created
+        db_path = self.gtdb.get_full_path_to(org.prm['blastdb_nucl_all'])
+        db_files = [db_path + '.nsq', db_path + '.nhr', db_path + '.nin']
+        for fn in db_files:
+            self.assertTrue(os.path.exists(fn) and os.path.getsize(fn) > 0)
 
