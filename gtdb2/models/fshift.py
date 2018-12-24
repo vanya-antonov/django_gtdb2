@@ -2,6 +2,8 @@
 
 import re
 
+import Bio.Seq
+from Bio.Alphabet import generic_dna, generic_protein
 from django.db import models
 
 from gtdb2.models.abstract import AbstractUnit, AbstractParam
@@ -21,6 +23,21 @@ class Fshift(AbstractUnit):
     class Meta:
         db_table = 'fshifts'
 
+    # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
+    prm_info = dict(list(AbstractUnit.prm_info.items()) + list({
+        'seq_nt': {'value_attr': 'data'},
+        'seq_nt_corr': {'value_attr': 'data'},
+        'seq_nt_n': {'value_attr': 'data'},
+        'seq_nt_c': {'value_attr': 'data'},
+        'seq_prot': {'value_attr': 'data'},
+        'seq_prot_n': {'value_attr': 'data'},
+        'seq_prot_c': {'value_attr': 'data'},
+    }.items()))
+
+    @property
+    def org(self):
+        return self.seq.org
+
     @classmethod
     def create_from_gtdb1_fs(cls, user, seq, gtdb1_fs):
         "Creates Fshift based on the info from GTDB1 fs."
@@ -37,6 +54,73 @@ class Fshift(AbstractUnit):
         fshift.add_xref_param('gtdb1', fs.fs_id)
 
         return fshift
+
+    def make_all_params(self):
+        "Generates/updates the majority of params."
+        self._make_param_seq_nt_and_prot()
+
+    def get_prm_bio_seq(self, name):
+        "Returns Bio.Seq.Seq object for a given seq param."
+        if name.startswith('seq_nt'):
+            alphabet = generic_dna
+        elif name.startswith('seq_prot'):
+            alphabet = generic_protein
+        else:
+            raise ValueError("Can't determine alphabet for prm '%s'" % name)
+        return Bio.Seq.Seq(self.prm[name], alphabet)
+
+    def _make_param_seq_nt_and_prot(self):
+        "Creates seq_nt* and seq_prot* params."
+        start, end, strand = self.start, self.end, self.strand
+        fs_coord, fs_type = self.coord, self.len
+        seq = self.seq.seq
+
+        up_len_nt = fs_coord - start
+        down_len_nt = end - fs_coord
+        if strand == -1:
+            up_len_nt, down_len_nt = down_len_nt, up_len_nt
+
+        # Backward frameshiting increases the C-terminal length of fs-protein
+        down_len_nt -= fs_type
+
+        if up_len_nt % 3 != 0 or down_len_nt % 3 != 0:
+            raise ValueError(
+                "The length of the upstream / downstream fsgene part "
+                "(%d / %d) is not divisible by 3: start=%d, end=%d, "
+                "fs_coord=%d, fs_type=%+d, strand=%d" %
+                (up_len_nt, down_len_nt, start, end, fs_coord, fs_type, strand))
+
+        chunk_nt = seq[start:end]
+        if strand == -1:
+            chunk_nt = chunk_nt.reverse_complement()
+
+        up_chunk_nt = chunk_nt[:up_len_nt]
+        down_chunk_nt = chunk_nt[-down_len_nt:]
+        prot_seq_n = up_chunk_nt.translate(table = self.seq.transl_table)
+        prot_seq_c = down_chunk_nt.translate(table = self.seq.transl_table)
+        prot_seq_c = prot_seq_c.rstrip('*')  # remove possible stop codon at the end
+
+        if '*' in prot_seq_n + prot_seq_c:
+            raise ValueError("FS-prot seq contains in-frame stop codon:\n"
+                             "%s\n\n%s" % (prot_seq_n, prot_seq_c))
+
+        self.set_seq_param('seq_prot_n', prot_seq_n.upper())
+        self.set_seq_param('seq_prot_c', prot_seq_c.upper())
+        self.set_seq_param('seq_nt_n', up_chunk_nt.upper())
+        self.set_seq_param('seq_nt_c', down_chunk_nt.upper())
+
+        seq_prot = prot_seq_n.lower() + prot_seq_c.upper()
+        self.set_seq_param('seq_prot', seq_prot)
+
+        seq_nt = chunk_nt[:up_len_nt].lower() + chunk_nt[up_len_nt:].upper()
+        self.set_seq_param('seq_nt', seq_nt)
+
+        seq_nt_corr = up_chunk_nt.lower() + down_chunk_nt.upper()
+        self.set_seq_param('seq_nt_corr', seq_nt_corr)
+
+    def set_seq_param(self, name, seq):
+        "Saves seq as param-data and len(seq) as param-num."
+        self.set_param(name, data=seq, num=len(seq))
 
 
 class FshiftParam(AbstractParam):

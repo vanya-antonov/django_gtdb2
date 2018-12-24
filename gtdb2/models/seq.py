@@ -52,6 +52,15 @@ class Seq(AbstractUnit):
                 self.id, seq_dir='seq_gbk')
         return self._record
 
+    @property
+    def transl_table(self):
+        "Returns transl_table ID (int)."
+        if 'transl_table' in self.prm:
+            return self.prm['transl_table']
+        else:
+            raise NotImplementedError("org.transl_table is not implemeted!")
+            return self.org.transl_table
+
     @classmethod
     def get_or_create_from_ext_id(cls, user, org, ext_id):
         "Returns existing or a newly created Seq object."
