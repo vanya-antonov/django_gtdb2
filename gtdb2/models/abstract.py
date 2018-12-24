@@ -87,12 +87,21 @@ class AbstractUnit(models.Model):
         >>> param = OrgParam(...)
         >>> param.save()
         """
-        # E.g. param_cls is 'OrgParam' class object:
+        # E.g. self.param_set.model is 'OrgParam' class:
         # https://stackoverflow.com/a/14487781/310453
         param_cls = self.param_set.model
-        param = param_cls(parent=self, name=name, value=value, num=num,
-                          data=data)
+
+        # Do not add extra rows to non-list params
+        info = self.prm_info.get(name, None)
+        if(info is not None and not info.get('is_list', False) and
+          param_cls.objects.filter(parent=self, name=name).count() > 0):
+            raise ValueError("Can't add another row to a non-list param '%s' "
+                             "(parent_id = '%s')" % (name, self.id))
+
+        param = self.param_set.model(
+            parent=self, name=name, value=value, num=num, data=data)
         param.save()
+
         return param
 
     def delete_param(self, name):
