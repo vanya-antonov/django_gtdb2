@@ -74,7 +74,7 @@ class Org(AbstractUnit):
         return SeqIO.read(seq_path, dir2fmt[seq_dir])
 
     def make_all_params(self):
-        "Generates/updates the majority of org params."
+        "Generates/updates the majority of params."
         self._make_param_short_name()
 
         # Get all org gbk files with full paths
@@ -132,7 +132,7 @@ class Org(AbstractUnit):
             if org is None:
                 # This is the first record in the file
                 org = cls._create_from_SeqRecord(user, record)
-                org.add_param('source_fn', fn)
+                org.set_param('source_fn', fn)
             elif record.annotations['organism'] != org.name:
                 # Make sure that all seqs correspond to the same org
                 raise ValueError("Sequence '%s' does NOT belong to org '%s'" %
@@ -160,7 +160,7 @@ class Org(AbstractUnit):
         # 'Natranaerobius thermophilus JW/NM-WN-LF'  =>
         # 'Natranaerobius_thermophilus_JW_NM_WN_LF'
         dir_name = re.compile('[^\w\d]+').sub('_', self.name).strip('_')
-        self.add_param('dir_name', dir_name)
+        self.set_param('dir_name', dir_name)
 
         dir_path = self.get_full_path_to_subdir()
         os.makedirs(dir_path)
@@ -195,7 +195,7 @@ class Org(AbstractUnit):
         short_name_re = re.compile(r'^(\w)\w*\s+(\w+).*$')
         if short_name_re.match(self.name):
             short_name = short_name_re.sub(r'\1. \2', self.name)
-            self.add_param('short_name', short_name)
+            self.set_param('short_name', short_name)
         else:
             logging.warning("Can't generate short name from '%s'" % self.name)
 
@@ -204,7 +204,8 @@ class Org(AbstractUnit):
         # Remove any existing DBs
         blastdb_dir = self.get_full_path_to_subdir('blastdb')
         if os.path.exists(blastdb_dir):
-            shutil.rmtree(blastdb_dir)
+            # About ignore_errors: https://stackoverflow.com/a/303225/310453
+            shutil.rmtree(blastdb_dir, ignore_errors=True)
         os.makedirs(blastdb_dir)   # Create empty dir
 
         # Create blastdbs inside it
@@ -232,7 +233,7 @@ class Org(AbstractUnit):
 
         # Save relative path to db as param
         rel_path = os.path.relpath(db_path, self.gtdb.root_dir)
-        return self.add_param('blastdb_nucl_all', rel_path,
+        return self.set_param('blastdb_nucl_all', rel_path,
                               num=len(all_ext_ids))
 
 

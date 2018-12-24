@@ -97,8 +97,10 @@ class OrgModelTests(GtdbTestCase):
         # Check the param values
         self.assertEqual(org.prm['num_seqs'], 3)
         self.assertEqual(org.prm['short_name'], 'N. mexicana')
-        self.assertEqual(org.prm['taxonomy'][0], 'Bacteria')
-        self.assertEqual(org.prm['taxonomy'][-1], org.genus)
+
+        true_taxonomy = ['Bacteria', 'Actinobacteria', 'Corynebacteriales',
+                         'Nocardiaceae', 'Nocardia']
+        self.assertEqual(org.prm['taxonomy'], true_taxonomy)
 
         # Make sure external IDs were added
         self.assertEqual(org, OrgParam.get_parent_by_xref(
@@ -115,4 +117,9 @@ class OrgModelTests(GtdbTestCase):
         db_files = [db_path + '.nsq', db_path + '.nhr', db_path + '.nin']
         for fn in db_files:
             self.assertTrue(os.path.exists(fn) and os.path.getsize(fn) > 0)
+
+        # Make sure no duplicates are created after another function call
+        org.make_all_params()
+
+        self.assertEqual(org.prm['taxonomy'], true_taxonomy)
 
