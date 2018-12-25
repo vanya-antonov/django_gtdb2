@@ -97,6 +97,8 @@ class OrgModelTests(GtdbTestCase):
         # Check the param values
         self.assertEqual(org.prm['num_seqs'], 3)
         self.assertEqual(org.prm['short_name'], 'N. mexicana')
+        self.assertEqual(org.prm['transl_table'], [11])
+        self.assertEqual(org.transl_table, 11)
 
         true_taxonomy = ['Bacteria', 'Actinobacteria', 'Corynebacteriales',
                          'Nocardiaceae', 'Nocardia']

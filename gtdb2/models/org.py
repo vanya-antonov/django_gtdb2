@@ -35,8 +35,8 @@ class Org(AbstractUnit):
         'num_seqs': {'value_attr': 'num', 'type_fun': int},
         'short_name': {},
         'source_fn': {},
-        'taxonomy': {'value_attr': 'value', 'is_list': True, 'sort_attr': 'num'},
-        'transl_table': {'value_attr': 'value', 'type_fun': int, 'is_list': True,
+        'taxonomy': {'is_list': True, 'sort_attr': 'num'},
+        'transl_table': {'type_fun': int, 'is_list': True,
                          'sort_attr': 'num', 'reverse': True},
     }.items()))
 
@@ -47,60 +47,13 @@ class Org(AbstractUnit):
         'seq_gbk': 'orgs/%s/seq_gbk/',
         'blastdb': 'orgs/%s/blastdb/',}
 
-    def get_full_path_to_subdir(self, name='main'):
-        "Returns a full path to subdir by its name or alias."
-        subdir = self.subdir_info[name] % self.prm['dir_name']
-        return self.gtdb.get_full_path_to(subdir)
-
-    def get_all_seq_ids(self, seq_dir='seq_gbk', fullpath=False):
-        """Returns a list of all seq ids that are the names of the files in
-        the seq_gbk/seq_fna folder.
-
-        Arguments:
-         - seq_dir - name of the folder with sequence files
-         - fullpath - if True appends full paths to the sequence files.
+    @property
+    def transl_table(self):
+        """Returns a translation table most typical to the org. For example,
+        for human it should return the standard genetic code and not the
+        mitochondrial genetic code.
         """
-        seq_dir = self.get_full_path_to_subdir(seq_dir)
-        all_ids = os.listdir(seq_dir)
-        if fullpath:
-            all_ids = [os.path.join(seq_dir, fn) for fn in all_ids]
-        return all_ids
-
-    def read_seq_file(self, ext_id, seq_dir='seq_gbk'):
-        "Returns a SeqRecord object."
-        dir2fmt = {'seq_gbk': 'genbank', 'seq_fna': 'fasta'}
-        dir_path = self.get_full_path_to_subdir(seq_dir)
-        seq_path = os.path.join(dir_path, ext_id)
-        return SeqIO.read(seq_path, dir2fmt[seq_dir])
-
-    def make_all_params(self):
-        "Generates/updates the majority of params."
-        self._make_param_short_name()
-
-        # Get all org gbk files with full paths
-        all_gbk = self.get_all_seq_ids(seq_dir='seq_gbk', fullpath=True)
-        self.set_param('num_seqs', num=len(all_gbk))
-
-        record = SeqIO.read(all_gbk[0], "genbank")
-        self._make_param_taxonomy(record)
-        self._make_param_xref(record)
-
-        self._make_param_blastdb()
-        #org.make_genetack_model()
-
-    def update_seqs_with_gbk(self, gbk_fn):
-        """Compares current list of org seqs with the seqs from the gbk file.
-        Removes seqs that are not present in gbk. Adds seqs that are present
-        in gbk, but not in org_dir and replaces seqs with records from the
-        file if they have newer versions. Returns a tuple with info about
-        the update statistics.
-        """
-        # gbk file may be very large, so get a list of IDs first
-        gbk_seq_ids = [r.id for r in SeqIO.parse(gbk_fn, "genbank")]
-        org_seq_ids = self.get_all_seq_ids()
-        if set(org_seq_ids) == set(gbk_seq_ids):
-            return {"n_new": 0, "n_updated": 0, "n_deleted": 0}
-        raise NotImplementedError("Some org seqs should be updated!")
+        return self.prm['transl_table'][0]
 
     @classmethod
     def get_or_create_from_gbk(cls, user, gbk_fn):
@@ -155,6 +108,63 @@ class Org(AbstractUnit):
 
         return org
 
+    def get_full_path_to_subdir(self, name='main'):
+        "Returns a full path to subdir by its name or alias."
+        subdir = self.subdir_info[name] % self.prm['dir_name']
+        return self.gtdb.get_full_path_to(subdir)
+
+    def get_all_seq_ids(self, seq_dir='seq_gbk', fullpath=False):
+        """Returns a list of all seq ids that are the names of the files in
+        the seq_gbk/seq_fna folder.
+
+        Arguments:
+         - seq_dir - name of the folder with sequence files
+         - fullpath - if True appends full paths to the sequence files.
+        """
+        seq_dir = self.get_full_path_to_subdir(seq_dir)
+        all_ids = os.listdir(seq_dir)
+        if fullpath:
+            all_ids = [os.path.join(seq_dir, fn) for fn in all_ids]
+        return all_ids
+
+    def read_seq_file(self, ext_id, seq_dir='seq_gbk'):
+        "Returns a SeqRecord object."
+        dir2fmt = {'seq_gbk': 'genbank', 'seq_fna': 'fasta'}
+        dir_path = self.get_full_path_to_subdir(seq_dir)
+        seq_path = os.path.join(dir_path, ext_id)
+        return SeqIO.read(seq_path, dir2fmt[seq_dir])
+
+    def make_all_params(self):
+        "Generates/updates the majority of params."
+        self._make_param_short_name()
+
+        # Get all org gbk files with full paths
+        all_gbk = self.get_all_seq_ids(seq_dir='seq_gbk', fullpath=True)
+        self.set_param('num_seqs', num=len(all_gbk))
+
+        record = SeqIO.read(all_gbk[0], "genbank")
+        self._make_param_taxonomy(record)
+        self._make_param_xref(record)
+
+        self._make_param_transl_table()
+
+        self._make_param_blastdb()
+        #org.make_genetack_model()
+
+    def update_seqs_with_gbk(self, gbk_fn):
+        """Compares current list of org seqs with the seqs from the gbk file.
+        Removes seqs that are not present in gbk. Adds seqs that are present
+        in gbk, but not in org_dir and replaces seqs with records from the
+        file if they have newer versions. Returns a tuple with info about
+        the update statistics.
+        """
+        # gbk file may be very large, so get a list of IDs first
+        gbk_seq_ids = [r.id for r in SeqIO.parse(gbk_fn, "genbank")]
+        org_seq_ids = self.get_all_seq_ids()
+        if set(org_seq_ids) == set(gbk_seq_ids):
+            return {"n_new": 0, "n_updated": 0, "n_deleted": 0}
+        raise NotImplementedError("Some org seqs should be updated!")
+
     def _create_org_dir(self):
         "Creates dir for the new org and saves its name in the params table."
         # 'Natranaerobius thermophilus JW/NM-WN-LF'  =>
@@ -198,6 +208,23 @@ class Org(AbstractUnit):
             self.set_param('short_name', short_name)
         else:
             logging.warning("Can't generate short name from '%s'" % self.name)
+
+    def _make_param_transl_table(self):
+        """Analyzes all features from all org seqs and creates transl_table
+        param with statistics about all genetic codes of the org.
+        """
+        all_gcodes = {}
+        for gbk_fn in self.get_all_seq_ids(seq_dir='seq_gbk', fullpath=True):
+            record = SeqIO.read(gbk_fn, "genbank")
+            for f in record.features:
+                gcode = f.qualifiers.get('transl_table', [None])[0]
+                if gcode is not None:
+                    all_gcodes.setdefault(gcode, 0)
+                    all_gcodes[gcode]+= 1
+
+        self.delete_param('transl_table')
+        for gcode, num_f in all_gcodes.items():
+            self.add_param('transl_table', value=gcode, num=num_f)
 
     def _make_param_blastdb(self):
         "Creates all blastdbs and saves them as org params."

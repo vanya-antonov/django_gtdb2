@@ -29,7 +29,7 @@ class Seq(AbstractUnit):
 
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
     prm_info = dict(list(AbstractUnit.prm_info.items()) + list({
-        'transl_table': {'value_attr': 'value', 'type_fun': int},
+        'transl_table': {'type_fun': int},
     }.items()))
 
     @property
@@ -58,7 +58,6 @@ class Seq(AbstractUnit):
         if 'transl_table' in self.prm:
             return self.prm['transl_table']
         else:
-            raise NotImplementedError("org.transl_table is not implemeted!")
             return self.org.transl_table
 
     @classmethod
