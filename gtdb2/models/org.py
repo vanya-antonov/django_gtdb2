@@ -58,15 +58,15 @@ class Org(AbstractUnit):
     @classmethod
     def get_or_create_from_gbk(cls, user, gbk_fn):
         "Returns existing or a newly created Org object."
-        record = next(SeqIO.parse(gbk_fn, "genbank"))
-        org = cls.get_by_SeqRecord(record)
+        org = cls.get_by_gbk(gbk_fn)
         if org is None:
             org = cls.create_from_gbk(user, gbk_fn)
         return org
 
     @classmethod
-    def get_by_SeqRecord(cls, record):
+    def get_by_gbk(cls, gbk_fn):
         "Returns existing Org object or None."
+        record = next(SeqIO.parse(gbk_fn, "genbank"))
         org_name = record.annotations['organism']
         org = cls.objects.filter(name=org_name).first()
 

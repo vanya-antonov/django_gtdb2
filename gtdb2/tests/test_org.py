@@ -42,8 +42,7 @@ class OrgModelTests(GtdbTestCase):
 
     def test_org_get_or_create_from_gbk(self):
         # Org does not exist yet
-        record = next(SeqIO.parse(self.fn, "genbank"))
-        self.assertIsNone(Org.get_by_SeqRecord(record))
+        self.assertIsNone(Org.get_by_gbk(self.fn))
 
         org = Org.get_or_create_from_gbk(self.user, self.fn)
         self.assertIsNotNone(org)
