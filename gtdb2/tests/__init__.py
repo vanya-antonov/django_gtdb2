@@ -1,6 +1,7 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 import logging
+#logging.basicConfig(level=logging.DEBUG)
 import os
 import shutil
 import tempfile

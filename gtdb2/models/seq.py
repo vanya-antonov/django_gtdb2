@@ -76,6 +76,9 @@ class Seq(AbstractUnit):
                   id=record.id, name=record.name, descr=record.description,
                   type=record.annotations['molecule_type'], len=len(record.seq))
         seq.save()
+
+        seq.make_all_params()
+
         return seq
 
     def make_all_params(self):

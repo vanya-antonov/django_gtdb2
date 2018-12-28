@@ -85,13 +85,17 @@ class Org(AbstractUnit):
             if org is None:
                 # This is the first record in the file
                 org = cls._create_from_SeqRecord(user, record)
-                org.set_param('source_fn', fn)
             elif record.annotations['organism'] != org.name:
                 # Make sure that all seqs correspond to the same org
                 raise ValueError("Sequence '%s' does NOT belong to org '%s'" %
                                  (record.id, org.name))
             org._create_seq_file(record, 'fasta-2line', 'seq_fna')
             org._create_seq_file(record, 'genbank', 'seq_gbk')
+
+        org.set_param('source_fn', fn)
+
+        org.make_all_params()
+
         return org
 
     @classmethod
@@ -189,7 +193,11 @@ class Org(AbstractUnit):
         all_xrefs = record.dbxrefs
         all_xrefs += _get_source_feature_xrefs(record)
         for xref in all_xrefs:
-            self.add_xref_gbk_str(xref)
+            # xref is a string like 'Assembly:GCF_001613165.1'
+            parts = xref.split(':')
+            if len(parts) != 2:
+                raise ValueError("Wrong gbk_xref='%s'" % xref)
+            self.set_param_xref(parts[0], parts[1])
 
     def _make_param_taxonomy(self, record):
         "Creates the 'taxonomy' params from the given SeqRecord."

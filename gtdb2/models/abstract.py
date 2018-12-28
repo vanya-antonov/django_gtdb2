@@ -30,20 +30,21 @@ class AbstractUnit(models.Model):
     def __str__(self):
         return str(self.name)
 
-    def _get_param_dict(self):
+    @property
+    def param_dict(self):
+        """A convenience property:
+        >>> list_A = list(org.orgparam_set.filter(name='source_fn').all())
+        >>> list_B = org.param_dict['source_fn']
+        >>> list_A == list_B
+        """
         param_dict = {}
         for p in self.param_set.all():
             param_dict.setdefault(p.name, []).append(p)
         return param_dict
-    param_dict = property(
-        fget=_get_param_dict,
-        doc="""Convenience property:
-        >>> list_A = list(org.orgparam_set.filter(name='source_fn').all())
-        >>> list_B = org.param_dict['source_fn']
-        >>> list_A == list_B
-        """)
 
-    def _get_prm(self):
+    @property
+    def prm(self):
+        "A computed dictionary with parameters represented by simple types."
         prm = {}
         for key, param_list in self.param_dict.items():
             info = self.prm_info.get(key, None)
@@ -73,9 +74,10 @@ class AbstractUnit(models.Model):
                                   "non-list prm '%s'" % (len(value_list)), key)
                 prm[key] = value_list[0]
         return prm
-    prm = property(
-        fget=_get_prm,
-        doc="A computed dictionary with parameters represented by simple types.")
+
+    def get_full_path_to_prm(self, name):
+        "Returns a full path for a relative param path."
+        return self.gtdb.get_full_path_to(self.prm[name])
 
     def set_param(self, name, value=None, num=None, data=None):
         "Deletes and adds param."
@@ -108,22 +110,22 @@ class AbstractUnit(models.Model):
         "Deletes all unit params with the given name."
         self.param_set.filter(name=name).delete()
 
-    def add_xref_param(self, db_name, ext_id):
+    def set_param_xref(self, db_name, ext_id):
+        "Deletes xref(s) for the given db_name and adds the new ext_id."
+        self.param_set.filter(
+            name='xref', value__startswith=db_name + ':'
+        ).delete()
+        self.add_param_xref(db_name, ext_id)
+
+    def add_param_xref(self, db_name, ext_id):
         "Creates a new param with name='xref' and value='db_name:ext_id'."
         data_dict = {'db_name': db_name, 'ext_id': ext_id}
         json_str = json.dumps(data_dict)
         value = db_name + ':' + str(ext_id)
         return self.add_param('xref', value, data=json_str)
 
-    def add_xref_gbk_str(self, gbk_str):
-        "gbk_xref is a string like 'Assembly:GCF_001613165.1'."
-        parts = gbk_str.split(':')
-        if len(parts) != 2:
-            raise ValueError("Wrong gbk_xref='%s'" % gbk_str)
-        return self.add_xref_param(parts[0], parts[1])
-
     # TODO
-    # def add_xref_data_dict(self, data_dict):
+    # def add_param_xref_data_dict(self, data_dict):
 
 
 class AbstractParam(models.Model):

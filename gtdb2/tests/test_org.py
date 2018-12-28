@@ -61,11 +61,6 @@ class OrgModelTests(GtdbTestCase):
         self.assertEqual(org.name, 'Nocardia mexicana NBRC 108244')
         self.assertIn(org.genus, org.name)
 
-        # Test the computed attributes & Make sure the fn was saved
-        self.assertEqual(org.param_set.get(name='source_fn').value, self.fn)
-        self.assertEqual(org.param_dict['source_fn'][0].value, self.fn)
-        self.assertEqual(org.prm['source_fn'], self.fn)
-
         # Make sure org dir was created
         org_dir = org.get_full_path_to_subdir()
         self.assertTrue(os.path.isdir(org_dir))
@@ -77,21 +72,31 @@ class OrgModelTests(GtdbTestCase):
         self.assertTrue(os.path.exists(fna_fn) and os.path.getsize(fna_fn) > 0)
         self.assertTrue(os.path.exists(gbk_fn) and os.path.getsize(gbk_fn) > 0)
 
+        self._validate_params_Nocardia_mexicana(org)
+
         # Make sure the org dir is removed if the org is deleted from db
         org.delete()
         self.assertFalse(os.path.isdir(org_dir))
 
-    def test_org_make_all_params(self):
+    def test_org_make_all_params_2(self):
+        """Make sure all params are preserved and no duplicates are created
+        after another function call.
+        """
         org = Org.create_from_gbk(self.user, self.fn)
 
-        # The majority of params are created by the make_all_params() call
-        self.assertFalse('short_name' in org.prm)
-        self.assertFalse('taxonomy' in org.prm)
-
+        num_params_1 = OrgParam.objects.count()
         org.make_all_params()
+        num_params_2 = OrgParam.objects.count()
 
-        self.assertTrue('short_name' in org.prm)
-        self.assertTrue('taxonomy' in org.prm)
+        self.assertEqual(num_params_1, num_params_2)
+
+        self._validate_params_Nocardia_mexicana(org)
+
+    def _validate_params_Nocardia_mexicana(self, org):
+        # Test the computed attributes & Make sure the fn was saved
+        self.assertEqual(org.param_set.get(name='source_fn').value, self.fn)
+        self.assertEqual(org.param_dict['source_fn'][0].value, self.fn)
+        self.assertEqual(org.prm['source_fn'], self.fn)
 
         # Check the param values
         self.assertEqual(org.prm['num_seqs'], 3)
@@ -118,9 +123,3 @@ class OrgModelTests(GtdbTestCase):
         db_files = [db_path + '.nsq', db_path + '.nhr', db_path + '.nin']
         for fn in db_files:
             self.assertTrue(os.path.exists(fn) and os.path.getsize(fn) > 0)
-
-        # Make sure no duplicates are created after another function call
-        org.make_all_params()
-
-        self.assertEqual(org.prm['taxonomy'], true_taxonomy)
-

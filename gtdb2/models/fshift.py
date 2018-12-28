@@ -1,5 +1,6 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+from pprint import pprint
 import re
 
 import Bio.Seq
@@ -43,21 +44,18 @@ class Fshift(AbstractUnit):
         "Creates Fshift based on the info from GTDB1 fs."
         fs = _validate_gtdb1_fs(gtdb1_fs, seq)
 
-        fshift = Fshift(
+        self = cls(
             user=user, seq=seq, c_date=fs.job.c_date, type='genetack',
-            name=_get_fshift_name(seq, fs.fs_coord, int(fs.type)),
             descr=fs.descr, coord=fs.fs_coord, len=int(fs.type),
             start=fs.start, end=fs.end, strand=fs.strand)
-        fshift.save()
+        self.save()
 
         # add gtdb1 ID to xrefs
-        fshift.add_xref_param('gtdb1', fs.fs_id)
+        self.set_param_xref('gtdb1', fs.fs_id)
 
-        return fshift
+        self.make_all_params()
 
-    def make_all_params(self):
-        "Generates/updates the majority of params."
-        self._make_param_seq_nt_and_prot()
+        return self
 
     def get_prm_bio_seq(self, name):
         "Returns Bio.Seq.Seq object for a given seq param."
@@ -68,6 +66,20 @@ class Fshift(AbstractUnit):
         else:
             raise ValueError("Can't determine alphabet for prm '%s'" % name)
         return Bio.Seq.Seq(self.prm[name], alphabet)
+
+    def set_seq_param(self, name, seq):
+        "Saves seq as param-data and len(seq) as param-num."
+        self.set_param(name, data=seq, num=len(seq))
+
+    def make_all_params(self):
+        "Generates/updates name attribute and the majority of params."
+        self._make_fshift_name()
+        self._make_param_seq_nt_and_prot()
+
+    def _make_fshift_name(self):
+        "Generates name like: 'NC_010002.1:1922457:-1'."
+        self.name = '%s:%d:%+d' % (self.seq.id, self.coord, self.len)
+        self.save()
 
     def _make_param_seq_nt_and_prot(self):
         "Creates seq_nt* and seq_prot* params."
@@ -118,10 +130,6 @@ class Fshift(AbstractUnit):
         seq_nt_corr = up_chunk_nt.lower() + down_chunk_nt.upper()
         self.set_seq_param('seq_nt_corr', seq_nt_corr)
 
-    def set_seq_param(self, name, seq):
-        "Saves seq as param-data and len(seq) as param-num."
-        self.set_param(name, data=seq, num=len(seq))
-
 
 class FshiftParam(AbstractParam):
     parent = models.ForeignKey(Fshift, on_delete=models.CASCADE,
@@ -130,14 +138,6 @@ class FshiftParam(AbstractParam):
     class Meta:
         db_table = 'fshift_params'
 
-
-def _get_fshift_name(seq, fs_coord, fs_len):
-    "Generates name like: 'NC_010002.1:1922457:-1'."
-    if fs_len == 0:
-        # to avoid 'NC_005085.1:1684916:+0'
-        return '%s:%d:%d' % (seq.id, fs_coord, fs_len)
-    else:
-        return '%s:%d:%+d' % (seq.id, fs_coord, fs_len)
 
 def _validate_gtdb1_fs(fs, seq):
     """Makes sure that GTDB1 fs matches GTDB2 seq and modifies/adds some
