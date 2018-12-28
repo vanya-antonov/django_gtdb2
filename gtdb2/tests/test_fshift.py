@@ -103,6 +103,13 @@ class FshiftModelTests(GtdbTestCase):
 
         self._validate_params_1122957(fshift)
 
+        # Make sure that after another make_all_params() call the gtdb1
+        # xref that is not present in gbk file was preserved
+        fshift.make_all_params()
+        self.assertEqual(
+            fshift, FshiftParam.get_parent_by_xref('gtdb1', 33540948))
+
+
     def _validate_params_1122957(self, fshift):
         "Validates params of fshift with coord 1122957."
 
@@ -126,6 +133,10 @@ class FshiftModelTests(GtdbTestCase):
 
         # Translation of the original (frameshifted) seq produces stop codons
         nt_intact = fshift.get_prm_bio_seq('seq_nt')
+
+        # Make seq length divisible by 3 to avoid biopython warning
+        whole_codons = int(len(nt_intact)/3)
+        nt_intact = nt_intact[:(3*whole_codons)]
         prot_intact = nt_intact.translate(table=fshift.seq.transl_table)
         prot_intact = prot_intact.rstrip('*')
         self.assertTrue('*' in prot_intact)
