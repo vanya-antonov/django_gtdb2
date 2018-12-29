@@ -6,15 +6,22 @@ from django.db.models import signals
 from django.dispatch import receiver
 
 from gtdb2.models.abstract import AbstractUnit, AbstractParam
+from gtdb2.models.feat import Feat
 from gtdb2.models.fshift import Fshift
 
 
 class Cof(AbstractUnit):
     type = models.CharField(max_length=255)
+    feat_set = models.ManyToManyField(Feat, db_table='cof_feats')
     fshift_set = models.ManyToManyField(Fshift, db_table='cof_fshifts')
 
     class Meta:
         db_table = 'cofs'
+
+    @property
+    def seed_fshifts(self):
+        "Returns a list of seed fshfits."
+        return list(self.fshift_set.filter(seed=True).all())
 
     @classmethod
     def create_from_seed_fshifts(cls, user, seed_fshifts, name=None,
@@ -31,16 +38,16 @@ class Cof(AbstractUnit):
                 raise ValueError("Fshift '%s' already belongs to a COF" %
                                  fshift.name)
 
-        cof = cls(user=user, name=name, descr=descr, type=type)
-        cof.save()
-        cof.fshift_set.set(seed_fshifts)
+        self = cls(user=user, name=name, descr=descr, type=type)
+        self.save()
+        self.fshift_set.set(seed_fshifts)
 
         # Add the seed flag to each fshift
         for fshift in seed_fshifts:
             fshift.seed = True
             fshift.save()
 
-        return cof
+        return self
 
 
 class CofParam(AbstractParam):

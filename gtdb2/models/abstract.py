@@ -75,10 +75,6 @@ class AbstractUnit(models.Model):
                 prm[key] = value_list[0]
         return prm
 
-    def get_full_path_to_prm(self, name):
-        "Returns a full path for a relative param path."
-        return self.gtdb.get_full_path_to(self.prm[name])
-
     def set_param(self, name, value=None, num=None, data=None):
         "Deletes and adds param."
         self.delete_param(name)

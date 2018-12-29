@@ -37,6 +37,9 @@ class CofModelTests(GtdbTestCase):
         for fshift in seed_fshifts:
             self.assertTrue(fshift.seed)
 
+        # Check the seed_fshifts property
+        self.assertEqual(set(cof.seed_fshifts), set(seed_fshifts))
+
         self.assertEqual(cof.name, cof_name)
         self.assertEqual(cof.fshift_set.count(), 1)
         self.assertEqual(fshift.cof_set.first(), cof)

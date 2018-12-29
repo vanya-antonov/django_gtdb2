@@ -40,6 +40,27 @@ class Fshift(AbstractUnit):
         return self.seq.org
 
     @classmethod
+    def get_or_create(cls, *args, **kwargs):
+        """Tries to find similar fshift in the DB and, if fails, creates a
+        new one.
+        """
+        all_fshifts = cls.objects.filter(
+            seq=kwargs['seq'], strand=kwargs['strand'], len=kwargs['len'],
+            coord__gt=kwargs['start'], coord__lt=kwargs['end'],
+        ).all()
+        if len(all_fshifts) == 0:
+            # Create a new fshift
+            self = cls(*args, **kwargs)
+            self.make_all_params()
+            return self
+        elif len(all_fshifts) == 1:
+            # Return existing fshift
+            return all_fshifts[0]
+        else:
+            raise NotImplemented("Fshift with the closest coord should "
+                                 "be returned!")
+
+    @classmethod
     def create_from_gtdb1_fs(cls, user, seq, gtdb1_fs):
         "Creates Fshift based on the info from GTDB1 fs."
         fs = _validate_gtdb1_fs(gtdb1_fs, seq)
