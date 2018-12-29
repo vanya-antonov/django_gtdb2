@@ -6,6 +6,7 @@ from Bio import SeqIO
 
 from django.core.management.base import BaseCommand, CommandError
 
+#from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.org import ChelataseOrg
 from gtdb2.lib.db import GeneTackDB
 
@@ -25,23 +26,20 @@ class Command(BaseCommand):
         gtdb = GeneTackDB()
         user = gtdb.get_or_create_default_user()
 
-        org = ChelataseOrg.get_or_create_from_gbk(user, gbk_fn)
-        upd_info = org.update_seqs_with_gbk(gbk_fn)
-        if(upd_info['n_new'] == 0 and upd_info['n_updated'] == 0 and
-           'num_chld_feats' in org.prm):
+        org = ChelataseOrg.get_by_gbk(gbk_fn)
+        if org is None:
+            org = ChelataseOrg.create_from_gbk(user, gbk_fn)
             self.stdout.write(self.style.SUCCESS(
-                "The '%s' genome is up-to-date (it has '%s' chlD genes)" %
+                "The new org '%s' has been created with '%s' chlD genes" %
                 (org.name, org.prm['num_chld_feats'])))
-            return
-
-        org.create_chld_fshifts_and_feats(user)
-
-        pprint(vars(org))
-        exit()
-        if org.prm['num_chld_feats'] == 0:
-            self.stdout.write(
-                "The '%s' genome does not have chlD genes!" % org.name)
-            return
-        org.create_chelatase_feats(user)
-        org.make_all_params()
+        else:
+            new_seqs = org.update_seqs_with_gbk(gbk_fn)
+            if len(new_seqs) > 0:
+                org.make_all_params(user)
+                self.stdout.write(self.style.SUCCESS(
+                    "'%s' seqs have been created/updated in org '%s'" %
+                    (len(new_seqs), org.name)
+            else:
+                self.stdout.write(self.style.SUCCESS(
+                    "All '%s' sequences are up-to-date" % org.name))
 

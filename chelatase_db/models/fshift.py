@@ -11,3 +11,15 @@ class ChelataseFshift(Fshift):
     # prm_info = dict(list(Fshift.prm_info.items()) + list({
     # }.items()))
 
+    @property
+    def feat(self):
+        "Simulate one-to-one relationship between chelatase objects."
+        num = self.feat_set.count()
+        if num == 0:
+            return None
+        elif num == 1:
+            return self.feat_set.first()
+        else:
+            raise ValueError("ChelataseFshift '%s' has '%s' feats" %
+                             (self, num))
+
