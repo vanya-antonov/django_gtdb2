@@ -20,7 +20,7 @@ class GeneTackDB:
         self.all_tmp_dirs = []
 
     def __del__(self):
-        "Make sure the delete all created tmp dirs and files."
+        "Make sure to delete all created tmp dirs and files."
         for path in self.all_tmp_dirs:
             shutil.rmtree(path)
             logging.debug("Tmp folder '%s' has been removed." % path)
@@ -52,12 +52,14 @@ class GeneTackDB:
         else:
             logging.warning("Folder '%s' doesn't exist!" % path)
 
-    def make_tmp_dir(self, keep=False):
-        "Creates a new tmp folder in GTDB dir and returns its relative path."
-        subdir = os.path.join(self.root_dir, 'tmp')
-        os.makedirs(subdir, exist_ok=True)
-        tmp_path = tempfile.mkdtemp(prefix='__gtdb.', dir=subdir)
-        if not keep:
+    def get_or_create_tmp_dir(self):
+        """Returns a full path to the tmp folder inside GTDB dir (and creates
+        it, if needed).
+        """
+        if len(self.all_tmp_dirs) == 0:
+            subdir = os.path.join(self.root_dir, 'tmp')
+            os.makedirs(subdir, exist_ok=True)
+            tmp_path = tempfile.mkdtemp(prefix='__gtdb.', dir=subdir)
             self.all_tmp_dirs.append(tmp_path)
-        return os.path.relpath(tmp_path, self.root_dir)
+        return self.all_tmp_dirs[0]
 
