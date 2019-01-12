@@ -3,7 +3,6 @@
 from datetime import datetime
 import os
 
-from gtdb2.lib.db import GeneTackDB
 from gtdb2.models.org import Org
 from gtdb2.models.seq import Seq
 from gtdb2.tests import GtdbTestCase
