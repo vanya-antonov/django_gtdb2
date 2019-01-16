@@ -1,12 +1,12 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
 from django.db import models
 
+from gtdb2.lib.bio import is_stop
 from gtdb2.models.abstract import AbstractUnit, AbstractParam
 from gtdb2.models.seq import Seq
 from gtdb2.models.fshift import Fshift
-
-from Bio.SeqFeature import FeatureLocation, CompoundLocation
 
 
 class Feat(AbstractUnit):
@@ -17,6 +17,8 @@ class Feat(AbstractUnit):
     strand = models.IntegerField()
     origin = models.CharField(max_length=255)
     fshift_set = models.ManyToManyField(Fshift, db_table='feat_fshifts')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE,
+                               default=None, blank=True, null=True)
 
     class Meta:
         db_table = 'feats'
@@ -52,10 +54,11 @@ class Feat(AbstractUnit):
         if feat is not None:
             return feat
 
-        return cls.create_from_SeqFeature(user, seq, f)
+        return cls.create_from_SeqFeature(user, seq, f,
+                                          origin='gbk_annotation')
 
     @classmethod
-    def create_from_SeqFeature(cls, user, seq, f, origin='annotation'):
+    def create_from_SeqFeature(cls, user, seq, f, origin):
         """The argument f is a Bio.SeqFeature.SeqFeature object.
         """
         self = cls(user=user, seq=seq, type=f.type,
@@ -67,14 +70,110 @@ class Feat(AbstractUnit):
                    origin=origin)
         self.save()
 
-        self.make_all_params(f)
+        self.make_all_params(f=f)
 
         return self
 
-    def make_all_params(self, f=None):
-        if self.origin != 'annotation':
-            raise NotImplementedError("Feat make_all_params!")
+    @classmethod
+    def get_or_create_fscds_from_parent(cls, user, parent_cds, all_fshifts):
+        """Arguments:
+         - parent_cds - Feat object corresponding to the CDS where
+           translation initiates
+         - all_fshifts - a list of all unique frameshifts that are required
+           for the translation of fsCDS to be created.
+        """
+        # Check if this fsCDS already exists in DB using the
+        # annotation approach: https://stackoverflow.com/a/8637972/310453
+        fscds = (cls.objects
+                    .filter(type='fsCDS', seq=parent_cds.seq)
+                    .filter(parent=parent_cds)
+                    .filter(fshift_set__in=all_fshifts)
+                    .annotate(num_fshifts=models.Count('fshift_set'))
+                    .filter(num_fshifts=len(all_fshifts))
+                    .first())
+        if fscds is not None:
+            return fscds
 
+        return cls.create_fscds_from_parent(user, parent_cds, all_fshifts)
+
+    @classmethod
+    def create_fscds_from_parent(cls, user, parent_cds, all_fshifts):
+        "See get_or_create_fscds_from_parent() for more info."
+        if len(all_fshifts) == 0:
+            raise ValueError("fsCDS must have at least one fshift!")
+
+        strand = parent_cds.strand
+        start_codon = parent_cds.start if strand == 1 else parent_cds.end
+        for fshift in all_fshifts:
+            if fshift.seq != parent_cds.seq:
+                raise ValueError("All fshifts must be on the same seq as "
+                                "the parent CDS!")
+            if fshift.strand != parent_cds.strand:
+                raise ValueError("All fshifts must be on the same strand as "
+                                "the parent CDS!")
+            # TODO: implement is_downstream()
+            #if not is_downstream(start_codon, fshift.coord, strand)
+            #    raise ValueError("All fshifts must be located downstream "
+            #                     "of the parent start codon!")
+
+        c_loc = _make_compound_location(parent_cds, all_fshifts)
+
+        # Make sure the fsCDS does not have internal stop codons
+        fscds_f = SeqFeature(c_loc, type="CDS")
+        fscds_nt = fscds_f.extract(parent_cds.seq.seq)
+        fscds_aa = fscds_nt.translate(table=parent_cds.seq.transl_table)
+        if '*' in fscds_aa.rstrip('*'):
+            raise ValueError("fsCDS translation contains internal stop "
+                             "codon(s):\n%s" % fscds_aa)
+
+        fscds = Feat(
+            user=user, parent=parent_cds, origin='GeneTackDB', 
+            type='fsCDS', seq=parent_cds.seq,
+            start=c_loc.start, end=c_loc.end, strand=c_loc.strand)
+        fscds.save()
+
+        fscds.fshift_set.set(all_fshifts)
+
+        fscds.make_all_params()
+
+        return fscds
+
+    @property
+    def feature(self):
+        "Retruns a Bio.SeqFeature.SeqFeature object."
+        if self.type == 'fsCDS':
+            all_fshifts = list(self.fshift_set.all())
+            stop_coord = self.end if self.strand == 1 else self.start
+            loc = _make_compound_location(self.parent, all_fshifts, stop_coord)
+        else:
+            loc = FeatureLocation(self.start, self.end, self.strand)
+        return SeqFeature(loc, type=self.type)
+
+    def make_all_params(self, **kwargs):
+        if self.type == 'fsCDS':
+            self._make_fscds_name()
+
+        if self.origin == 'gbk_annotation':
+            self._make_all_params_gbk(**kwargs)
+
+    def _make_fscds_name(self):
+        "Creates fsCDS name like 'MEFER_RS06095_fs1122957'."
+        if self.parent.name is None:
+            all_parts = ['fsCDS']
+        else:
+            all_parts = [self.parent.name]
+
+        # Sort frameshifts in the order of their appearance during translation
+        all_fshifts = sorted(self.fshift_set.all(), key=lambda fs: fs.coord,
+                             reverse=(self.strand == -1))
+        for fs in all_fshifts:
+            all_parts.append('fs' + str(fs.coord))
+
+        self.name = '_'.join(all_parts)
+        self.save()
+
+    def _make_all_params_gbk(self, f=None):
+        "The argument f is a Bio.SeqFeature.SeqFeature object."
         if f is None:
             f = get_overlapping_feats_from_record(
                 self.seq.record, self.start, self.end, self.strand,
@@ -84,27 +183,94 @@ class Feat(AbstractUnit):
         self._make_param_from_q(f, 'gene_synonym')
 
         if self.type == 'CDS':
-            self._make_param_cds(f)
+            self._make_param_from_q(f, 'protein_id')
+            self._make_param_from_q(f, 'ribosomal_slippage')
+
+            for prot_seq in f.qualifiers.get('translation', []):
+                self.add_param('translation', data=prot_seq, num=len(prot_seq))
         elif self.type == 'rRNA':
-            self._make_param_rrna(f)
+            # see add_16S_rRNA() from
+            # ~/_my/Programming/python/scripts/frameshift/gtdb2_manager.py
+            raise NotImplementedError("rRNA feat!!")
 
     def _make_param_from_q(self, f, name):
         "Create param based on gbk qualifier."
         for v in f.qualifiers.get(name, []):
             self.add_param(name, v)
 
-    def _make_param_cds(self, f):
-        self._make_param_from_q(f, 'protein_id')
-        self._make_param_from_q(f, 'ribosomal_slippage')
 
-        for prot_seq in f.qualifiers.get('translation', []):
-            self.add_param('translation', data=prot_seq, num=len(prot_seq))
+class FeatParam(AbstractParam):
+    parent = models.ForeignKey(Feat, on_delete=models.CASCADE,
+                               related_name='param_set')
 
-    def _make_param_rrna(self, f):
-        # see add_16S_rRNA() from
-        # ~/_my/Programming/python/scripts/frameshift/gtdb2_manager.py
-        raise NotImplementedError("rRNA feat!!")
+    class Meta:
+        db_table = 'feat_params'
 
+
+def _make_compound_location(parent_cds, all_fshifts, stop_coord=None):
+    """The parent_cds and all_fshifts are assumed to be on the same seq
+    and strand.
+    Arguments:
+     - stop_coord - the coordinate of the location end (for plus strand) or
+       location start (for minus strand)
+    """
+    strand = parent_cds.strand
+
+    # Sort frameshifts in the order of their appearance during translation
+    all_fshifts = sorted(all_fshifts, key=lambda fs: fs.coord,
+                         reverse=(strand == -1))
+
+    # Get the translation initiation (start codon) coordinate
+    current_coord = parent_cds.start if strand == 1 else parent_cds.end
+    all_locs = []
+    for fshift in all_fshifts:
+        # Make the FeatureLocation for this region, shift the frame and
+        # continue to the next fshift (if any)
+        if strand == 1:
+            # Moving from left to right
+            loc = FeatureLocation(current_coord, fshift.coord, strand)
+            current_coord = fshift.coord + fshift.len
+        else:
+            # Moving from right to left
+            loc = FeatureLocation(fshift.coord, current_coord, strand)
+            current_coord = fshift.coord - fshift.len
+        all_locs.append(loc)
+
+    # After all shifts of the reading frame, find the stop codon
+    if stop_coord is None:
+        stop_coord = _find_downstream_stop(
+            parent_cds.seq.seq, current_coord, strand,
+            parent_cds.seq.transl_table)
+
+    if strand == 1:
+        # Moving from left to right
+        stop_loc = FeatureLocation(current_coord, stop_coord, strand)
+    else:
+        # Moving from right to left
+        stop_loc = FeatureLocation(stop_coord, current_coord, strand)
+    all_locs.append(stop_loc)
+
+    return CompoundLocation(all_locs)
+
+def _find_downstream_stop(seq, start_coord, strand, gcode):
+    """Retruns coord AFTER the stop codon or start/end of sequence."""
+    coord = start_coord
+    if strand == 1:
+        # Move to the right
+        while coord <= len(seq)-3:
+            codon = seq[coord:(coord+3)]
+            coord += 3  # move to the next codon
+            if is_stop(codon, strand, gcode):
+                break
+    else:
+        # Move to the left
+        while coord >= 3:
+            codon = seq[(coord-3):coord]
+            coord -= 3  # move to the next codon
+            if is_stop(codon, strand, gcode):
+                break
+
+    return coord
 
 def get_overlapping_feats_from_record(
     record, start, end, strand, all_types=['CDS'], min_overlap=1, max_feats=None):
@@ -141,11 +307,4 @@ def get_FeatureLocation_overlap_len(f1, f2):
         return 0
 
     return len(set(f1).intersection(set(f2)))
-
-class FeatParam(AbstractParam):
-    parent = models.ForeignKey(Feat, on_delete=models.CASCADE,
-                               related_name='param_set')
-
-    class Meta:
-        db_table = 'feat_params'
 
