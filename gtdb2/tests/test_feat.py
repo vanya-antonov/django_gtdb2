@@ -46,7 +46,7 @@ class SeqModelTests(GtdbTestCase):
 
         # fsCDS needs a frameshift for full length translation
         fshift = Fshift.get_or_create(
-            user=self.user, seq=self.seq, type='tblastn',
+            user=self.user, seq=self.seq, origin='tblastn',
             start=1121859, end=1123904, strand=1,
             coord=1122957, len=-1)
 
@@ -55,7 +55,7 @@ class SeqModelTests(GtdbTestCase):
             self.user, parent_feat, [fshift])
 
         self.assertEqual(fscds.type, 'fsCDS')
-        self.assertEqual(fscds.origin, 'GeneTackDB')
+        self.assertEqual(fscds.origin, 'genetack')
         self.assertEqual(fscds.name, 'MEFER_RS06095_fs1122957')
         self.assertEqual(list(fscds.fshift_set.all()), [fshift])
 

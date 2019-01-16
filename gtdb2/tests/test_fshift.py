@@ -21,7 +21,7 @@ class FshiftModelTests(GtdbTestCase):
         self.seq = Seq.create_from_ext_id(self.user, org, 'NC_013156.1')
 
     def test_fshift_simple_create(self):
-        fshift = Fshift(user=self.user, seq=self.seq, type='genetack',
+        fshift = Fshift(user=self.user, seq=self.seq, origin='genetack',
                         start=1121859, coord=1122957, end=1123904,
                         len=-1, strand=1)
         fshift.save()
@@ -31,7 +31,7 @@ class FshiftModelTests(GtdbTestCase):
         self.assertEqual(Fshift.objects.first(), fshift)
 
     def test_fshift_make_all_params(self):
-        fshift = Fshift(user=self.user, seq=self.seq, type='genetack',
+        fshift = Fshift(user=self.user, seq=self.seq, origin='genetack',
                         start=1121859, coord=1122957, end=1123904,
                         len=-1, strand=1)
         fshift.save()
@@ -49,7 +49,7 @@ class FshiftModelTests(GtdbTestCase):
         """Make sure all params are preserved and no duplicates are created
         after another function call.
         """
-        fshift = Fshift(user=self.user, seq=self.seq, type='genetack',
+        fshift = Fshift(user=self.user, seq=self.seq, origin='genetack',
                         start=1121859, coord=1122957, end=1123904,
                         len=-1, strand=1)
         fshift.save()
@@ -91,7 +91,7 @@ class FshiftModelTests(GtdbTestCase):
 
         # Validate fs attributes
         self.assertEqual(fshift.name, 'NC_013156.1:1122957:-1')
-        self.assertEqual(fshift.type, 'genetack')
+        self.assertEqual(fshift.origin, 'genetack')
         self.assertEqual(fshift.coord, 1122957)
         self.assertEqual(fshift.len, -1)
         self.assertEqual(fshift.strand, 1)

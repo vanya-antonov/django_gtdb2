@@ -12,8 +12,12 @@ from gtdb2.models.seq import Seq
 
 
 class Fshift(AbstractUnit):
+    ORIGIN_CHOICES = (
+        ('gbk_annotation', 'GenBank annotation'),
+        ('genetack', 'GeneTack prediction'),
+        ('tblastn', 'tBLASTn prediction'),)
     seq = models.ForeignKey(Seq, on_delete=models.CASCADE)
-    type = models.CharField(max_length=255)
+    origin = models.CharField(max_length=255, choices=ORIGIN_CHOICES)
     coord = models.IntegerField()
     len = models.IntegerField()
     start = models.IntegerField()
@@ -66,7 +70,7 @@ class Fshift(AbstractUnit):
         fs = _validate_gtdb1_fs(gtdb1_fs, seq)
 
         self = cls(
-            user=user, seq=seq, c_date=fs.job.c_date, type='genetack',
+            user=user, seq=seq, c_date=fs.job.c_date, origin='genetack',
             descr=fs.descr, coord=fs.fs_coord, len=int(fs.type),
             start=fs.start, end=fs.end, strand=fs.strand)
         self.save()

@@ -15,7 +15,7 @@ class Feat(AbstractUnit):
     start = models.IntegerField()
     end = models.IntegerField()
     strand = models.IntegerField()
-    origin = models.CharField(max_length=255)
+    origin = models.CharField(max_length=255, choices=Fshift.ORIGIN_CHOICES)
     fshift_set = models.ManyToManyField(Fshift, db_table='feat_fshifts')
     parent = models.ForeignKey('self', on_delete=models.CASCADE,
                                default=None, blank=True, null=True)
@@ -127,7 +127,7 @@ class Feat(AbstractUnit):
                              "codon(s):\n%s" % fscds_aa)
 
         fscds = Feat(
-            user=user, parent=parent_cds, origin='GeneTackDB', 
+            user=user, parent=parent_cds, origin='genetack',
             type='fsCDS', seq=parent_cds.seq,
             start=c_loc.start, end=c_loc.end, strand=c_loc.strand)
         fscds.save()
