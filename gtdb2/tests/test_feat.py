@@ -59,6 +59,10 @@ class SeqModelTests(GtdbTestCase):
         self.assertEqual(fscds.name, 'MEFER_RS06095_fs1122957')
         self.assertEqual(list(fscds.fshift_set.all()), [fshift])
 
+        # Check the fsCDS params
+        self.assertTrue(fscds.prm.translation.startswith('MQYIYPFTA'))
+        self.assertTrue(fscds.prm.translation.endswith('ICKGFVEY'))
+
         # Make sure new feature is not created if we call the function again
         # and the existing Feat is returned
         self.assertEqual(Feat.objects.count(), 2)

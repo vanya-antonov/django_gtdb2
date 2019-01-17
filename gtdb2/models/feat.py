@@ -152,6 +152,7 @@ class Feat(AbstractUnit):
     def make_all_params(self, **kwargs):
         if self.type == 'fsCDS':
             self._make_fscds_name()
+            self._make_param_fscds_translation()
 
         if self.origin == 'gbk_annotation':
             self._make_all_params_gbk(**kwargs)
@@ -171,6 +172,14 @@ class Feat(AbstractUnit):
 
         self.name = '_'.join(all_parts)
         self.save()
+
+    def _make_param_fscds_translation(self):
+        fscds_nt = self.feature.extract(self.seq.seq)
+        fscds_aa = fscds_nt.translate(table=self.seq.transl_table)
+
+        # Remove possible stop codon at the end
+        fscds_aa = fscds_aa.rstrip('*')
+        self.add_param('translation', data=fscds_aa, num=len(fscds_aa))
 
     def _make_all_params_gbk(self, f=None):
         "The argument f is a Bio.SeqFeature.SeqFeature object."
