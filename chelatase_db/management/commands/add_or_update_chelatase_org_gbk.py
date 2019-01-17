@@ -31,14 +31,16 @@ class Command(BaseCommand):
             org = ChelataseOrg.create_from_gbk(user, gbk_fn)
             self.stdout.write(self.style.SUCCESS(
                 "The new org '%s' has been created with '%s' chlD genes" %
-                (org.name, org.prm['num_chld_feats'])))
+                (org.name, len(org.chld_feats))))
+                # -- OR? --
+                #(org.name, org.prm['num_chld_feats'])))
         else:
             new_seqs = org.update_seqs_with_gbk(gbk_fn)
             if len(new_seqs) > 0:
                 org.make_all_params(user)
                 self.stdout.write(self.style.SUCCESS(
                     "'%s' seqs have been created/updated in org '%s'" %
-                    (len(new_seqs), org.name)
+                    (len(new_seqs), org.name)))
             else:
                 self.stdout.write(self.style.SUCCESS(
                     "All '%s' sequences are up-to-date" % org.name))

@@ -36,10 +36,11 @@ class ChelataseCof(Cof):
         "Returns the chlD cof."
         cof = cls.objects.filter(name=cls.chld_info['name']).first()
         if cof is None:
-            gtdb1_fs_list = [GtFs.objects.get(pk=gtdb1_id) for gtdb1_id in
-                             cls.chld_info['seed_fshifts'].keys()]
-            return cls.create_from_gtdb1_seed_fs(
-                user, gtdb1_fs_list)
+            gtdb1_fs_list = []
+            for gtdb1_id in cls.chld_info['seed_fshifts'].keys():
+                gtdb1_fs = GtFs.objects.using('gtdb1').get(pk=gtdb1_id)
+                gtdb1_fs_list.append(gtdb1_fs)
+            return cls.create_from_gtdb1_seed_fshifts(user, gtdb1_fs_list)
         else:
             if cof.descr != cls.chld_info['descr']:
                 raise ValueError("Name/descr mismatch!")

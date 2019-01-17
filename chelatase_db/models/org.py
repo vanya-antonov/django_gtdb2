@@ -9,9 +9,9 @@ import subprocess
 
 from Bio.Blast import NCBIXML
 
-from chelatase_db.models.cof import ChelataseCof
-from chelatase_db.models.feat import ChelataseFeat
-from chelatase_db.models.fshift import ChelataseFshift
+from chelatase_db.models.cof import ChelataseCof as CCof
+from chelatase_db.models.feat import ChelataseFeat as CFeat
+from chelatase_db.models.fshift import ChelataseFshift as CFshift
 from gtdb2.models.org import Org
 from gtdb2.models.seq import Seq
 
@@ -33,23 +33,20 @@ class ChelataseOrg(Org):
         chlD gene in the org seqs.
         """
         # Create params required to search for chld genes
-        self._make_param_blastdb()
-        self._make_param_transl_table()
+        super()._make_param_blastdb()
+        super()._make_param_transl_table()
 
-        chld_feats = self.get_or_create_chld_feats(user)
+        chld_cof = CCof.get_or_create_chld_cof(user)
+        chld_feats = self.get_or_create_feats_from_cof_by_tblastn(
+            user, chld_cof)
+        #self.set_param('num_chld_feats', len(all_feats))
         if len(chld_feats) > 0:
-            # Params are created for orgs with chld genes only
+            # All other params are created for orgs with chld genes only
             super().make_all_params()
-            self.create_chelatase_feats(user)
-
-    def create_chelatase_feats(self, user):
-        ChelataseFeat.get_or_create_small_subunits(user)
-        ChelataseFeat.get_or_create_large_subunits(user)
-        ChelataseFeat.get_or_create_chlorophyll_pathway(user)
-        ChelataseFeat.get_or_create_b12_pathway(user)
+            self._make_chelatase_params(user)
 
     def get_or_create_feats_from_cof_by_tblastn(self, user, cof):
-        """Returns a set of feats (with or without fshifts) identified
+        """Returns a list of feats (with or without fshifts) identified
         in the given org sequences by using cof prot_seqs as queries to
         run tblastn.
         """
@@ -68,9 +65,7 @@ class ChelataseOrg(Org):
                 user, cof, n_hits_dict, c_hits_dict)
             all_feats.update(feat_set)
 
-        #self.set_param('num_chld_feats', len(all_feats))
-
-        return all_feats
+        return list(all_feats)
 
     def _get_or_create_feats_from_tblastn_hits(
             self, user, cof, n_hits_dict, c_hits_dict):
@@ -89,15 +84,24 @@ class ChelataseOrg(Org):
             for fs in all_fs_info:
                 if fs['coord'] is None:
                     # This is normal CDS -- no need to create fshift
-                    feat = ChelataseFeat.get_or_create_from_locus_annotation(
+                    feat = CFeat.get_or_create_from_gbk_annotation(
                         user, seq, fs['left'], fs['right'], fs['strand'])
                 else:
-                    fshift = ChelataseFshift.get_or_create(
+                    # fsCDS needs a frameshift for full length translation
+                    fshift = CFshift.get_or_create(
                         user=user, seq=seq, type='tblastn',
                         start=fs['start'], end=fs['end'], strand=fs['strand'],
                         coord=fs['coord'], len=fs['len'])
-                    feat = ChelataseFeat.get_or_create_from_fshift(
-                        user, fshift)
+
+                    # Create the parent feature that corresponds to the
+                    # upstream part of fsCDS, i.e. where translation begins
+                    parent_feat = CFeat.get_or_create_from_gbk_annotation(
+                        user, seq, fs['hsp_n'].sbjct_start,
+                        fs['hsp_n'].sbjct_end, fs['hsp_n'].strand)
+
+                    # Finally, create the full-length fsCDS feat
+                    feat = CFeat.get_or_create_fscds_from_parent(
+                        user, parent_feat, {fshift})
 
                 if feat is not None:
                     feat_set.add(feat)
@@ -122,9 +126,17 @@ class ChelataseOrg(Org):
             fs_dict = _get_fshift_info_from_two_hits(
                 hsp_n, hsp_c, seq.seq, self.transl_table)
             if fs_dict is not None:
+                fs_dict['hsp_n'] = hsp_n
+                fs_dict['hsp_c'] = hsp_c
                 all_fs_info.append(fs_dict)
 
         return all_fs_info
+
+    def _make_chelatase_params(self, user):
+        ChelataseFeat.get_or_create_small_subunits(user)
+        ChelataseFeat.get_or_create_large_subunits(user)
+        ChelataseFeat.get_or_create_chlorophyll_pathway(user)
+        ChelataseFeat.get_or_create_b12_pathway(user)
 
 
 def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
@@ -212,22 +224,28 @@ def _get_fshift_info_from_two_hits(hsp_n, hsp_c, chr_seq, gencode):
                 'start': lh.sbjct_start, 'end': rh.sbjct_end}
 
 def _get_stop_stop_seq(left, right, strand, chr_seq, gencode):
+    """Expand the given CDS part in both directions until stop codons
+    on both sides (the stop codons are included as well).
+    """
     from ivanya.biopython import get_codon_type
 
     # Validate the provided coordinates
     if (right - left) % 3 != 0:
-        raise Exception('Difference between left and right coordinates is not divisible by 3!!')
+        raise ValueError("The difference between the left and right "
+                         "coordinates is not divisible by 3!!")
 
     chr_region = chr_seq[left:right]
     if not re.compile('^[ACGT]+$', re.IGNORECASE).match(str(chr_region)):
-        logging.warning("Sequence %i-%i contains non-ACGT chars" % (left, right))
+        logging.warning("Sequence %i-%i contains non-ACGT chars" %
+                        (left, right))
         return None
 
     if strand == '-':
         chr_region = chr_region.reverse_complement()
     prot_seq = chr_region.translate(table=gencode)
     if '*' in prot_seq:
-        logging.warning('Given region (%i,%i) already contains a stop codon' % (left, right))
+        logging.warning('Given region (%i,%i) already contains a stop codon' %
+                        (left, right))
         return None
 
     ss_left = left

@@ -32,13 +32,21 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         # Create params required for tblastn run
         mf_org._make_param_blastdb()
         mf_org._make_param_transl_table()
-        mf_feats = mf_org.get_or_create_feats_from_cof_by_tblastn(
+        mf_chld_feats = mf_org.get_or_create_feats_from_cof_by_tblastn(
             self.user, chld_cof)
 
         # Make sure no new objects were created
         self.assertEqual(ChelataseOrg.objects.count(), 1)
         self.assertEqual(ChelataseSeq.objects.count(), 1)
         self.assertEqual(ChelataseFshift.objects.count(), 1)
+
+        # Methanocaldococcus fervens contains 1 chlD gene only
+        self.assertEqual(len(mf_chld_feats), 1)
+
+        # This chlD contains -1 frameshift
+        mf_chld = mf_chld_feats[0]
+        self.assertEqual(mf_chld.fshift.len, -1)
+
 
 #        org_id = chld_cof.fshift_set.first().org.id
 #        org = ChelataseOrg.objects.get(pk=org_id)

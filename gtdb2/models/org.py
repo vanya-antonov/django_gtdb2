@@ -105,7 +105,7 @@ class Org(AbstractUnit):
         if None in (sp, ge, ph, ki):
             raise ValueError("Can't determine species, genus, phylum or "
                              "kingdom: %s, %s, %s, %s" % (sp, ge, ph, ki))
-        org = Org(user=user, name=sp, genus=ge, phylum=ph, kingdom=ki)
+        org = cls(user=user, name=sp, genus=ge, phylum=ph, kingdom=ki)
         org.save()
 
         org._create_org_dir()

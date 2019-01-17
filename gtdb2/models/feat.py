@@ -126,10 +126,10 @@ class Feat(AbstractUnit):
             raise ValueError("fsCDS translation contains internal stop "
                              "codon(s):\n%s" % fscds_aa)
 
-        fscds = Feat(
+        fscds = cls(
             user=user, parent=parent_cds, origin='genetack',
             type='fsCDS', seq=parent_cds.seq,
-            start=c_loc.start, end=c_loc.end, strand=c_loc.strand)
+            start=int(c_loc.start), end=int(c_loc.end), strand=c_loc.strand)
         fscds.save()
 
         fscds.fshift_set.set(all_fshifts)
