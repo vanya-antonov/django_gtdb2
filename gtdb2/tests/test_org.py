@@ -97,6 +97,7 @@ class OrgModelTests(GtdbTestCase):
         self.assertEqual(org.param_set.get(name='source_fn').value, self.fn)
         self.assertEqual(org.param_dict['source_fn'][0].value, self.fn)
         self.assertEqual(org.prm['source_fn'], self.fn)
+        self.assertEqual(org.prm.source_fn, self.fn)   # AttrDict style
 
         # Check the param values
         self.assertEqual(org.prm['num_seqs'], 3)

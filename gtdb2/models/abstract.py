@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 
+from attrdict import AttrDict
 from django.db import models
 from django.utils import timezone
 
@@ -45,7 +46,7 @@ class AbstractUnit(models.Model):
     @property
     def prm(self):
         "A computed dictionary with parameters represented by simple types."
-        prm = {}
+        prm = AttrDict()
         for key, param_list in self.param_dict.items():
             info = self.prm_info.get(key, None)
             if info is None:
