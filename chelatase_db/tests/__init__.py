@@ -12,7 +12,7 @@ class ChelataseTestCase(GtdbTestCase):
     # Overwrite dir path
     test_data_dir = 'chelatase_db/tests/data/'
 
-    def create_chld_colf_from_pickles(self, seed_gtdb1_ids=None):
+    def create_chld_cof_from_pickles(self, seed_gtdb1_ids=None):
         """Creates chlD COF in the test database from the GTDB1 frameshifts
         stored in pickle files. Thus, any future calls of
         get_or_create_chld_cof() will return the existing cof.

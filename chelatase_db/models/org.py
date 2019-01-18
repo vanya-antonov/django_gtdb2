@@ -26,7 +26,7 @@ class ChelataseOrg(Org):
         'num_chld_feats': {'value_attr': 'num', 'type_fun': int},
     }.items()))
 
-    def make_all_params(self, user):
+    def make_all_params(self):
         """Overwrite the parent's method because ALL params should be
         generated for orgs with chlD gene(s) only. Still, some specific
         params (e.g. transl_table) must be created in order to search for
@@ -36,14 +36,25 @@ class ChelataseOrg(Org):
         super()._make_param_blastdb()
         super()._make_param_transl_table()
 
-        chld_cof = CCof.get_or_create_chld_cof(user)
+        chld_cof = CCof.get_or_create_chld_cof(self.user)
         chld_feats = self.get_or_create_feats_from_cof_by_tblastn(
-            user, chld_cof)
+            self.user, chld_cof)
+        if len(chld_feats) == 0:
+            # Other params are NOT created for orgs without chld genes
+            return
+
+        return
+        raise NotImplementedError('self.annotate_chel_feats(chld_feats)')
+
+        for chld in chld_feats:
+            chld.add_param('chel_subunit', 'M')
+#	chel_evalue	1.90e-57	1.9000000000000002e-57
+#	chel_gene	bchD	NULL
+#	chel_query	WP_011362635.1	621
+#	chel_subunit	M	NULL
         #self.set_param('num_chld_feats', len(all_feats))
-        if len(chld_feats) > 0:
-            # All other params are created for orgs with chld genes only
             super().make_all_params()
-            self._make_chelatase_params(user)
+            self._make_chelatase_params(self.user)
 
     def get_or_create_feats_from_cof_by_tblastn(self, user, cof):
         """Returns a list of feats (with or without fshifts) identified
@@ -77,7 +88,8 @@ class ChelataseOrg(Org):
             if chr_name not in c_hits_dict:
                 continue
 
-            seq = Seq.objects.get(pk=chr_name)
+            seq = Seq.get_or_create_from_ext_id(
+                user, self, chr_name)
             all_fs_info = self._get_fshift_info_from_tblastn_hits_on_seq(
                 seq, n_hits_dict[chr_name], c_hits_dict[chr_name])
 
@@ -89,7 +101,7 @@ class ChelataseOrg(Org):
                 else:
                     # fsCDS needs a frameshift for full length translation
                     fshift = CFshift.get_or_create(
-                        user=user, seq=seq, type='tblastn',
+                        user=user, seq=seq, origin='tblastn',
                         start=fs['start'], end=fs['end'], strand=fs['strand'],
                         coord=fs['coord'], len=fs['len'])
 
@@ -133,6 +145,7 @@ class ChelataseOrg(Org):
         return all_fs_info
 
     def _make_chelatase_params(self, user):
+        return
         ChelataseFeat.get_or_create_small_subunits(user)
         ChelataseFeat.get_or_create_large_subunits(user)
         ChelataseFeat.get_or_create_chlorophyll_pathway(user)
@@ -160,7 +173,7 @@ def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
                 #   <=============================================
 
                 # the hits should be in the right order
-                if hsp_c.sbjct_end >= hspn.sbjct_end:
+                if hsp_c.sbjct_end >= hsp_n.sbjct_end:
                     continue
                 dist = hsp_n.sbjct_start - hsp_c.sbjct_end
             else:
