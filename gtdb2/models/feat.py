@@ -24,7 +24,7 @@ class Feat(AbstractUnit):
         db_table = 'feats'
 
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
-    prm_info = dict(list(AbstractUnit.prm_info.items()) + list({
+    PRM_INFO = dict(list(AbstractUnit.PRM_INFO.items()) + list({
         'gene': {},
         'gene_synonym': {},
         'protein_id': {},

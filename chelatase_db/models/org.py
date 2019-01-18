@@ -22,7 +22,7 @@ class ChelataseOrg(Org):
         proxy = True
 
     # Merge two dicts: https://stackoverflow.com/a/38990/310453
-    prm_info = dict(list(Org.prm_info.items()) + list({
+    PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
         'num_chld_fshifts': {'value_attr': 'num', 'type_fun': int},
         'num_chld_feats': {'value_attr': 'num', 'type_fun': int},
     }.items()))

@@ -24,7 +24,7 @@ class AbstractUnit(models.Model):
     gtdb = GeneTackDB()
 
     # All items in the 'prm' dict must be explicitly declared in 'prm_info'
-    prm_info = {
+    PRM_INFO = {
         'xref': {'value_attr': 'data', 'type_fun': json.loads, 'is_list': True},
     }
 
@@ -48,7 +48,7 @@ class AbstractUnit(models.Model):
         "A computed dictionary with parameters represented by simple types."
         prm = AttrDict()
         for key, param_list in self.param_dict.items():
-            info = self.prm_info.get(key, None)
+            info = self.PRM_INFO.get(key, None)
             if info is None:
                 continue
 
@@ -91,7 +91,7 @@ class AbstractUnit(models.Model):
         param_cls = self.param_set.model
 
         # Do not add extra rows to non-list params
-        info = self.prm_info.get(name, None)
+        info = self.PRM_INFO.get(name, None)
         if(info is not None and not info.get('is_list', False) and
           param_cls.objects.filter(parent=self, name=name).count() > 0):
             raise ValueError("Can't add another row to a non-list param '%s' "
