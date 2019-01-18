@@ -41,7 +41,7 @@ class Org(AbstractUnit):
     }.items()))
 
     # The '%'s will be substituted with the value of 'dir_name' prm
-    subdir_info = {
+    SUBDIR_INFO = {
         'main': 'orgs/%s/',
         'seq_fna': 'orgs/%s/seq_fna/',
         'seq_gbk': 'orgs/%s/seq_gbk/',
@@ -114,7 +114,7 @@ class Org(AbstractUnit):
 
     def get_full_path_to_subdir(self, name='main'):
         "Returns a full path to subdir by its name or alias."
-        subdir = self.subdir_info[name] % self.prm['dir_name']
+        subdir = self.SUBDIR_INFO[name] % self.prm['dir_name']
         return self.gtdb.get_full_path_to(subdir)
 
     def get_all_seq_ids(self, seq_dir='seq_gbk', fullpath=False):
