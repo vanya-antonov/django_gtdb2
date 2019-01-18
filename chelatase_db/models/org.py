@@ -10,9 +10,9 @@ import subprocess
 from Bio.Blast import NCBIXML
 from Bio.Data import CodonTable
 
-from chelatase_db.models.cof import ChelataseCof as CCof
+from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.feat import ChelataseFeat as CFeat
-from chelatase_db.models.fshift import ChelataseFshift as CFshift
+from chelatase_db.models.fshift import ChelataseFshift
 from gtdb2.models.org import Org
 from gtdb2.models.seq import Seq
 
@@ -37,25 +37,27 @@ class ChelataseOrg(Org):
         super()._make_param_blastdb()
         super()._make_param_transl_table()
 
-        chld_cof = CCof.get_or_create_chld_cof(self.user)
+        chld_cof = ChelataseCof.get_or_create_chld_cof(self.user)
         chld_feats = self.get_or_create_feats_from_cof_by_tblastn(
             self.user, chld_cof)
         if len(chld_feats) == 0:
             # Other params are NOT created for orgs without chld genes
             return
 
-        return
-        raise NotImplementedError('self.annotate_chel_feats(chld_feats)')
-
+        # Make sure the automatic annotation correctly recognized
+        # all the chlD Feats as M subunits
         for chld in chld_feats:
-            chld.add_param('chel_subunit', 'M')
+            if 'chel_subunit' not in chld.prm or chld.prm.chel_subunit != 'M':
+                self.delete()
+                raise ValueError("The identified chlD gene was not "
+                                 "automatically annotated as medium subunit!")
 #	chel_evalue	1.90e-57	1.9000000000000002e-57
 #	chel_gene	bchD	NULL
 #	chel_query	WP_011362635.1	621
 #	chel_subunit	M	NULL
-        #self.set_param('num_chld_feats', len(all_feats))
-            super().make_all_params()
-            self._make_chelatase_params(self.user)
+        #self.set_param('num_chld_feats', len(chld_feats))
+        super().make_all_params()
+        self._make_chelatase_params(self.user)
 
     def get_or_create_feats_from_cof_by_tblastn(self, user, cof):
         """Returns a list of feats (with or without fshifts) identified
@@ -101,7 +103,7 @@ class ChelataseOrg(Org):
                         user, seq, fs['left'], fs['right'], fs['strand'])
                 else:
                     # fsCDS needs a frameshift for full length translation
-                    fshift = CFshift.get_or_create(
+                    fshift = ChelataseFshift.get_or_create(
                         user=user, seq=seq, origin='tblastn',
                         start=fs['start'], end=fs['end'], strand=fs['strand'],
                         coord=fs['coord'], len=fs['len'])
