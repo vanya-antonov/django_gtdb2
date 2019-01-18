@@ -8,6 +8,7 @@ import re
 import subprocess
 
 from Bio.Blast import NCBIXML
+from Bio.Data import CodonTable
 
 from chelatase_db.models.cof import ChelataseCof as CCof
 from chelatase_db.models.feat import ChelataseFeat as CFeat
@@ -191,8 +192,6 @@ def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
     return min_hsp_n, min_hsp_c
 
 def _get_fshift_info_from_two_hits(hsp_n, hsp_c, chr_seq, gencode):
-    from ivanya.bio import get_overlap_region
-
     if hsp_n.strand == hsp_c.strand == 1:
         lh, rh = hsp_n, hsp_c
     elif hsp_n.strand == hsp_c.strand == -1:
@@ -236,12 +235,45 @@ def _get_fshift_info_from_two_hits(hsp_n, hsp_c, chr_seq, gencode):
         return {'coord': fs_coord, 'len': fs_len, 'strand': lh.strand,
                 'start': lh.sbjct_start, 'end': rh.sbjct_end}
 
+def get_overlap_region(s1,e1,s2,e2):
+    """0-based system is used (like in Biopython):
+
+    |            INPUT            |          RETURNS            |
+    |-----------------------------|-----------------------------|
+    |                             |                             |
+    |  s1=3      e1=14            |                             |
+    |     |----------|            |        [9,14]               |
+    |           |---------|       |                             |
+    |        s2=9     e2=19       |                             |
+    |                             |                             |
+    """
+    if s1 > e1 or s2 > e2:
+        raise Exception("Something is wrong with the intervals (%i,%i) and (%i,%i)" %
+                        (s1,e1,s2,e2))
+
+    if s1 <= s2 <= e1 and s1 <= e2 <= e1:
+        # |----------------|
+        #     |--------|
+        return s2, e2
+    elif s2 <= s1 <= e2 and s2 <= e1 <= e2:
+        #     |--------|
+        # |----------------|
+        return s1, e1
+    elif s1 <= s2 <= e1 and s2 <= e1 <= e2:
+        # |------------|
+        #       |-------------|
+        return s2, e1
+    elif s2 <= s1 <= e2 and  s1 <= e2 <= e1:
+        #       |-------------|
+        # |------------|
+        return s1, e2
+    else:
+        return None, None
+
 def _get_stop_stop_seq(left, right, strand, chr_seq, gencode):
     """Expand the given CDS part in both directions until stop codons
     on both sides (the stop codons are included as well).
     """
-    from ivanya.biopython import get_codon_type
-
     # Validate the provided coordinates
     if (right - left) % 3 != 0:
         raise ValueError("The difference between the left and right "
@@ -286,6 +318,19 @@ def _get_stop_stop_seq(left, right, strand, chr_seq, gencode):
             break
 
     return {'left' : ss_left, 'right' : ss_right}
+
+def get_codon_type(codon, gencode, strand=1):
+    acgt_only_re = re.compile('^[ACGT]+$', re.IGNORECASE)
+    if not acgt_only_re.match(str(codon)):
+        return 'non_ACGT'
+
+    if strand == -1:
+        codon = codon.reverse_complement()
+
+    if codon in CodonTable.unambiguous_dna_by_id[gencode].stop_codons:
+        return 'stop'
+    else:
+        return 'coding'
 
 def _run_tblastn(prot_seq, blastdb_path, gcode, evalue=1e-6, num_threads=8):
     """Returns a dict where the keys are the hit sequence IDs and
