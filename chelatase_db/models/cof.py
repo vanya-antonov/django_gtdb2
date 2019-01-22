@@ -1,6 +1,5 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
-from pprint import pprint
 import os
 
 from django.conf import settings

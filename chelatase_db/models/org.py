@@ -1,20 +1,18 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 from pprint import pprint
-import io
 import logging
 import os
 import re
-import subprocess
 
-from Bio.Blast import NCBIXML
 from Bio.Data import CodonTable
 
+from chelatase_db.lib.bio import run_tblastn
 from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.feat import ChelataseFeat as CFeat
 from chelatase_db.models.fshift import ChelataseFshift
+from chelatase_db.models.seq import ChelataseSeq
 from gtdb2.models.org import Org
-from gtdb2.models.seq import Seq
 
 
 class ChelataseOrg(Org):
@@ -51,10 +49,6 @@ class ChelataseOrg(Org):
                 self.delete()
                 raise ValueError("The identified chlD gene was not "
                                  "automatically annotated as medium subunit!")
-#	chel_evalue	1.90e-57	1.9000000000000002e-57
-#	chel_gene	bchD	NULL
-#	chel_query	WP_011362635.1	621
-#	chel_subunit	M	NULL
         #self.set_param('num_chld_feats', len(chld_feats))
         super().make_all_params()
         self._make_chelatase_params(self.user)
@@ -70,9 +64,9 @@ class ChelataseOrg(Org):
             # similar to the N- and C- parts of the query fs-prot
             blastdb_path = self.gtdb.get_full_path_to(
                 self.prm['blastdb_nucl_all'])
-            n_hits_dict = _run_tblastn(
+            n_hits_dict = run_tblastn(
                 q_fshift.prm['seq_prot_n'], blastdb_path, self.transl_table)
-            c_hits_dict = _run_tblastn(
+            c_hits_dict = run_tblastn(
                 q_fshift.prm['seq_prot_c'], blastdb_path, self.transl_table)
 
             feat_set = self._get_or_create_feats_from_tblastn_hits(
@@ -91,7 +85,7 @@ class ChelataseOrg(Org):
             if chr_name not in c_hits_dict:
                 continue
 
-            seq = Seq.get_or_create_from_ext_id(
+            seq = ChelataseSeq.get_or_create_from_ext_id(
                 user, self, chr_name)
             all_fs_info = self._get_fshift_info_from_tblastn_hits_on_seq(
                 seq, n_hits_dict[chr_name], c_hits_dict[chr_name])
@@ -333,43 +327,4 @@ def get_codon_type(codon, gencode, strand=1):
         return 'stop'
     else:
         return 'coding'
-
-def _run_tblastn(prot_seq, blastdb_path, gcode, evalue=1e-6, num_threads=8):
-    """Returns a dict where the keys are the hit sequence IDs and
-    the values are the lists of Bio.Blast.Record.HSP objects
-    (https://github.com/biopython/biopython/blob/master/Bio/Blast/Record.py).
-    The coordinate system of the HSP objects is converted to 0-based.
-    """
-    # Use the fixed -dbsize to make results (evalues) reproducible
-    cmd_str = ' '.join([
-        'tblastn  -outfmt 5  -dbsize 1  -max_target_seqs 999999',
-        '-evalue', str(evalue),
-        '-num_threads', str(num_threads),
-        '-db_gencode', str(gcode),
-        '-db', blastdb_path])
-
-    fasta_txt = '>query\n' + prot_seq + '\n'
-    proc = subprocess.run(
-        cmd_str, input=fasta_txt, stdout=subprocess.PIPE,
-        shell=True, universal_newlines=True)
-
-    f = io.StringIO(proc.stdout)
-    all_res = list(NCBIXML.parse(f))
-    f.close()
-    if(len(all_res) != 1):
-        raise ValueError('BLAST XML must contain results for a single query!')
-
-    all_hits = {}
-    for alignment in all_res[0].alignments:
-        for hsp in alignment.hsps:
-            # Overwrite the .strand attribute becuase it is None anyway
-            hsp.strand = 1 if hsp.frame[1] >= 0 else -1
-
-            # Hsp objects use 1-based coordinates - let's fix it
-            hsp.query_start -= 1
-            hsp.sbjct_start -= 1
-
-            all_hits.setdefault(alignment.hit_def, []).append(hsp)
-
-    return all_hits
 
