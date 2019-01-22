@@ -32,6 +32,17 @@ class Feat(AbstractUnit):
         'translation': {'value_attr': 'data'},
     }.items()))
 
+    @property
+    def feature(self):
+        "Retruns a Bio.SeqFeature.SeqFeature object."
+        if self.type == 'fsCDS':
+            all_fshifts = list(self.fshift_set.all())
+            stop_coord = self.end if self.strand == 1 else self.start
+            loc = _make_compound_location(self.parent, all_fshifts, stop_coord)
+        else:
+            loc = FeatureLocation(self.start, self.end, self.strand)
+        return SeqFeature(loc, type=self.type)
+
     @classmethod
     def get_or_create_from_gbk_annotation(cls, user, seq, start, end, strand,
                                          f_type='CDS'):
@@ -70,7 +81,7 @@ class Feat(AbstractUnit):
                    origin=origin)
         self.save()
 
-        self.make_all_params(f=f)
+        self.make_all_params()
 
         return self
 
@@ -138,24 +149,13 @@ class Feat(AbstractUnit):
 
         return fscds
 
-    @property
-    def feature(self):
-        "Retruns a Bio.SeqFeature.SeqFeature object."
-        if self.type == 'fsCDS':
-            all_fshifts = list(self.fshift_set.all())
-            stop_coord = self.end if self.strand == 1 else self.start
-            loc = _make_compound_location(self.parent, all_fshifts, stop_coord)
-        else:
-            loc = FeatureLocation(self.start, self.end, self.strand)
-        return SeqFeature(loc, type=self.type)
-
-    def make_all_params(self, **kwargs):
+    def make_all_params(self):
         if self.type == 'fsCDS':
             self._make_fscds_name()
             self._make_param_fscds_translation()
 
         if self.origin == 'gbk_annotation':
-            self._make_all_params_gbk(**kwargs)
+            self._make_all_params_gbk()
 
     def _make_fscds_name(self):
         "Creates fsCDS name like 'MEFER_RS06095_fs1122957'."
@@ -181,12 +181,11 @@ class Feat(AbstractUnit):
         fscds_aa = fscds_aa.rstrip('*')
         self.add_param('translation', data=fscds_aa, num=len(fscds_aa))
 
-    def _make_all_params_gbk(self, f=None):
-        "The argument f is a Bio.SeqFeature.SeqFeature object."
-        if f is None:
-            f = get_overlapping_feats_from_record(
-                self.seq.record, self.start, self.end, self.strand,
-                all_types=[self.type], min_overlap=1, max_feats=1)[0]
+    def _make_all_params_gbk(self):
+        # f is a Bio.SeqFeature.SeqFeature object
+        f = get_overlapping_feats_from_record(
+            self.seq.record, self.start, self.end, self.strand,
+            all_types=[self.type], min_overlap=1, max_feats=1)[0]
 
         self._make_param_from_q(f, 'gene')
         self._make_param_from_q(f, 'gene_synonym')
