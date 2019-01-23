@@ -26,7 +26,7 @@ def run_tblastn(prot_seq, blastdb_path, gcode, evalue=1e-6, num_threads=6):
     hits_dict = _run_blast_cmd_str(prot_seq, cmd_str)
 
     # Overwrite the .strand attribute becuase it is None anyway
-    for all_hsps in hits_dict.values:
+    for all_hsps in hits_dict.values():
         for hsp in all_hsps:
             hsp.strand = 1 if hsp.frame[1] >= 0 else -1
 

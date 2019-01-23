@@ -25,6 +25,16 @@ class ChelataseOrg(Org):
         'num_chld_feats': {'value_attr': 'num', 'type_fun': int},
     }.items()))
 
+    @property
+    def chld_feats(self):
+        # Follow the relationships by using the double underscores operator:
+        # https://docs.djangoproject.com/en/2.1/topics/db/queries/#lookups-that-span-relationships
+        return list(CFeat.objects.filter(
+            seq__org=self,
+            param_set__name='chel_subunit',
+            param_set__value='M'
+        ).all())
+
     def make_all_params(self):
         """Overwrite the parent's method because ALL params should be
         generated for orgs with chlD gene(s) only. Still, some specific
@@ -94,7 +104,7 @@ class ChelataseOrg(Org):
                 if fs['coord'] is None:
                     # This is normal CDS -- no need to create fshift
                     feat = CFeat.get_or_create_from_gbk_annotation(
-                        user, seq, fs['left'], fs['right'], fs['strand'])
+                        user, seq, fs['start'], fs['end'], fs['strand'])
                 else:
                     # fsCDS needs a frameshift for full length translation
                     fshift = ChelataseFshift.get_or_create(

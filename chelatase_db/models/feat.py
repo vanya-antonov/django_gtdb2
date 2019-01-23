@@ -17,7 +17,7 @@ class ChelataseFeat(Feat):
 
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
     PRM_INFO = dict(list(Feat.PRM_INFO.items()) + list({
-        'chel_blastp_evalue': {'type_fun': float},
+        'chel_evalue': {'type_fun': float},
         'chel_gene': {},
         'chel_pathway': {},
         'chel_query': {},
@@ -93,7 +93,7 @@ class ChelataseFeat(Feat):
         if best_hsp is None:
             return
 
-        self.set_param('chel_blastp_evalue', '%.2e' % best_hsp.expect,
+        self.set_param('chel_evalue', '%.2e' % best_hsp.expect,
                        num=best_hsp.expect)
 
         # Set params from info_dict: 'chel_gene', 'chel_subunit', etc

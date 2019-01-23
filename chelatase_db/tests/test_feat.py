@@ -26,5 +26,5 @@ class ChelataseFeatModelTests(ChelataseTestCase):
         self.assertEqual(feat.prm.chel_subunit, 'M')
         self.assertEqual(feat.prm.chel_gene, 'bchD')
         self.assertEqual(feat.prm.chel_pathway, 'Chlorophyll')
-        self.assertTrue(feat.prm.chel_blastp_evalue < 1e-80 )
+        self.assertTrue(feat.prm.chel_evalue < 1e-80)
 

@@ -5,7 +5,8 @@ from pprint import pprint
 
 from django.conf import settings
 
-from chelatase_db.models.cof import ChelataseCof as CCof
+from chelatase_db.models.cof import ChelataseCof
+from chelatase_db.models.feat import ChelataseFeat
 from chelatase_db.models.fshift import ChelataseFshift
 from chelatase_db.models.org import ChelataseOrg
 from chelatase_db.models.seq import ChelataseSeq
@@ -49,23 +50,27 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(mf_chld.fshift.name, 'NC_013156.1:1122957:-1')
 
     def test_org_make_all_params(self):
-        "Creates chlD fsCDS in D.acidovorans genome by tBLASTn."
-        da_gtdb1_id = 286671156   # da = Delftia acodovorans
+        """Creates chlD and other pathway feats by tBLASTn."""
 
         # make_all_params() is called inside the 'create' method
-        info = CCof.chld_info['seed_fshifts'][da_gtdb1_id]
-        gbk_fn = os.path.join(settings.BASE_DIR, info['org_gbk'])
+        gbk_fn = self.get_full_path_to_test_file('N_mexicana.gbk')
         org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
 
-        #len(org.chld_feats)
+        # The org has 1 seq only
+        self.assertEqual(org.seq_set.count(), 1)
 
-        pprint(vars(org))
+        # The org has only one chlD gene without fshift
+        self.assertEqual(len(org.chld_feats), 1)
 
+        chld_feat = org.chld_feats[0]
 
-#        org_id = chld_cof.fshift_set.first().org.id
-#        org = ChelataseOrg.objects.get(pk=org_id)
+        # The chlD gene does not have a frameshift
+        self.assertEqual(chld_feat.fshift_set.count(), 0)
+        self.assertEqual(chld_feat.fshift, None)
 
-        #org.get_or_create_chld_feats(self.user)
-#        org.make_all_params(self.user)
-#        print("TEST IS FINISHED!")
+        # The chlD gene is more similar to bchD
+        self.assertEqual(chld_feat.prm.chel_pathway, 'Chlorophyll')
+        self.assertEqual(chld_feat.prm.chel_subunit, 'M')
+        self.assertEqual(chld_feat.prm.chel_gene, 'bchD')
+        self.assertTrue(chld_feat.prm.chel_evalue < 1e-80)
 
