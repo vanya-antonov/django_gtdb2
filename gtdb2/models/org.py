@@ -285,7 +285,11 @@ def on_org_delete(sender, instance, using, **kwargs):
     """Make sure to remove org dir if the org is deleted. This is done using
     Django signals: https://stackoverflow.com/a/12678428/310453
     """
-    shutil.rmtree(instance.get_full_path_to_subdir())
+    dir_path = instance.get_full_path_to_subdir()
+    if os.path.exists(dir_path):
+        shutil.rmtree(instance.get_full_path_to_subdir())
+    else:
+        logging.error("Directory doesn't exist: %s" % dir_path)
 
 def _get_species_genus_phylum_kingdom(record):
     taxa_l = record.annotations.get('taxonomy')
