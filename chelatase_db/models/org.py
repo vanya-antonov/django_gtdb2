@@ -8,6 +8,7 @@ import re
 from Bio.Data import CodonTable
 
 from chelatase_db.lib.bio import run_tblastn
+from chelatase_db.lib.config import PATHWAY_GENES_TXT, PATHWAY_GENES_FAA
 from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.feat import ChelataseFeat
 from chelatase_db.models.fshift import ChelataseFshift
@@ -157,6 +158,17 @@ class ChelataseOrg(Org):
 
         return all_fs_info
 
+# TODO: Annotation of other pathway genes
+# 
+# Data file are in q_seq/group_seq and _q_groups.2_col located in
+# ~/_my/DataLog/2018_yulia/0802.Ba.heatmap_with_several_queries
+# 
+# Additional info is in 0802.xlsx located on my Mac in 
+# /Users/antonov/Projects/2018/Baranov/DataLog/0802.Ba.heatmap_with_several_queries
+# 
+# No code was written for this part of the work.
+
+    # def get_or_create_pathway_genes(self, user):
     def _make_chelatase_params(self, user):
         return
         ChelataseFeat.get_or_create_small_subunits(user)

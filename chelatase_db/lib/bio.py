@@ -5,8 +5,10 @@ import subprocess
 
 from Bio.Blast import NCBIXML
 
+from .config import MAX_NUM_THREADS, DEFAULT_EVALUE
 
-def run_blastp_vs_file(prot_seq, file_path, evalue=1e-6, num_threads=6):
+
+def run_blastp_vs_file(prot_seq, file_path, evalue=DEFAULT_EVALUE):
     # Use the fixed -dbsize to make results (evalues) reproducible
     cmd_str = ' '.join([
         'blastp  -outfmt 5  -dbsize 1  -max_target_seqs 999999',
@@ -14,7 +16,9 @@ def run_blastp_vs_file(prot_seq, file_path, evalue=1e-6, num_threads=6):
         '-subject', file_path])
     return _run_blast_cmd_str(prot_seq, cmd_str)
 
-def run_tblastn(prot_seq, blastdb_path, gcode, evalue=1e-6, num_threads=6):
+def run_tblastn(prot_seq, blastdb_path, gcode,
+                evalue=DEFAULT_EVALUE,
+                num_threads=MAX_NUM_THREADS):
     # Use the fixed -dbsize to make results (evalues) reproducible
     cmd_str = ' '.join([
         'tblastn  -outfmt 5  -dbsize 1  -max_target_seqs 999999',
