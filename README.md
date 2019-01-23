@@ -1,2 +1,2 @@
 # django_gtdb2
-GeneTackDB-2 based on Biopython and powered by Django  
+GeneTackDB-2 based on Django and Biopython
