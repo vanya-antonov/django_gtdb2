@@ -32,6 +32,13 @@ class GeneTackDB:
             descr='Default GeneTackDB user')
         return user
 
+    def get_or_create_prm_user(self):
+        """Returns a user for objects created by make_all_params()."""
+        user, created = User.objects.get_or_create(
+            name='gtdb_prm',
+            descr='Objects automatically created by make_all_params()')
+        return user
+
     def get_full_path_to(self, *args):
         "Returns a full path for a GTDB dir relative path."
         return os.path.join(self.root_dir, *args)

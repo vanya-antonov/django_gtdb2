@@ -9,7 +9,7 @@ from Bio.Data import CodonTable
 
 from chelatase_db.lib.bio import run_tblastn
 from chelatase_db.models.cof import ChelataseCof
-from chelatase_db.models.feat import ChelataseFeat as CFeat
+from chelatase_db.models.feat import ChelataseFeat
 from chelatase_db.models.fshift import ChelataseFshift
 from chelatase_db.models.seq import ChelataseSeq
 from gtdb2.models.org import Org
@@ -29,7 +29,7 @@ class ChelataseOrg(Org):
     def chld_feats(self):
         # Follow the relationships by using the double underscores operator:
         # https://docs.djangoproject.com/en/2.1/topics/db/queries/#lookups-that-span-relationships
-        return list(CFeat.objects.filter(
+        return list(ChelataseFeat.objects.filter(
             seq__org=self,
             param_set__name='chel_subunit',
             param_set__value='M'
@@ -44,24 +44,30 @@ class ChelataseOrg(Org):
         # Create params required to search for chld genes
         super()._make_param_blastdb()
         super()._make_param_transl_table()
-
         chld_cof = ChelataseCof.get_or_create_chld_cof(self.user)
+
+        # Remove any objects created by previous method call
+        prm_user = self.gtdb.get_or_create_prm_user()
+        ChelataseFeat.objects.filter(user=prm_user).delete()
+        ChelataseFshift.objects.filter(user=prm_user).delete()
+
+        # Try to find chlD gene(s)
         chld_feats = self.get_or_create_feats_from_cof_by_tblastn(
-            self.user, chld_cof)
+            prm_user, chld_cof)
         if len(chld_feats) == 0:
             # Other params are NOT created for orgs without chld genes
             return
 
-        # Make sure the automatic annotation correctly recognized
-        # all the chlD Feats as M subunits
+        # Verify automatic annotation of chlD genes
         for chld in chld_feats:
             if 'chel_subunit' not in chld.prm or chld.prm.chel_subunit != 'M':
                 self.delete()
                 raise ValueError("The identified chlD gene was not "
                                  "automatically annotated as medium subunit!")
-        #self.set_param('num_chld_feats', len(chld_feats))
+
+        # Finally, create the full set of params
         super().make_all_params()
-        self._make_chelatase_params(self.user)
+        self._make_chelatase_params(prm_user)
 
     def get_or_create_feats_from_cof_by_tblastn(self, user, cof):
         """Returns a list of feats (with or without fshifts) identified
@@ -103,7 +109,7 @@ class ChelataseOrg(Org):
             for fs in all_fs_info:
                 if fs['coord'] is None:
                     # This is normal CDS -- no need to create fshift
-                    feat = CFeat.get_or_create_from_gbk_annotation(
+                    feat = ChelataseFeat.get_or_create_from_gbk_annotation(
                         user, seq, fs['start'], fs['end'], fs['strand'])
                 else:
                     # fsCDS needs a frameshift for full length translation
@@ -114,13 +120,13 @@ class ChelataseOrg(Org):
 
                     # Create the parent feature that corresponds to the
                     # upstream part of fsCDS, i.e. where translation begins
-                    parent_feat = CFeat.get_or_create_from_gbk_annotation(
+                    parent = ChelataseFeat.get_or_create_from_gbk_annotation(
                         user, seq, fs['hsp_n'].sbjct_start,
                         fs['hsp_n'].sbjct_end, fs['hsp_n'].strand)
 
                     # Finally, create the full-length fsCDS feat
-                    feat = CFeat.get_or_create_fscds_from_parent(
-                        user, parent_feat, {fshift})
+                    feat = ChelataseFeat.get_or_create_fscds_from_parent(
+                        user, parent, {fshift})
 
                 if feat is not None:
                     feat_set.add(feat)
