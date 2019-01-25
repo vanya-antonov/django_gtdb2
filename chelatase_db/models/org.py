@@ -6,9 +6,10 @@ import os
 import re
 
 from Bio.Data import CodonTable
+from django.conf import settings
 
-from chelatase_db.lib.bio import run_tblastn
-from chelatase_db.lib.config import PATHWAY_GENES_TXT, PATHWAY_GENES_FAA
+from chelatase_db.lib.bio import run_tblastn_seq_vs_db, run_tblastn_file_vs_db
+from chelatase_db.lib.config import PATHWAY_GENES_FAA
 from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.feat import ChelataseFeat
 from chelatase_db.models.fshift import ChelataseFshift
@@ -81,10 +82,14 @@ class ChelataseOrg(Org):
             # similar to the N- and C- parts of the query fs-prot
             blastdb_path = self.gtdb.get_full_path_to(
                 self.prm['blastdb_nucl_all'])
-            n_hits_dict = run_tblastn(
+
+            n_hsp_list = run_tblastn_seq_vs_db(
                 q_fshift.prm['seq_prot_n'], blastdb_path, self.transl_table)
-            c_hits_dict = run_tblastn(
+            c_hsp_list = run_tblastn_seq_vs_db(
                 q_fshift.prm['seq_prot_c'], blastdb_path, self.transl_table)
+
+            n_hits_dict = _make_hits_dict(n_hsp_list)
+            c_hits_dict = _make_hits_dict(c_hsp_list)
 
             feat_set = self._get_or_create_feats_from_tblastn_hits(
                 user, cof, n_hits_dict, c_hits_dict)
@@ -123,7 +128,7 @@ class ChelataseOrg(Org):
                     # upstream part of fsCDS, i.e. where translation begins
                     parent = ChelataseFeat.get_or_create_from_gbk_annotation(
                         user, seq, fs['hsp_n'].sbjct_start,
-                        fs['hsp_n'].sbjct_end, fs['hsp_n'].strand)
+                        fs['hsp_n'].sbjct_end, fs['hsp_n'].sbjct_strand)
 
                     # Finally, create the full-length fsCDS feat
                     feat = ChelataseFeat.get_or_create_fscds_from_parent(
@@ -170,18 +175,24 @@ class ChelataseOrg(Org):
 
     # def get_or_create_pathway_genes(self, user):
     def _make_chelatase_params(self, user):
-        return
-        ChelataseFeat.get_or_create_small_subunits(user)
-        ChelataseFeat.get_or_create_large_subunits(user)
-        ChelataseFeat.get_or_create_chlorophyll_pathway(user)
-        ChelataseFeat.get_or_create_b12_pathway(user)
+        """Creates feats homologous to the cholorophyll and B12
+        biosynthesis pathway genes.
+        """
+        db_path = self.gtdb.get_full_path_to(self.prm.blastdb_nucl_all)
+        faa_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_FAA)
+        all_hsps = run_tblastn_file_vs_db(faa_fn, db_path, self.transl_table)
 
+        for hsp in all_hsps:
+            seq = ChelataseSeq.get_or_create_from_ext_id(
+                user, self, hsp.sbjct_id)
+            feat = ChelataseFeat.get_or_create_from_gbk_annotation(
+                user, seq, hsp.sbjct_start, hsp.sbjct_end, hsp.sbjct_strand)
 
 def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
     min_dist, min_hsp_n, min_hsp_c = None, None, None
     for hsp_n in all_hsp_n:
         for hsp_c in all_hsp_c:
-            if hsp_n.strand == hsp_c.strand == 1:
+            if hsp_n.sbjct_strand == hsp_c.sbjct_strand == 1:
                 #          hsp_n                    hsp_c
                 #    ----------------       --------------------
                 #    start        end       start            end
@@ -191,7 +202,7 @@ def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
                 if hsp_n.sbjct_end >= hsp_c.sbjct_end:
                     continue
                 dist = hsp_c.sbjct_start - hsp_n.sbjct_end
-            elif hsp_n.strand == hsp_c.strand == -1:
+            elif hsp_n.sbjct_strand == hsp_c.sbjct_strand == -1:
                 #          hsp_c                    hsp_n
                 #    ----------------       --------------------
                 #    start        end       start            end
@@ -216,16 +227,16 @@ def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
     return min_hsp_n, min_hsp_c
 
 def _get_fshift_info_from_two_hits(hsp_n, hsp_c, chr_seq, gencode):
-    if hsp_n.strand == hsp_c.strand == 1:
+    if hsp_n.sbjct_strand == hsp_c.sbjct_strand == 1:
         lh, rh = hsp_n, hsp_c
-    elif hsp_n.strand == hsp_c.strand == -1:
+    elif hsp_n.sbjct_strand == hsp_c.sbjct_strand == -1:
         lh, rh = hsp_c, hsp_n
     else:
         raise ValueError("The HSPs are on different strands!")
 
-    l_ss = _get_stop_stop_seq(lh.sbjct_start, lh.sbjct_end, lh.strand,
+    l_ss = _get_stop_stop_seq(lh.sbjct_start, lh.sbjct_end, lh.sbjct_strand,
                               chr_seq, gencode)
-    r_ss = _get_stop_stop_seq(rh.sbjct_start, rh.sbjct_end, rh.strand,
+    r_ss = _get_stop_stop_seq(rh.sbjct_start, rh.sbjct_end, rh.sbjct_strand,
                               chr_seq, gencode)
     if l_ss is None or r_ss is None:
         return None
@@ -233,7 +244,7 @@ def _get_fshift_info_from_two_hits(hsp_n, hsp_c, chr_seq, gencode):
         # left and right hits are in frame => fs-gene without FS
         return {'coord': None, 'len': 0,   # i.e. no frameshift
                 'start': lh.sbjct_start, 'end': rh.sbjct_end,
-                'strand': lh.strand}
+                'strand': lh.sbjct_strand}
 
     ovlp_l, ovlp_r = get_overlap_region(l_ss['left'], l_ss['right'],
                                         r_ss['left'], r_ss['right'])
@@ -255,8 +266,8 @@ def _get_fshift_info_from_two_hits(hsp_n, hsp_c, chr_seq, gencode):
             fs_len = 0   # i.e. in_frame_stop
 
         # putative fs-coord just before the middle stop codon
-        fs_coord = (l_ss['right']-3) if lh.strand == 1 else (r_ss['left']+3)
-        return {'coord': fs_coord, 'len': fs_len, 'strand': lh.strand,
+        fs_coord = (l_ss['right']-3) if lh.sbjct_strand == 1 else (r_ss['left']+3)
+        return {'coord': fs_coord, 'len': fs_len, 'strand': lh.sbjct_strand,
                 'start': lh.sbjct_start, 'end': rh.sbjct_end}
 
 def get_overlap_region(s1,e1,s2,e2):
@@ -355,4 +366,13 @@ def get_codon_type(codon, gencode, strand=1):
         return 'stop'
     else:
         return 'coding'
+
+def _make_hits_dict(hsp_list):
+    """Returns a dict where the keys are the hit sequence IDs and
+    the values are the lists of Bio.Blast.Record.HSP objects.
+    """
+    all_hits = {}
+    for hsp in hsp_list:
+        all_hits.setdefault(hsp.sbjct_id, []).append(hsp)
+    return all_hits
 

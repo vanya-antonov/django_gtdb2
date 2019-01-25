@@ -7,7 +7,7 @@ import subprocess
 
 from django.conf import settings
 
-from chelatase_db.lib.bio import run_blastp_vs_file
+from chelatase_db.lib.bio import run_blastp_seq_vs_file
 from chelatase_db.lib.config import PATHWAY_GENES_TXT, PATHWAY_GENES_FAA
 from gtdb2.models.feat import Feat
 
@@ -53,22 +53,30 @@ class ChelataseFeat(Feat):
         info_dict = _read_pathway_gene_info(info_fn)
 
         faa_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_FAA)
-        hits_dict = run_blastp_vs_file(self.prm.translation, faa_fn)
-        if len(hits_dict.keys()) == 0:
-            return
+        all_hsps = run_blastp_seq_vs_file(self.prm.translation, faa_fn)
 
         aa_len = len(self.prm.translation)
-        best_hsp = _get_best_hit(hits_dict, info_dict, aa_len)
+        best_hsp = None
+        for hsp in all_hsps:
+            info = info_dict[hsp.sbjct_id]
+            # Make sure the Feat satisfies the requirements
+            if '_min_len' in info and aa_len < info['_min_len']:
+                continue
+            if '_max_len' in info and aa_len > info['_max_len']:
+                continue
+            best_hsp = hsp
+            break
+
         if best_hsp is None:
             return
 
-        self.set_param('chel_evalue', '%.2e' % best_hsp.expect,
-                       num=best_hsp.expect)
-
         # Set params from info_dict: 'chel_gene', 'chel_subunit', etc
-        for name, value in info_dict[best_hsp.hit_id].items():
+        for name, value in info_dict[best_hsp.sbjct_id].items():
             if not name.startswith('_'):
                 self.set_param(name, value)
+
+        self.set_param('chel_evalue', '%.2e' % best_hsp.expect,
+                       num=best_hsp.expect)
 
 
 def _get_best_hit(hits_dict, info_dict, aa_len):

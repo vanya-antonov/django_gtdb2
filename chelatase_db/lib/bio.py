@@ -8,59 +8,90 @@ from Bio.Blast import NCBIXML
 from .config import MAX_NUM_THREADS, DEFAULT_EVALUE
 
 
-def run_blastp_vs_file(prot_seq, file_path, evalue=DEFAULT_EVALUE):
+def run_blastp_seq_vs_file(query_seq, target_fn, evalue=DEFAULT_EVALUE):
+    """Arguments:
+     - query_seq - (str) query protein sequence
+     - target_fn - (str) full path to a file with other protein seqs
+    """
     # Use the fixed -dbsize to make results (evalues) reproducible
     cmd_str = ' '.join([
         'blastp  -outfmt 5  -dbsize 1  -max_target_seqs 999999',
         '-evalue', str(evalue),
-        '-subject', file_path])
-    return _run_blast_cmd_str(prot_seq, cmd_str)
+        '-subject', target_fn])
+    xml_str = _run_blast_cmd_str_with_query_seq(cmd_str, query_seq)
+    return _parse_blast_xml_str(xml_str)
 
-def run_tblastn(prot_seq, blastdb_path, gcode,
-                evalue=DEFAULT_EVALUE,
-                num_threads=MAX_NUM_THREADS):
+def run_tblastn_seq_vs_db(query_seq, target_db, gcode,
+                evalue=DEFAULT_EVALUE):
+    """Arguments:
+     - query_seq - (str) query protein sequence
+     - target_db - (str) full path to the blast db
+     - gcode - (int) target db genetic code
+    """
     # Use the fixed -dbsize to make results (evalues) reproducible
     cmd_str = ' '.join([
         'tblastn  -outfmt 5  -dbsize 1  -max_target_seqs 999999',
         '-evalue', str(evalue),
-        '-num_threads', str(num_threads),
+        '-num_threads', str(MAX_NUM_THREADS),
         '-db_gencode', str(gcode),
-        '-db', blastdb_path])
+        '-db', target_db])
+    xml_str = _run_blast_cmd_str_with_query_seq(cmd_str, query_seq)
+    return _parse_blast_xml_str(xml_str)
 
-    hits_dict = _run_blast_cmd_str(prot_seq, cmd_str)
+def run_tblastn_file_vs_db(query_fn, target_db, gcode,
+                           evalue=DEFAULT_EVALUE):
+    """Arguments:
+     - query_fn - (str) full path to the fn with query sequence(s)
+     - target_db - (str) full path to the blast db
+     - gcode - (int) target db genetic code
+    """
+    # Use the fixed -dbsize to make results (evalues) reproducible
+    cmd_str = ' '.join([
+        'tblastn  -outfmt 5  -dbsize 1  -max_target_seqs 999999',
+        '-evalue', str(evalue),
+        '-num_threads', str(MAX_NUM_THREADS),
+        '-db_gencode', str(gcode),
+        '-query', query_fn,
+        '-db', target_db])
+    xml_str = subprocess.getoutput(cmd_str)
+    return _parse_blast_xml_str(xml_str)
 
-    # Overwrite the .strand attribute becuase it is None anyway
-    for all_hsps in hits_dict.values():
-        for hsp in all_hsps:
-            hsp.strand = 1 if hsp.frame[1] >= 0 else -1
-
-    return hits_dict
-
-def _run_blast_cmd_str(query_seq, cmd_str):
-    """Returns a dict where the keys are the hit sequence IDs and
-    the values are the lists of Bio.Blast.Record.HSP objects
-    (https://github.com/biopython/biopython/blob/master/Bio/Blast/Record.py).
-    The coordinate system of the HSP objects is converted to 0-based.
+def _run_blast_cmd_str_with_query_seq(cmd_str, query_seq):
+    """Returns XML string produced by BLAST run.
     """
     fasta_txt = '>query\n' + query_seq + '\n'
-    proc = subprocess.run(
+    return subprocess.run(
         cmd_str, input=fasta_txt, stdout=subprocess.PIPE,
-        shell=True, universal_newlines=True)
+        shell=True, universal_newlines=True
+    ).stdout
 
-    f = io.StringIO(proc.stdout)
-    all_res = list(NCBIXML.parse(f))
+def _parse_blast_xml_str(xml_str):
+    """Returns a sorted list of Bio.Blast.Record.HSP objects with some extra
+    attributes -- query_id, sbjct_id, sbjct_strand. Also the coordinate system
+    of all the HSP objects is converted to 0-based.
+    https://github.com/biopython/biopython/blob/master/Bio/Blast/Record.py
+    """
+    f = io.StringIO(xml_str)
+
+    # http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc102
+    all_hsps = []
+    for blast_record in NCBIXML.parse(f):
+        for alignment in blast_record.alignments:
+            for hsp in alignment.hsps:
+                # Hsp objects use 1-based coordinates - let's fix it
+                hsp.query_start -= 1
+                hsp.sbjct_start -= 1
+
+                # Add the query and the hit IDs
+                hsp.query_id = blast_record.query
+                hsp.sbjct_id = alignment.hit_def
+
+                # Add a more convenient attribute for the hit strand
+                hsp.sbjct_strand = 1 if hsp.frame[1] >= 0 else -1
+
+                all_hsps.append(hsp)
+
     f.close()
-    if(len(all_res) != 1):
-        raise ValueError('BLAST XML must contain results for a single query!')
 
-    all_hits = {}
-    for alignment in all_res[0].alignments:
-        for hsp in alignment.hsps:
-            # Hsp objects use 1-based coordinates - let's fix it
-            hsp.query_start -= 1
-            hsp.sbjct_start -= 1
-
-            all_hits.setdefault(alignment.hit_def, []).append(hsp)
-
-    return all_hits
+    return sorted(all_hsps, key = lambda hsp: hsp.expect)
 

@@ -48,6 +48,11 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         mf_chld = mf_chld_feats[0]
         self.assertEqual(mf_chld.fshift.len, -1)
         self.assertEqual(mf_chld.fshift.name, 'NC_013156.1:1122957:-1')
+        self.assertEqual(mf_chld.prm.chel_subunit, 'M')
+
+        # Make sure the parent CDS was created as well
+        mf_chli = mf_chld.parent
+        self.assertEqual(mf_chli.prm.chel_subunit, 'S')
 
     def test_org_make_all_params(self):
         """Creates chlD and other pathway feats by tBLASTn."""
@@ -56,21 +61,34 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         gbk_fn = self.get_full_path_to_test_file('N_mexicana.gbk')
         org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
 
-        # The org has 1 seq only
-        self.assertEqual(org.seq_set.count(), 1)
-
-        # The org has only one chlD gene without fshift
+        # The org has only one chlD gene
         self.assertEqual(len(org.chld_feats), 1)
-
         chld_feat = org.chld_feats[0]
+
+        self.assertEqual(chld_feat.descr, 'magnesium chelatase')
+        self.assertEqual(chld_feat.prm.chel_subunit, 'M')
 
         # The chlD gene does not have a frameshift
         self.assertEqual(chld_feat.fshift_set.count(), 0)
         self.assertEqual(chld_feat.fshift, None)
+
+        # ... and therefore does not have a parent
+        self.assertEqual(chld_feat.parent, None)
 
         # The chlD gene is more similar to bchD
         self.assertEqual(chld_feat.prm.chel_pathway, 'Chlorophyll')
         self.assertEqual(chld_feat.prm.chel_subunit, 'M')
         self.assertEqual(chld_feat.prm.chel_gene, 'bchD')
         self.assertTrue(chld_feat.prm.chel_evalue < 1e-80)
+
+        # In addition to the medium subunit, it has the large subunit as well
+        all_feats = list(ChelataseFeat.objects.filter(seq__org=org).all())
+        all_large = [f for f in all_feats if f.prm.chel_subunit == 'L']
+        self.assertEqual(len(all_large), 1)
+        cobn_feat = all_large[0]
+
+        # Verify the annotation of the cobN feat
+        self.assertEqual(cobn_feat.prm.chel_pathway, 'Cobalamin')
+        self.assertEqual(cobn_feat.prm.chel_subunit, 'L')
+        self.assertEqual(cobn_feat.prm.chel_gene, 'cobN')
 
