@@ -7,22 +7,62 @@
 #  * _min/_max_len  -  (optional) the params will be set to the feature
 #    only if its length is within these boundaries
 #
-_id	chel_query	chel_gene	chel_subunit	chel_pathway	_min_len	_max_len
-WP_004683959.1	WP_004683959.1	cobN	L	Cobalamin	1000	2000
-AAA25780.1	AAA25780.1	cobN	L	Cobalamin	1000	2000
-BAA17040.1	BAA17040.1	chlH	L	Chlorophyll	1000	2000
-WP_011935387.1	WP_011935387.1	chlH	L	Chlorophyll	1000	2000
-YP_353361.1	YP_353361.1	bchH	L	Chlorophyll	1000	2000
-WP_011361278.1	WP_011361278.1	bchH	L	Chlorophyll	1000	2000
-WP_004686229.1	WP_004686229.1	cobT	M	Cobalamin	400	1000
-AAA25793.1	AAA25793.1	cobT	M	Cobalamin	400	1000
-BAA16787.1	BAA16787.1	chlD	M	Chlorophyll	400	1000
-WP_011934639.1	WP_011934639.1	chlD	M	Chlorophyll	400	1000
-YP_353348.2	YP_353348.2	bchD	M	Chlorophyll	400	1000
-WP_011362635.1	WP_011362635.1	bchD	M	Chlorophyll	400	1000
-WP_002971872.1	WP_002971872.1	cobS	S	Cobalamin	250	450
-AAA25792.1	AAA25792.1	cobS	S	Cobalamin	250	450
-BAA17166.1	BAA17166.1	chlI	S	Chlorophyll	250	450
-WP_011935147.1	WP_011935147.1	chlI	S	Chlorophyll	250	450
-YP_353347.1	YP_353347.1	bchI	S	Chlorophyll	250	450
-WP_011362636.1	WP_011362636.1	bchI	S	Chlorophyll	250	450
+_id	chel_query	chel_pathway	chel_gene_group	chel_gene	chel_subunit	_min_len	_max_len
+AAA25780.1	AAA25780.1	B12	cobN	cobN	L	1000	2000
+WP_004683959.1	WP_004683959.1	B12	cobN	cobN	L	1000	2000
+BAA17040.1	BAA17040.1	Chlorophyll	chlH	chlH	L	1000	2000
+YP_353361.1	YP_353361.1	Chlorophyll	bchH	bchH	L	1000	2000
+AAA25793.1	AAA25793.1	B12	cobT	cobT	M	400	1000
+WP_004686229.1	WP_004686229.1	B12	cobT	cobT	M	400	1000
+BAA16787.1	BAA16787.1	Chlorophyll	chlD	chlD	M	400	1000
+YP_353348.2	YP_353348.2	Chlorophyll	bchD	bchD	M	400	1000
+AAA25792.1	AAA25792.1	B12	cobS	cobS	S	250	450
+WP_002971872.1	WP_002971872.1	B12	cobS	cobS	S	250	450
+BAA17166.1	BAA17166.1	Chlorophyll	chlI	chlI	S	250	450
+YP_353347.1	YP_353347.1	Chlorophyll	bchI	bchI	S	250	450
+ADC69074.1	ADC69074.1	B12	cobD_cobC				
+ADC69303.1	ADC69303.1	B12	cobV_cobS				
+ADC69892.1	ADC69892.1	B12	cysG_cobA				
+ADC70426.1	ADC70426.1	B12	cobQ	cobQ			
+NP_249963.1	NP_249963.1	B12	cobO	cobO			
+NP_249966.1	NP_249966.1	B12	cobD_cobC	cobD			
+NP_249968.1	NP_249968.1	B12	cobQ	cobQ			
+NP_249969.1	NP_249969.1	B12	cobP_cobU	cobP			
+NP_249972.1	NP_249972.1	B12	cobV_cobS	cobV			
+AAL51871.1	AAL51871.1	B12	cobQ	cobQ			
+AAL51874.1	AAL51874.1	B12	cobP_cobU				
+AAL51877.1	AAL51877.1	B12	cobO	cobO			
+AAL51885.1	AAL51885.1	B12	cysG_cobA				
+AAL51887.1	AAL51887.1	B12	cobD_cobC				
+AAL52281.1	AAL52281.1	B12	cobV_cobS				
+NP_214768.1	NP_214768.1	B12	cobP_cobU				
+NP_215025.2	NP_215025.2	B12	cysG_cobA				
+NP_216724.1	NP_216724.1	B12	cobV_cobS				
+NP_216752.1	NP_216752.1	B12	cobD_cobC				
+NP_250469.1	NP_250469.1	B12	cysG_cobA				
+YP_177703.1	YP_177703.1	B12	cobQ	cobQ			
+YP_177908.1	YP_177908.1	B12	cobO	cobO			
+YP_353355.1	YP_353355.1	Chlorophyll	bchE	bchE			
+YP_353359.1	YP_353359.1	Chlorophyll	chlN_bchN	bchN			
+YP_353360.1	YP_353360.1	Chlorophyll	chlB_bchB	bchB			
+YP_353362.1	YP_353362.1	Chlorophyll	chlL_bchL	bchL			
+YP_353363.1	YP_353363.1	Chlorophyll	chlM_bchM	bchM			
+ABL64639.1	ABL64639.1	Chlorophyll	chlG_bchG				
+ABL66305.1	ABL66305.1	Chlorophyll	chlM_bchM				
+ABL66306.1	ABL66306.1	Chlorophyll	bchE	bchE			
+ABL66374.1	ABL66374.1	Chlorophyll	chlL_bchL				
+ABL66375.1	ABL66375.1	Chlorophyll	chlB_bchB				
+ABL66376.1	ABL66376.1	Chlorophyll	chlN_bchN				
+ABU57629.1	ABU57629.1	Chlorophyll	chlN_bchN				
+ABU57630.1	ABU57630.1	Chlorophyll	chlB_bchB				
+ABU57631.1	ABU57631.1	Chlorophyll	chlL_bchL				
+ABU57632.1	ABU57632.1	Chlorophyll	chlM_bchM				
+ABU57634.1	ABU57634.1	Chlorophyll	bchE	bchE			
+ABU59792.1	ABU59792.1	Chlorophyll	chlG_bchG				
+BAA10114.1	BAA10114.1	Chlorophyll	chlB_bchB				
+BAA10281.1	BAA10281.1	Chlorophyll	chlG_bchG				
+BAA10457.1	BAA10457.1	Chlorophyll	bchE	bchE			
+BAA10812.1	BAA10812.1	Chlorophyll	chlM_bchM				
+BAA18745.1	BAA18745.1	Chlorophyll	chlL_bchL				
+BAA18746.1	BAA18746.1	Chlorophyll	chlN_bchN				
+YP_353353.1	YP_353353.1	Chlorophyll	chlG_bchG				
