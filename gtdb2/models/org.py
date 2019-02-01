@@ -9,6 +9,7 @@ import re
 
 from Bio import SeqIO
 
+from django.apps import apps
 from django.db import models
 from django.db.models import signals
 from django.dispatch import receiver
@@ -28,6 +29,9 @@ class Org(AbstractUnit):
     class Meta:
         db_table = 'orgs'
 
+    # Define these attributes so they can be overwritten by the derived classes
+    FEAT_CLS = 'Feat'
+
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
     PRM_INFO = dict(list(AbstractUnit.PRM_INFO.items()) + list({
         'blastdb_nucl_all': {},
@@ -46,6 +50,22 @@ class Org(AbstractUnit):
         'seq_fna': 'orgs/%s/seq_fna/',
         'seq_gbk': 'orgs/%s/seq_gbk/',
         'blastdb': 'orgs/%s/blastdb/',}
+
+    @property
+    def feat_set(self):
+        """Retruns a QuerySet of all the Feat objects (or its subclasses)
+        that belong to the current org.
+        """
+        # Get the app name, i.e. 'gtdb2':
+        # https://stackoverflow.com/a/2742722/310453
+        app_label = self._meta.app_label
+
+        # Get the class object for the db model:
+        # https://stackoverflow.com/a/36234846/310453
+        feat_cls = apps.get_model(app_label, self.FEAT_CLS)
+
+        # Create the QuerySet
+        return feat_cls.objects.filter(seq__org=self)
 
     @property
     def transl_table(self):
@@ -95,6 +115,7 @@ class Org(AbstractUnit):
         org.set_param('source_fn', fn)
 
         org.make_all_params()
+        org.create_annotation()
 
         return org
 
@@ -154,6 +175,12 @@ class Org(AbstractUnit):
 
         self._make_param_blastdb()
         #org.make_genetack_model()
+
+    def create_annotation(self):
+        # create annotated fshifts
+        # create genetack fshifts
+        # create 16S rRNA feats
+        pass
 
     def update_seqs_with_gbk(self, gbk_fn):
         """Compares current list of org seqs with the seqs from the gbk file.

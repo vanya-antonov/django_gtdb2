@@ -32,11 +32,11 @@ class GeneTackDB:
             descr='Default GeneTackDB user')
         return user
 
-    def get_or_create_prm_user(self):
-        """Returns a user for objects created by make_all_params()."""
+    def get_or_create_annotation_user(self):
+        """Returns a user for automatic annotation."""
         user, created = User.objects.get_or_create(
-            name='gtdb_prm',
-            descr='Objects automatically created by make_all_params()')
+            name='auto_annotation',
+            descr='Objects created by the automatic annotation')
         return user
 
     def get_full_path_to(self, *args):

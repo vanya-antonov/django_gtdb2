@@ -22,10 +22,10 @@ class ChelataseOrg(Org):
         proxy = True
 
     # Merge two dicts: https://stackoverflow.com/a/38990/310453
-    PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
-        'num_chld_fshifts': {'value_attr': 'num', 'type_fun': int},
-        'num_chld_feats': {'value_attr': 'num', 'type_fun': int},
-    }.items()))
+    # PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
+    # }.items()))
+
+    FEAT_CLS = 'ChelataseFeat'
 
     @property
     def chld_feats(self):
@@ -37,44 +37,32 @@ class ChelataseOrg(Org):
             param_set__value='M'
         ).all())
 
-    def make_all_params(self):
-        """Overwrite the parent's method because ALL params should be
-        generated for orgs with chlD gene(s) only. Still, some specific
-        params (e.g. transl_table) must be created in order to search for
-        chlD gene in the org seqs.
+    def create_annotation(self):
+        """Creates feats homologous to the cholorophyll and B12
+        biosynthesis pathway genes.
         """
-        # Create params required to search for chld genes
-        super()._make_param_blastdb()
-        super()._make_param_transl_table()
-        chld_cof = ChelataseCof.get_or_create_chld_cof(self.user)
+        user = self.gtdb.get_or_create_annotation_user()
 
-        # Remove any objects created by previous method call
-        prm_user = self.gtdb.get_or_create_prm_user()
-        ChelataseFeat.objects.filter(user=prm_user).delete()
-        ChelataseFshift.objects.filter(user=prm_user).delete()
-
-        # Try to find chlD gene(s)
-        chld_feats = self.get_or_create_feats_from_cof_by_tblastn(
-            prm_user, chld_cof)
+        # Annotation is only created for orgs with chld gene(s)
+        chld_feats = self._get_or_create_chld_feats(user)
         if len(chld_feats) == 0:
-            # Other params are NOT created for orgs without chld genes
             return
+        super().create_annotation()
 
-        # Verify automatic annotation of chlD genes
-        for chld in chld_feats:
-            if 'chel_subunit' not in chld.prm or chld.prm.chel_subunit != 'M':
-                self.delete()
-                raise ValueError("The identified chlD gene was not "
-                                 "automatically annotated as medium subunit!")
-
-        # Finally, create the full set of params
-        super().make_all_params()
-        self._make_chelatase_params(prm_user)
+        # Create CDS feats homologous to cholorophyll and B12 pathway genes
+        db_path = self.gtdb.get_full_path_to(self.prm.blastdb_nucl_all)
+        faa_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_FAA)
+        all_hsps = run_tblastn_file_vs_db(faa_fn, db_path, self.transl_table)
+        for hsp in all_hsps:
+            seq = ChelataseSeq.get_or_create_from_ext_id(
+                user, self, hsp.sbjct_id)
+            ChelataseFeat.get_or_create_from_gbk_annotation(
+                user, seq, hsp.sbjct_start, hsp.sbjct_end, hsp.sbjct_strand)
 
     def get_or_create_feats_from_cof_by_tblastn(self, user, cof):
         """Returns a list of feats (with or without fshifts) identified
-        in the given org sequences by using cof prot_seqs as queries to
-        run tblastn.
+        in the given org sequences by using prot_seqs from the seed COF
+        as queries to run tblastn.
         """
         all_feats = set()
         for q_fshift in cof.seed_fshifts:
@@ -96,6 +84,20 @@ class ChelataseOrg(Org):
             all_feats.update(feat_set)
 
         return list(all_feats)
+
+    def _get_or_create_chld_feats(self, user):
+        """Returns a list of ChelataseFeat objects."""
+        chld_cof = ChelataseCof.get_or_create_chld_cof(self.user)
+        chld_feats = self.get_or_create_feats_from_cof_by_tblastn(
+            user, chld_cof)
+
+        # Verify the automatic annotation of chlD genes
+        for chld in chld_feats:
+            if 'chel_subunit' not in chld.prm or chld.prm.chel_subunit != 'M':
+                self.delete()
+                raise ValueError("The identified chlD gene was not "
+                                 "automatically annotated as medium subunit!")
+        return chld_feats
 
     def _get_or_create_feats_from_tblastn_hits(
             self, user, cof, n_hits_dict, c_hits_dict):
@@ -162,31 +164,6 @@ class ChelataseOrg(Org):
                 all_fs_info.append(fs_dict)
 
         return all_fs_info
-
-# TODO: Annotation of other pathway genes
-# 
-# Data file are in q_seq/group_seq and _q_groups.2_col located in
-# ~/_my/DataLog/2018_yulia/0802.Ba.heatmap_with_several_queries
-# 
-# Additional info is in 0802.xlsx located on my Mac in 
-# /Users/antonov/Projects/2018/Baranov/DataLog/0802.Ba.heatmap_with_several_queries
-# 
-# No code was written for this part of the work.
-
-    # def get_or_create_pathway_genes(self, user):
-    def _make_chelatase_params(self, user):
-        """Creates feats homologous to the cholorophyll and B12
-        biosynthesis pathway genes.
-        """
-        db_path = self.gtdb.get_full_path_to(self.prm.blastdb_nucl_all)
-        faa_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_FAA)
-        all_hsps = run_tblastn_file_vs_db(faa_fn, db_path, self.transl_table)
-
-        for hsp in all_hsps:
-            seq = ChelataseSeq.get_or_create_from_ext_id(
-                user, self, hsp.sbjct_id)
-            feat = ChelataseFeat.get_or_create_from_gbk_annotation(
-                user, seq, hsp.sbjct_start, hsp.sbjct_end, hsp.sbjct_strand)
 
 def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
     min_dist, min_hsp_n, min_hsp_c = None, None, None

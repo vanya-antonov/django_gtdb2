@@ -20,6 +20,7 @@ class ChelataseFeat(Feat):
     PRM_INFO = dict(list(Feat.PRM_INFO.items()) + list({
         'chel_evalue': {'type_fun': float},
         'chel_gene': {},
+        'chel_gene_group': {},
         'chel_pathway': {},
         'chel_query': {},
         'chel_subunit': {},
@@ -103,6 +104,10 @@ def _get_best_hit(hits_dict, info_dict, aa_len):
     return best_hsp
 
 def _read_pathway_gene_info(fn):
+    """Returns a dict of dicts where keys of the first dict are the
+    sequence IDs (the _id column of the .txt file).
+    """
+    # Read the info from file
     info_dict = {}
     with open(fn) as f:
         # https://stackoverflow.com/a/14158869/310453
@@ -113,10 +118,21 @@ def _read_pathway_gene_info(fn):
                 raise ValueError(
                     "Sequence ID '%s' is duplicated in file '%s'" %
                     (row['_id'], fn))
-            if row['_min_len'].isdigit():
-                row['_min_len'] = int(row['_min_len'])
-            if row['_max_len'].isdigit():
-                row['_max_len'] = int(row['_max_len'])
             info_dict[row['_id']] = row
+
+    # Postprocess the created dict of dicts
+    for row in info_dict.values():
+        # Remove any special key that does not have a value
+        # About list(row.keys()): https://stackoverflow.com/a/11941855/310453
+        for key in list(row.keys()):
+            if key.startswith('_') and row[key] == '':
+                del(row[key])
+
+        # Convert some strings to integers, if available
+        if '_min_len' in row:
+            row['_min_len'] = int(row['_min_len'])
+        if '_max_len' in row:
+            row['_max_len'] = int(row['_max_len'])
+
     return info_dict
 

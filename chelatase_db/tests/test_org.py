@@ -54,7 +54,7 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         mf_chli = mf_chld.parent
         self.assertEqual(mf_chli.prm.chel_subunit, 'S')
 
-    def test_org_make_all_params(self):
+    def test_org_create_from_gbk(self):
         """Creates chlD and other pathway feats by tBLASTn."""
 
         # make_all_params() is called inside the 'create' method
@@ -75,20 +75,31 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         # ... and therefore does not have a parent
         self.assertEqual(chld_feat.parent, None)
 
-        # The chlD gene is more similar to bchD
+        # The chlD gene should be automatically annotated
         self.assertEqual(chld_feat.prm.chel_pathway, 'Chlorophyll')
         self.assertEqual(chld_feat.prm.chel_subunit, 'M')
-        self.assertEqual(chld_feat.prm.chel_gene, 'bchD')
-        self.assertTrue(chld_feat.prm.chel_evalue < 1e-80)
+        self.assertTrue(chld_feat.prm.chel_gene in ['chlD', 'bchD'])
+        self.assertTrue(chld_feat.prm.chel_evalue < 1e-60)
 
         # In addition to the medium subunit, it has the large subunit as well
-        all_feats = list(ChelataseFeat.objects.filter(seq__org=org).all())
+        all_feats = list(org.feat_set.all())
         all_large = [f for f in all_feats if f.prm.chel_subunit == 'L']
         self.assertEqual(len(all_large), 1)
         cobn_feat = all_large[0]
 
         # Verify the annotation of the cobN feat
-        self.assertEqual(cobn_feat.prm.chel_pathway, 'Cobalamin')
+        self.assertEqual(cobn_feat.prm.chel_pathway, 'B12')
         self.assertEqual(cobn_feat.prm.chel_subunit, 'L')
         self.assertEqual(cobn_feat.prm.chel_gene, 'cobN')
+
+        # The org also has some other genes from the B12 pathway
+        cobQ_feats = [f for f in all_feats if f.prm.chel_gene_group == 'cobQ']
+        self.assertEqual(len(cobQ_feats), 1)
+
+        cobO_feats = [f for f in all_feats if f.prm.chel_gene_group == 'cobO']
+        self.assertEqual(len(cobO_feats), 1)
+
+        cobA_feats = [f for f in all_feats
+                      if f.prm.chel_gene_group == 'cysG_cobA']
+        self.assertEqual(len(cobA_feats), 1)
 
