@@ -114,7 +114,7 @@ class Org(AbstractUnit):
 
         org.set_param('source_fn', fn)
 
-        org.make_all_params()
+        org.create_all_params()
         org.create_annotation()
 
         return org
@@ -159,7 +159,7 @@ class Org(AbstractUnit):
         seq_path = os.path.join(dir_path, ext_id)
         return SeqIO.read(seq_path, dir2fmt[seq_dir])
 
-    def make_all_params(self):
+    def create_all_params(self):
         "Generates/updates the majority of params."
         self._make_param_short_name()
 

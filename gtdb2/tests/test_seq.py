@@ -31,7 +31,7 @@ class SeqModelTests(GtdbTestCase):
 
     def test_seq_make_all_params(self):
         seq = Seq.create_from_ext_id(self.user, self.org, 'NZ_BDBV01000005.1')
-        seq.make_all_params()
+        seq.create_all_params()
 
         # Check 'transl_table' prm
         self.assertTrue('transl_table' in seq.prm)

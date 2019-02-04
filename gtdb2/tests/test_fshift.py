@@ -39,7 +39,7 @@ class FshiftModelTests(GtdbTestCase):
         # name is generated inside make_all_params()
         self.assertIsNone(fshift.name)
 
-        fshift.make_all_params()
+        fshift.create_all_params()
 
         self.assertEqual(fshift.name, 'NC_013156.1:1122957:-1')
 
@@ -53,10 +53,10 @@ class FshiftModelTests(GtdbTestCase):
                         start=1121859, coord=1122957, end=1123904,
                         len=-1, strand=1)
         fshift.save()
-        fshift.make_all_params()
+        fshift.create_all_params()
 
         num_params_1 = FshiftParam.objects.count()
-        fshift.make_all_params()
+        fshift.create_all_params()
         num_params_2 = FshiftParam.objects.count()
 
         self.assertEqual(num_params_1, num_params_2)
@@ -105,7 +105,7 @@ class FshiftModelTests(GtdbTestCase):
 
         # Make sure that after another make_all_params() call the gtdb1
         # xref that is not present in gbk file was preserved
-        fshift.make_all_params()
+        fshift.create_all_params()
         self.assertEqual(
             fshift, FshiftParam.get_parent_by_xref('gtdb1', 33540948))
 

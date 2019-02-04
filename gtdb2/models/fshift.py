@@ -55,7 +55,7 @@ class Fshift(AbstractUnit):
         if len(all_fshifts) == 0:
             # Create a new fshift
             self = cls(*args, **kwargs)
-            self.make_all_params()
+            self.create_all_params()
             return self
         elif len(all_fshifts) == 1:
             # Return existing fshift
@@ -78,7 +78,7 @@ class Fshift(AbstractUnit):
         # add gtdb1 ID to xrefs
         self.set_param_xref('gtdb1', fs.fs_id)
 
-        self.make_all_params()
+        self.create_all_params()
 
         return self
 
@@ -96,7 +96,7 @@ class Fshift(AbstractUnit):
         "Saves seq as param-data and len(seq) as param-num."
         self.set_param(name, data=seq, num=len(seq))
 
-    def make_all_params(self):
+    def create_all_params(self):
         "Generates/updates name attribute and the majority of params."
         self._make_fshift_name()
         self._make_param_seq_nt_and_prot()

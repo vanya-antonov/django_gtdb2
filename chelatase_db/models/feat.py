@@ -38,9 +38,9 @@ class ChelataseFeat(Feat):
             raise ValueError("ChelataseFeat '%s' has '%s' fshifts" %
                              (self, num))
 
-    def make_all_params(self):
+    def create_all_params(self):
         """Extend the parent's method to create additional params."""
-        super().make_all_params()
+        super().create_all_params()
         self._make_params_chel_pathway()
 
     def _make_params_chel_pathway(self):

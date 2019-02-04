@@ -77,11 +77,11 @@ class Seq(AbstractUnit):
                   type=record.annotations['molecule_type'], len=len(record.seq))
         seq.save()
 
-        seq.make_all_params()
+        seq.create_all_params()
 
         return seq
 
-    def make_all_params(self):
+    def create_all_params(self):
         self._make_param_transl_table()
 
     def _make_param_transl_table(self):

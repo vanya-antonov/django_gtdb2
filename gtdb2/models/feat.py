@@ -81,7 +81,7 @@ class Feat(AbstractUnit):
                    origin=origin)
         self.save()
 
-        self.make_all_params()
+        self.create_all_params()
 
         return self
 
@@ -145,11 +145,11 @@ class Feat(AbstractUnit):
 
         fscds.fshift_set.set(all_fshifts)
 
-        fscds.make_all_params()
+        fscds.create_all_params()
 
         return fscds
 
-    def make_all_params(self):
+    def create_all_params(self):
         if self.type == 'fsCDS':
             self._make_fscds_name()
             self._make_param_fscds_translation()

@@ -85,7 +85,7 @@ class OrgModelTests(GtdbTestCase):
         org = Org.create_from_gbk(self.user, self.fn)
 
         num_params_1 = OrgParam.objects.count()
-        org.make_all_params()
+        org.create_all_params()
         num_params_2 = OrgParam.objects.count()
 
         self.assertEqual(num_params_1, num_params_2)

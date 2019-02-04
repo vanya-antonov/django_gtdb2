@@ -66,11 +66,11 @@ class ChelataseCof(Cof):
 
                 seq = ChelataseSeq.get_or_create_from_ext_id(
                     user, org, gtdb1_fs.job.name + '.1')
-                seq.make_all_params()
+                seq.create_all_params()
 
                 fshift = ChelataseFshift.create_from_gtdb1_fs(
                     user, seq, gtdb1_fs)
-                fshift.make_all_params()
+                fshift.create_all_params()
 
             #if fshift.feat is None:
             #    ChelataseFeat.create_fsCDS_from_fshift(user, fshift)

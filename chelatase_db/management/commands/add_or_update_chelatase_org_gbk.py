@@ -37,7 +37,7 @@ class Command(BaseCommand):
         else:
             new_seqs = org.update_seqs_with_gbk(gbk_fn)
             if len(new_seqs) > 0:
-                org.make_all_params(user)
+                org.create_all_params(user)
                 self.stdout.write(self.style.SUCCESS(
                     "'%s' seqs have been created/updated in org '%s'" %
                     (len(new_seqs), org.name)))
