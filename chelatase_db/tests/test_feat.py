@@ -24,7 +24,7 @@ class ChelataseFeatModelTests(ChelataseTestCase):
 
         # ... and it should be automatically annotated
         self.assertEqual(feat.prm.chel_subunit, 'M')
-        self.assertEqual(feat.prm.chel_gene, 'bchD')
+        self.assertEqual(feat.prm.chel_gene_group, 'chlD_bchD')
         self.assertEqual(feat.prm.chel_pathway, 'Chlorophyll')
-        self.assertTrue(feat.prm.chel_evalue < 1e-80)
+        self.assertTrue(feat.prm.chel_evalue < 1e-60)
 

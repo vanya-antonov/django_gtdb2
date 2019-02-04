@@ -125,7 +125,7 @@ def _read_pathway_gene_info(fn):
         # Remove any special key that does not have a value
         # About list(row.keys()): https://stackoverflow.com/a/11941855/310453
         for key in list(row.keys()):
-            if key.startswith('_') and row[key] == '':
+            if key.startswith('_') and (row[key] == '' or  row[key] is None):
                 del(row[key])
 
         # Convert some strings to integers, if available
