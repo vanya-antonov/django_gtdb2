@@ -13,7 +13,7 @@ from gtdb2.models.seq import Seq
 
 class Fshift(AbstractUnit):
     ORIGIN_CHOICES = (
-        ('gbk_annotation', 'GenBank annotation'),
+        ('annotation', 'GenBank annotation'),
         ('genetack', 'GeneTack prediction'),
         ('tblastn', 'tBLASTn prediction'),)
     seq = models.ForeignKey(Seq, on_delete=models.CASCADE)

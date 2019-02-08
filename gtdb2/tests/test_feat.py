@@ -25,7 +25,7 @@ class SeqModelTests(GtdbTestCase):
         self.assertEqual(feat.name, 'MEFER_RS06095')
         self.assertEqual(feat.descr, 'magnesium chelatase')
         self.assertEqual(feat.type, 'CDS')
-        self.assertEqual(feat.origin, 'gbk_annotation')
+        self.assertEqual(feat.origin, 'annotation')
 
         # Check params
         self.assertEqual(feat.prm['protein_id'], 'WP_015791742.1')

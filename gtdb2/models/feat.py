@@ -65,8 +65,8 @@ class Feat(AbstractUnit):
         if feat is not None:
             return feat
 
-        return cls.create_from_SeqFeature(user, seq, f,
-                                          origin='gbk_annotation')
+        return cls.create_from_SeqFeature(
+            user, seq, f, origin='annotation')
 
     @classmethod
     def create_from_SeqFeature(cls, user, seq, f, origin):
@@ -154,7 +154,7 @@ class Feat(AbstractUnit):
             self._make_fscds_name()
             self._make_param_fscds_translation()
 
-        if self.origin == 'gbk_annotation':
+        if self.origin == 'annotation':
             self._make_all_params_gbk()
 
     def _make_fscds_name(self):
