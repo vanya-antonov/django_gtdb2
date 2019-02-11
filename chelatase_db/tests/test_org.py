@@ -15,22 +15,12 @@ from chelatase_db.tests import ChelataseTestCase
 
 class ChelataseOrgModelTests(ChelataseTestCase):
 
-    def setUp(self):
-        super().setUp()
-
-        mf_gtdb1_id = 33540948    # mf = Methanocaldococcus fervens
-
-        # Create chld COF with 1 fshift only
-        self.chld_cof = self.create_chld_cof_from_pickles(
-            seed_gtdb1_ids = [mf_gtdb1_id])
-
-        # Make sure that org, seq and fshift were created
-        self.assertEqual(ChelataseOrg.objects.count(), 1)
-        self.assertEqual(ChelataseSeq.objects.count(), 1)
-        self.assertEqual(ChelataseFshift.objects.count(), 1)
-
     def test_org_get_or_create_feats_from_cof_by_tblastn(self):
-        # M. fervens org should be created in setUp()
+        # Create chld COF with 1 fshift only
+        chld_cof = self.create_chld_cof_from_pickles(
+            seed_gtdb1_ids = [self.MF_GTDB1_ID])
+
+        # M. fervens org should be created together with the COF
         mf_org = ChelataseOrg.objects.filter(
             name='Methanocaldococcus fervens AG86'
         ).first()
@@ -39,7 +29,7 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         mf_org._make_param_blastdb()
         mf_org._make_param_transl_table()
         mf_chld_feats = mf_org.get_or_create_feats_from_cof_by_tblastn(
-            self.user, self.chld_cof)
+            self.user, chld_cof)
 
         # Methanocaldococcus fervens contains 1 chlD gene only
         self.assertEqual(len(mf_chld_feats), 1)
@@ -53,6 +43,35 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         # Make sure the parent CDS was created as well
         mf_chli = mf_chld.parent
         self.assertEqual(mf_chli.prm.chel_subunit, 'S')
+
+    def test_org_get_or_create_feats_from_cof_by_tblastn_2(self):
+        """Test creation of fshifts located on the minus strand."""
+        # Create chld COF with 1 fshift only
+        chld_cof = self.create_chld_cof_from_pickles(
+            seed_gtdb1_ids = [self.DA_GTDB1_ID])
+
+        # The org was created together with the COF
+        org = ChelataseOrg.objects.filter(
+            name='Delftia acidovorans SPH-1'
+        ).first()
+
+        # Create params required for tblastn run
+        org._make_param_blastdb()
+        org._make_param_transl_table()
+        all_feats = org.get_or_create_feats_from_cof_by_tblastn(
+            self.user, chld_cof)
+
+        # There should be 1 chlD gene only
+        self.assertEqual(len(all_feats), 1)
+
+        # This chlD gene contains a single -1 frameshift
+        feat = all_feats[0]
+        self.assertEqual(feat.fshift.len, -1)
+        self.assertEqual(feat.prm.chel_subunit, 'M')
+
+        # Make sure the parent CDS was created as well
+        self.assertTrue(feat.parent is not None)
+        self.assertEqual(feat.parent.prm.chel_subunit, 'S')
 
     def test_org_create_from_gbk(self):
         """Creates chlD and other pathway feats by tBLASTn."""

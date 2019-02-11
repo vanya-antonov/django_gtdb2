@@ -297,7 +297,7 @@ def _get_stop_stop_seq(left, right, strand, chr_seq, gencode):
                         (left, right))
         return None
 
-    if strand == '-':
+    if strand == -1:
         chr_region = chr_region.reverse_complement()
     prot_seq = chr_region.translate(table=gencode)
     if '*' in prot_seq:
