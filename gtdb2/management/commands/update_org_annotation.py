@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from gtdb2.models.org import Org
+from chelatase_db.models import ChelataseOrg
+from gtdb2.models import Org, Feat, Fshift
 
 
 class Command(BaseCommand):
@@ -15,17 +16,19 @@ class Command(BaseCommand):
         try:
             # TODO: load() -- returns ChelataseOrg object if py_class prm is defined
             # org = Org.load(org_id)
-            org = Org.objects.get(id=org_id)
+            org = ChelataseOrg.objects.get(id=org_id)
         except Org.DoesNotExist:
             raise CommandError('Org "%s" does not exist' % org_id)
 
-        # Remove any objects created by the previous method call
+        # Remove old annotation
         anno_user = org.gtdb.get_or_create_annotation_user()
-        ChelataseFeat.objects.filter(user=anno_user).delete()
-        ChelataseFshift.objects.filter(user=anno_user).delete()
+        Feat.objects.filter(user=anno_user, seq__org=org).delete()
+        Fshift.objects.filter(user=anno_user, seq__org=org).delete()
 
+        # Create new annotation from scratch
         org.create_annotation()
 
         self.stdout.write(self.style.SUCCESS(
-            'Successfully updated annotation for org "%s"' % org_id))
+            "Successfully updated annotation for org '%s' (id=%s)" %
+            (org.name, org.id)))
 

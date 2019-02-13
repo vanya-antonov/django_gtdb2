@@ -34,16 +34,23 @@ class ChelataseCof(Cof):
     def get_or_create_chld_cof(cls, user):
         "Returns the chlD cof."
         cof = cls.objects.filter(name=cls.chld_info['name']).first()
+
         if cof is None:
             gtdb1_fs_list = []
             for gtdb1_id in cls.chld_info['seed_fshifts'].keys():
                 gtdb1_fs = GtFs.objects.using('gtdb1').get(pk=gtdb1_id)
                 gtdb1_fs_list.append(gtdb1_fs)
-            return cls.create_from_gtdb1_seed_fshifts(user, gtdb1_fs_list)
-        else:
-            if cof.descr != cls.chld_info['descr']:
-                raise ValueError("Name/descr mismatch!")
-            return cof
+            cof = cls.create_from_gtdb1_seed_fshifts(user, gtdb1_fs_list)
+
+        if len(cof.seed_fshifts) == 0:
+            raise ValueError("ChlD COF (id=%s) does not have seed fshifts" %
+                             cof.id)
+
+        if cof.descr != cls.chld_info['descr']:
+            raise ValueError("ChlD COF has wrong descr: '%s'  !=  '%s'" %
+                             (cof.descr, cls.chld_info['descr']))
+
+        return cof
 
     @classmethod
     def create_from_gtdb1_seed_fshifts(cls, user, gtdb1_fshifts):

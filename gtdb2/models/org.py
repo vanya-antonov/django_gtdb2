@@ -186,14 +186,15 @@ class Org(AbstractUnit):
         """Compares current list of org seqs with the seqs from the gbk file.
         Removes seqs that are not present in gbk. Adds seqs that are present
         in gbk, but not in org_dir and replaces seqs with records from the
-        file if they have newer versions. Returns a tuple with info about
-        the update statistics.
+        file if they have newer versions. Returns a list of new seqs (i.e.
+        the ones that were updated or just created).
         """
         # gbk file may be very large, so get a list of IDs first
         gbk_seq_ids = [r.id for r in SeqIO.parse(gbk_fn, "genbank")]
         org_seq_ids = self.get_all_seq_ids()
         if set(org_seq_ids) == set(gbk_seq_ids):
-            return {"n_new": 0, "n_updated": 0, "n_deleted": 0}
+            return []
+            #return {"n_new": 0, "n_updated": 0, "n_deleted": 0}
         raise NotImplementedError("Some org seqs should be updated!")
 
     def _create_org_dir(self):
