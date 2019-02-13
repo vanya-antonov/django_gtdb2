@@ -7,14 +7,17 @@ class Command(BaseCommand):
     help = "Deletes entire database content"
 
     def handle(self, *args, **options):
-        self.stdout.write("This will delete ALL(!) objects from the DB!")
+        self.stdout.write(self.style.WARNING(
+            "This will delete ALL(!) objects from the DB!"))
         answer = input("Please type 'DELETE' to confirm or press Enter to cancel: ")
         if answer != 'DELETE':
-            print('Canceled')
+            self.stdout.write(self.style.ERROR(
+                'Canceled'))
             return
 
         for user in User.objects.all():
             user.delete()
             self.stdout.write(self.style.SUCCESS(
                 'Successfully deleted user "%s"' % user.name))
+        self.stdout.write(self.style.SUCCESS('ALL DONE!'))
 
