@@ -5,11 +5,11 @@ import logging
 import sys
 
 from attrdict import AttrDict
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
 from gtdb2.lib.db import GeneTackDB
-from gtdb2.models.user import User
 
 
 class AbstractUnit(models.Model):

@@ -4,8 +4,7 @@ import shutil
 import tempfile
 
 from django.conf import settings
-
-from gtdb2.models.user import User
+from django.contrib.auth.models import User
 
 
 class GeneTackDB:
@@ -25,19 +24,29 @@ class GeneTackDB:
             shutil.rmtree(path)
             logging.debug("Tmp folder '%s' has been removed." % path)
 
+    def _get_or_create_user(self, username, password='123', last_name=None,
+                            email='vanya.antonov@gmail.com'):
+        """Returns existing user (by username) or creates a new one."""
+        user = User.objects.filter(username=username).first()
+        if user is None:
+            # https://docs.djangoproject.com/en/2.1/topics/auth/default/#topics-auth-creating-users
+            user = User.objects.create_user(
+                username=username, password=password, email=email)
+            user.last_name = last_name
+            user.save()
+        return user
+
     def get_or_create_default_user(self):
         """Returns 'default' user for manage.py commands."""
-        user, created = User.objects.get_or_create(
-            name='gtdb_manage.py',
-            descr='Default GeneTackDB user')
-        return user
+        return self._get_or_create_user(
+            username='gtdb2',
+            last_name='Default GeneTackDB user')
 
     def get_or_create_annotation_user(self):
         """Returns a user for automatic annotation."""
-        user, created = User.objects.get_or_create(
-            name='auto_annotation',
-            descr='Objects created by the automatic annotation')
-        return user
+        return self._get_or_create_user(
+            username='gtdb2_annotation',
+            last_name='Objects created by the automatic annotation')
 
     def get_full_path_to(self, *args):
         "Returns a full path for a GTDB dir relative path."
