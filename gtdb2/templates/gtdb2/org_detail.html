@@ -1,0 +1,26 @@
+{% extends "gtdb2/base.html" %}
+{% block content %}
+  <h1>{{ object.name }}</h1>
+
+	<nav aria-label="breadcrumb">
+    <!-- https://getbootstrap.com/docs/4.1/components/breadcrumb/ -->
+		<ol class="breadcrumb">
+      {% for taxa in object.param_dict.taxonomy %}
+			  <li class="breadcrumb-item"><a href="#">{{ taxa.value }}</a></li>
+      {% endfor %}
+		</ol>
+	</nav>
+
+  <h3>External IDs</h3>
+	<table class="table table-sm">
+    <tbody>
+      {% for xref in object.param_dict.xref %}
+        <tr>
+          <th scope="row">{{ xref.value }}</td>
+          <td>{{ xref.data }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+	</table>
+
+{% endblock content %}
