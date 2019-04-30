@@ -45,6 +45,9 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(mf_chld.fshift.name, 'NC_013156.1:1122957:-1')
         self.assertEqual(mf_chld.prm.chel_subunit, 'M')
 
+        # ...and this is the only fshift in this genome
+        self.assertEqual(mf_org.fshift_set.count(), 1)
+
         # Make sure the parent CDS was created as well
         mf_chli = mf_chld.parent
         self.assertEqual(mf_chli.prm.chel_subunit, 'S')

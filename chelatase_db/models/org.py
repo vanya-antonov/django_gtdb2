@@ -25,7 +25,8 @@ class ChelataseOrg(Org):
     # PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
     # }.items()))
 
-    FEAT_CLS = 'ChelataseFeat'
+    FEAT_CLS_NAME = 'ChelataseFeat'
+    FSHIFT_CLS_NAME = 'ChelataseFshift'
 
     @property
     def chld_feats(self):

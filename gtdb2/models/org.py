@@ -30,7 +30,8 @@ class Org(AbstractUnit):
         db_table = 'orgs'
 
     # Define these attributes so they can be overwritten by the derived classes
-    FEAT_CLS = 'Feat'
+    FEAT_CLS_NAME = 'Feat'
+    FSHIFT_CLS_NAME = 'Fshift'
 
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
     PRM_INFO = dict(list(AbstractUnit.PRM_INFO.items()) + list({
@@ -56,16 +57,14 @@ class Org(AbstractUnit):
         """Retruns a QuerySet of all the Feat objects (or its subclasses)
         that belong to the current org.
         """
-        # Get the app name, i.e. 'gtdb2':
-        # https://stackoverflow.com/a/2742722/310453
-        app_label = self._meta.app_label
+        return self._get_grandchildren_set(self.FEAT_CLS_NAME)
 
-        # Get the class object for the db model:
-        # https://stackoverflow.com/a/36234846/310453
-        feat_cls = apps.get_model(app_label, self.FEAT_CLS)
-
-        # Create the QuerySet
-        return feat_cls.objects.filter(seq__org=self)
+    @property
+    def fshift_set(self):
+        """Retruns a QuerySet of all Fshift objects (or its subclasses)
+        that belong to the current org.
+        """
+        return self._get_grandchildren_set(self.FSHIFT_CLS_NAME)
 
     @property
     def transl_table(self):
@@ -196,6 +195,28 @@ class Org(AbstractUnit):
             return []
             #return {"n_new": 0, "n_updated": 0, "n_deleted": 0}
         raise NotImplementedError("Some org seqs should be updated!")
+
+    def _get_grandchildren_set(self, grandchildren_cls_name):
+        """Retruns a QuerySet of all grandchildren of particular type
+        (assuming that seqs are children of the org).
+        For example, if grandchildren_cls_name = 'Feat' it will
+        return a QuerySet of Feat objects, i.e.
+        ORG (self)  ==>  ALL_SEQS  ==>  ALL_FEATS.
+
+        Arguments:
+         - grandchildren_cls_name - a string corresponding to grandchildren
+         class name (e.g. 'Feat' or 'Fshift')
+        """
+        # Get the app name, i.e. 'gtdb2':
+        # https://stackoverflow.com/a/2742722/310453
+        app_label = self._meta.app_label
+
+        # Get the class object for the db model:
+        # https://stackoverflow.com/a/36234846/310453
+        grandchildren_cls = apps.get_model(app_label, grandchildren_cls_name)
+
+        # Create the QuerySet
+        return grandchildren_cls.objects.filter(seq__org=self)
 
     def _create_org_dir(self):
         "Creates dir for the new org and saves its name in the params table."
