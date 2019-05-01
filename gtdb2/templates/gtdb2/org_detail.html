@@ -5,22 +5,46 @@
 	<nav aria-label="breadcrumb">
     <!-- https://getbootstrap.com/docs/4.1/components/breadcrumb/ -->
 		<ol class="breadcrumb">
-      {% for taxa in object.param_dict.taxonomy %}
-			  <li class="breadcrumb-item"><a href="#">{{ taxa.value }}</a></li>
+      {% for taxa in object.prm_dict.taxonomy %}
+			  <li class="breadcrumb-item"><a href="#">{{ taxa }}</a></li>
       {% endfor %}
 		</ol>
 	</nav>
 
   <h3>External IDs</h3>
-	<table class="table table-sm">
+	<table class="table table-sm col-4">
     <tbody>
-      {% for xref in object.param_dict.xref %}
+      {% for xref in object.prm_dict.xref %}
         <tr>
-          <th scope="row">{{ xref.value }}</td>
-          <td>{{ xref.data }}</td>
+          <th scope="row">{{ xref.db_name }}</td>
+          <td>{{ xref.ext_id }}</td>
+					<!-- FOR DEBUGING -->
+          <!-- <td>{{ xref|pprint }}</td> -->
         </tr>
       {% endfor %}
     </tbody>
 	</table>
+
+  <h3>All Features</h3>
+	<table class="table table-bordered table-sm">
+    <thead class="thead-light">
+      <tr>
+        <th scope="col">Location</th>
+        <th scope="col">Name</th>
+        <th scope="col">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for feat in object.feat_set %}
+        <tr>
+          <td>{{feat.seq_id}}:{{feat.start}}-{{feat.end}}({{feat.strand}})</td>
+          <td>{{ feat.name }}</td>
+          <td>{{ feat.descr }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+	</table>
+
+  <p>transl_table = {{ object.transl_table }}</p>
 
 {% endblock content %}

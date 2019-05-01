@@ -95,7 +95,8 @@ class OrgModelTests(GtdbTestCase):
     def _validate_params_Nocardia_mexicana(self, org):
         # Test the computed attributes & Make sure the fn was saved
         self.assertEqual(org.param_set.get(name='source_fn').value, self.fn)
-        self.assertEqual(org.param_dict['source_fn'][0].value, self.fn)
+        self.assertEqual(org.prm_dict_of_lists['source_fn'][0].value, self.fn)
+        self.assertEqual(org.prm_dict['source_fn'], self.fn)
         self.assertEqual(org.prm['source_fn'], self.fn)
         self.assertEqual(org.prm.source_fn, self.fn)   # AttrDict style
 

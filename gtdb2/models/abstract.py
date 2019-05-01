@@ -32,22 +32,23 @@ class AbstractUnit(models.Model):
         return str(self.name)
 
     @property
-    def param_dict(self):
+    def prm_dict_of_lists(self):
         """A convenience property:
         >>> list_A = list(org.orgparam_set.filter(name='source_fn').all())
-        >>> list_B = org.param_dict['source_fn']
+        >>> list_B = org.prm_dict_of_lists['source_fn']
         >>> list_A == list_B
         """
-        param_dict = {}
+        dict_of_lists = {}
         for p in self.param_set.all():
-            param_dict.setdefault(p.name, []).append(p)
-        return param_dict
+            dict_of_lists.setdefault(p.name, []).append(p)
+        return dict_of_lists
 
     @property
-    def prm(self):
-        "A computed dictionary with parameters represented by simple types."
-        prm = AttrDict()
-        for key, param_list in self.param_dict.items():
+    def prm_dict(self):
+        """A computed dictionary with parameters represented by simple types.
+        """
+        prm = {}
+        for key, param_list in self.prm_dict_of_lists.items():
             info = self.PRM_INFO.get(key, None)
             if info is None:
                 continue
@@ -75,6 +76,14 @@ class AbstractUnit(models.Model):
                                   "non-list prm '%s'" % (len(value_list)), key)
                 prm[key] = value_list[0]
         return prm
+
+    @property
+    def prm(self):
+        """Returns AttrDict version of prm_dict, so that we can write both
+        >>> org.prm['transl_table']
+        >>> org.prm.transl_table
+        """
+        return AttrDict(self.prm_dict)
 
     def set_param(self, name, value=None, num=None, data=None):
         "Deletes and adds param."
