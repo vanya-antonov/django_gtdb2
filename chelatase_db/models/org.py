@@ -29,18 +29,20 @@ class ChelataseOrg(Org):
     FSHIFT_CLS_NAME = 'ChelataseFshift'
 
     @property
-    def chld_feats(self):
+    def chld_feat_set(self):
+        """Returns a QuerySet of ChelataseFeat objects corresponding to
+        chlD or bchD genes.
+        """
         # Follow the relationships by using the double underscores operator:
         # https://docs.djangoproject.com/en/2.1/topics/db/queries/#lookups-that-span-relationships
-        return list(ChelataseFeat.objects.filter(
+        return ChelataseFeat.objects.filter(
             seq__org=self,
-            param_set__name='chel_subunit',
-            param_set__value='M'
-        ).all())
+            param_set__name='chel_gene_group',
+            param_set__value='chlD_bchD')
 
     @property
     def chel_subunit_feat_set(self):
-        """Returns a set of ChelataseFeat objects corresponding to
+        """Returns a QuerySet of ChelataseFeat objects corresponding to
         the large, medium or small chelatase subunits (i.e. all the 
         features with the 'chel_subunit' prm.
         """

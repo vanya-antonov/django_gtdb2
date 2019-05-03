@@ -31,7 +31,7 @@ class Command(BaseCommand):
             org = ChelataseOrg.create_from_gbk(user, gbk_fn)
             self.stdout.write(self.style.SUCCESS(
                 "The new org '%s' (id=%s) has been created with '%s' chlD "
-                " genes" % (org.name, org.id, len(org.chld_feats))))
+                " genes" % (org.name, org.id, org.chld_feat_set.count())))
         else:
             new_seqs = org.update_seqs_with_gbk(gbk_fn)
             if len(new_seqs) > 0:
