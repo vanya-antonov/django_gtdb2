@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from gtdb2.models.user import User
-
+from django.contrib.auth.models import User
 
 class Command(BaseCommand):
     help = "Deletes entire database content"
@@ -18,6 +17,6 @@ class Command(BaseCommand):
         for user in User.objects.all():
             user.delete()
             self.stdout.write(self.style.SUCCESS(
-                'Successfully deleted user "%s"' % user.name))
+                'Successfully deleted user "%s"' % user.username))
         self.stdout.write(self.style.SUCCESS('ALL DONE!'))
 
