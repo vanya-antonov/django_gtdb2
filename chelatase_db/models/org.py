@@ -38,6 +38,17 @@ class ChelataseOrg(Org):
             param_set__value='M'
         ).all())
 
+    @property
+    def chel_subunit_feat_set(self):
+        """Returns a set of ChelataseFeat objects corresponding to
+        the large, medium or small chelatase subunits (i.e. all the 
+        features with the 'chel_subunit' prm.
+        """
+        return ChelataseFeat.objects.filter(
+            seq__org=self,
+            param_set__name='chel_subunit')
+        #).order_by('param_set__value')
+
     def create_annotation(self):
         """Creates feats homologous to the cholorophyll and B12
         biosynthesis pathway genes.
@@ -50,7 +61,7 @@ class ChelataseOrg(Org):
             return
         super().create_annotation()
 
-        # Create CDS feats homologous to cholorophyll and B12 pathway genes
+        # Try to find cholorophyll and B12 pathway genes and create the feats
         db_path = self.gtdb.get_full_path_to(self.prm.blastdb_nucl_all)
         faa_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_FAA)
         all_hsps = run_tblastn_file_vs_db(faa_fn, db_path, self.transl_table)

@@ -73,7 +73,7 @@ class ChelataseFeat(Feat):
 
         # Set params from info_dict: 'chel_gene', 'chel_subunit', etc
         for name, value in info_dict[best_hsp.sbjct_id].items():
-            if not name.startswith('_'):
+            if value != '' and not name.startswith('_'):
                 self.set_param(name, value)
 
         self.set_param('chel_evalue', '%.2e' % best_hsp.expect,

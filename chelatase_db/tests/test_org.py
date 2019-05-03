@@ -109,10 +109,12 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertTrue(chld_feat.prm.chel_evalue < 1e-60)
 
         # In addition to the medium subunit, it has the large subunit as well
-        all_feats = list(org.feat_set.all())
-        all_large = [f for f in all_feats if f.prm.chel_subunit == 'L']
-        self.assertEqual(len(all_large), 1)
-        cobn_feat = all_large[0]
+        large_feat_set = ChelataseFeat.objects.filter(
+            seq__org=org,
+            param_set__name='chel_subunit',
+            param_set__value='L')
+        self.assertEqual(large_feat_set.count(), 1)
+        cobn_feat = large_feat_set.first()
 
         # Verify the annotation of the cobN feat
         self.assertEqual(cobn_feat.prm.chel_pathway, 'B12')
@@ -120,6 +122,7 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(cobn_feat.prm.chel_gene, 'cobN')
 
         # The org also has some other genes from the B12 pathway
+        all_feats = list(org.feat_set.all())
         cobQ_feats = [f for f in all_feats if f.prm.chel_gene_group == 'cobQ']
         self.assertEqual(len(cobQ_feats), 1)
 
