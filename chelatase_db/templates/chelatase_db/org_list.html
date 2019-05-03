@@ -1,0 +1,31 @@
+{% extends "chelatase_db/base.html" %}
+{% block content %}
+	<h1>Chelatase DB (OrgListView)!</h1>
+
+	<table style="width: auto;" class="table table-sm table-striped table-bordered">
+		<thead>
+			<tr>
+				<th scope="col">Id</th>
+				<th scope="col">Name</th>
+				<th scope="col">Phylum</th>
+				<th scope="col">Kingdom</th>
+			</tr>
+		</thead>
+    <tbody>
+			<!-- About dictsort: https://stackoverflow.com/a/14753926/310453 -->
+      {% for org in object_list|dictsortreversed:"kingdom" %}
+        <tr>
+          <td>{{ org.id }}</td>
+          <td>
+            <a href="{% url 'chelatase-org-detail' org.id %}">
+              {{ org.name }}
+            </a>
+          </td>
+          <td>{{ org.phylum }}</td>
+          <td>{{ org.kingdom }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+	</table>
+
+{% endblock content %}
