@@ -116,6 +116,10 @@ class Org(AbstractUnit):
         org.create_all_params()
         org.create_annotation()
 
+        # Need to call create_all_params() once again because some
+        # params are computed based on the created annotation (e.g. feats)
+        org.create_all_params()
+
         return org
 
     @classmethod

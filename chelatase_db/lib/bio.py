@@ -71,6 +71,9 @@ def _parse_blast_xml_str(xml_str):
     of all the HSP objects is converted to 0-based.
     https://github.com/biopython/biopython/blob/master/Bio/Blast/Record.py
     """
+    if xml_str == '':
+        return []
+
     f = io.StringIO(xml_str)
 
     # http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc102

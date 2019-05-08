@@ -19,9 +19,9 @@
         <th scope="col">S</th>
         <th scope="col">Pathway</th>
         <th scope="col">Name</th>
-        <th scope="col">Gene</th>
         <th scope="col">Len</th>
         <th scope="col">FS</th>
+        <th scope="col">Gene</th>
         <th scope="col">Group</th>
         <th scope="col">E-value</th>
         <th scope="col">Description</th>
@@ -30,13 +30,17 @@
     <tbody>
       {% for feat in object.chel_subunit_feat_set|dictsort:"start" %}
         <tr>
-					<td>{{feat.seq_id}}:{{feat.start}}-{{feat.end}}({{feat.strand}})</td>
+					<td>
+						<a href="https://www.ncbi.nlm.nih.gov/nuccore/{{feat.seq_id}}?report=graph&from={{feat.start}}&to={{feat.end}}">
+							{{feat.seq_id}}:{{feat.start}}-{{feat.end}}({{feat.strand}})
+						</a>
+					</td>
 					<td>{{ feat.prm_dict.chel_subunit }}</td>
 					<td>{{ feat.prm_dict.chel_pathway }}</td>
           <td>{{ feat.name }}</td>
-					<td>{{ feat.prm_dict.chel_gene }}</td>
 					<td>{{ feat.prm_dict.translation|length }}</td>
 					<td>{{ feat.fshift.len }}</td>
+					<td>{{ feat.prm_dict.chel_gene }}</td>
 					<td>{{ feat.prm_dict.chel_gene_group }}</td>
 					<td>{{ feat.prm_dict.chel_evalue }}</td>
           <td>{{ feat.descr }}</td>

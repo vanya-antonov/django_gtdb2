@@ -89,6 +89,7 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
 
         # The org has only one chlD gene
+        self.assertEqual(org.prm.chel_num_chld, 1)
         self.assertEqual(org.chld_feat_set.count(), 1)
         chld_feat = org.chld_feat_set.first()
 

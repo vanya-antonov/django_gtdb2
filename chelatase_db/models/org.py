@@ -21,12 +21,14 @@ class ChelataseOrg(Org):
     class Meta:
         proxy = True
 
-    # Merge two dicts: https://stackoverflow.com/a/38990/310453
-    # PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
-    # }.items()))
-
+    # Modify values of some constant attributes
     FEAT_CLS_NAME = 'ChelataseFeat'
     FSHIFT_CLS_NAME = 'ChelataseFshift'
+
+    # Merge two dicts: https://stackoverflow.com/a/38990/310453
+    PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
+        'chel_num_chld': {'value_attr': 'num', 'type_fun': int},
+    }.items()))
 
     @property
     def chld_feat_set(self):
@@ -49,7 +51,12 @@ class ChelataseOrg(Org):
         return ChelataseFeat.objects.filter(
             seq__org=self,
             param_set__name='chel_subunit')
-        #).order_by('param_set__value')
+
+    def create_all_params(self):
+        """Extend the parent's method to create additional params.
+        """
+        super().create_all_params()
+        self._make_params_chel_statistics()
 
     def create_annotation(self):
         """Creates feats homologous to the cholorophyll and B12
@@ -98,6 +105,13 @@ class ChelataseOrg(Org):
             all_feats.update(feat_set)
 
         return list(all_feats)
+
+    def _make_params_chel_statistics(self):
+        """Computes chelatase-related statistics and saves it as params:
+         - chel_num_chld - total number of chlD/bchD genes
+         - chel_num_M - total number of M chelatase subunits (cobT/chlD/bchD).
+        """
+        self.set_param('chel_num_chld', num=self.chld_feat_set.count())
 
     def _get_or_create_chld_feats(self, user):
         """Returns a list of ChelataseFeat objects."""

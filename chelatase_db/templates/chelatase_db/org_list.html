@@ -13,9 +13,9 @@
 		</thead>
     <tbody>
 			<!-- About dictsort: https://stackoverflow.com/a/14753926/310453 -->
-      {% for org in object_list|dictsortreversed:"kingdom" %}
+      {% for org in object_list|dictsort:"name" %}
         <tr>
-          <td>{{ org.id }}</td>
+          <td>{{ forloop.counter }}</td>
           <td>
             <a href="{% url 'chelatase-org-detail' org.id %}">
               {{ org.name }}
