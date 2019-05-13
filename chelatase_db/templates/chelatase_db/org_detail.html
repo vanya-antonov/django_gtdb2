@@ -49,4 +49,53 @@
     </tbody>
 	</table>
 
+  <h3 class="mt-4">Biosynthesis pathway genes</h3>
+  <div class="row">
+    <div class="col-auto">
+      <h5>Vitamin B12</h5>
+      <table class="table table-bordered table-sm table-hover">
+        <thead class="thead-light">
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Name</th>
+            <th scope="col"># Genes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for group in b12_groups|dictsort:"chel_gene_group" %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ group.chel_gene_group }}</td>
+              <td></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col-auto ml-5">
+      <h5>Chlorophyll</h5>
+      <table class="table table-bordered table-sm table-hover">
+        <thead class="thead-light">
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Name</th>
+            <th scope="col"># Genes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for group in chlorophyll_groups|dictsort:"chel_gene_group" %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ group.chel_gene_group }}</td>
+              <td></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>   <!-- <div class="row"> -->
+
+
 {% endblock content %}

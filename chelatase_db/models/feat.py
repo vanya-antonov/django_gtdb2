@@ -1,6 +1,5 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
-import csv
 import os
 from pprint import pprint
 import subprocess
@@ -8,7 +7,7 @@ import subprocess
 from django.conf import settings
 
 from chelatase_db.lib.bio import run_blastp_seq_vs_file
-from chelatase_db.lib.config import PATHWAY_GENES_TXT, PATHWAY_GENES_FAA
+from chelatase_db.lib.config import PATHWAY_GENES_FAA, read_pathway_gene_info
 from gtdb2.models.feat import Feat
 
 
@@ -50,8 +49,7 @@ class ChelataseFeat(Feat):
         if 'translation' not in self.prm:
             return
 
-        info_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_TXT)
-        info_dict = _read_pathway_gene_info(info_fn)
+        info_dict = read_pathway_gene_info()
 
         faa_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_FAA)
         all_hsps = run_blastp_seq_vs_file(self.prm.translation, faa_fn)
@@ -102,37 +100,4 @@ def _get_best_hit(hits_dict, info_dict, aa_len):
         break
 
     return best_hsp
-
-def _read_pathway_gene_info(fn):
-    """Returns a dict of dicts where keys of the first dict are the
-    sequence IDs (the _id column of the .txt file).
-    """
-    # Read the info from file
-    info_dict = {}
-    with open(fn) as f:
-        # https://stackoverflow.com/a/14158869/310453
-        lines_wo_comments = filter(lambda row: row[0]!='#', f)
-        reader = csv.DictReader(lines_wo_comments, delimiter="\t")
-        for row in reader:
-            if row['_id'] in info_dict:
-                raise ValueError(
-                    "Sequence ID '%s' is duplicated in file '%s'" %
-                    (row['_id'], fn))
-            info_dict[row['_id']] = row
-
-    # Postprocess the created dict of dicts
-    for row in info_dict.values():
-        # Remove any special key that does not have a value
-        # About list(row.keys()): https://stackoverflow.com/a/11941855/310453
-        for key in list(row.keys()):
-            if key.startswith('_') and (row[key] == '' or  row[key] is None):
-                del(row[key])
-
-        # Convert some strings to integers, if available
-        if '_min_len' in row:
-            row['_min_len'] = int(row['_min_len'])
-        if '_max_len' in row:
-            row['_max_len'] = int(row['_max_len'])
-
-    return info_dict
 
