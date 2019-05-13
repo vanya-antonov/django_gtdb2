@@ -9,7 +9,7 @@ from Bio.Data import CodonTable
 from django.conf import settings
 
 from chelatase_db.lib.bio import run_tblastn_seq_vs_db, run_tblastn_file_vs_db
-from chelatase_db.lib.config import PATHWAY_GENES_FAA
+from chelatase_db.lib.config import PATHWAY_GENES_FAA, read_pathway_gene_info
 from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.feat import ChelataseFeat
 from chelatase_db.models.fshift import ChelataseFshift
@@ -51,6 +51,41 @@ class ChelataseOrg(Org):
         return ChelataseFeat.objects.filter(
             seq__org=self,
             param_set__name='chel_subunit')
+
+    def get_full_pathway_gene_dict(self, pathway=None):
+        """Returns a dict of lists of feats (genes) that have the
+        'chel_pathway' and 'chel_gene_group' params. They keys are 
+        chel_gene_group values (e.g. 'chlI_bchI' or 'cobN').
+
+        Arguments:
+         - pathway - (string) include feats from a particular pathway
+           only ('B12' or 'Chlorophyll' -- see pathway_genes.txt). By default
+           it returns genes from all the pathways.
+        """
+
+        # Get statistics about all the B12/CHL genes
+        info_dict = read_pathway_gene_info()
+        all_gene_groups = {}
+        for gene in info_dict.values():
+            if pathway is not None and gene['chel_pathway'] != pathway:
+                continue
+
+            # e.g. 'cobD_cobC'
+            gene_group = gene['chel_gene_group']
+            all_gene_groups[gene_group] = []
+
+        # Add B12/CHL genes from the current org
+        for feat in self.feat_set.all():
+            if 'chel_pathway' not in feat.prm:
+                continue
+            if 'chel_gene_group' not in feat.prm:
+                continue
+
+            gene_group = feat.prm['chel_gene_group']
+            if gene_group in all_gene_groups:
+                all_gene_groups[gene_group].append(feat)
+
+        return all_gene_groups
 
     def create_all_params(self):
         """Extend the parent's method to create additional params.

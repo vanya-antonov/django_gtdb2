@@ -53,7 +53,7 @@
   <div class="row">
     <div class="col-auto">
       <h5>Vitamin B12</h5>
-      <table class="table table-bordered table-sm table-hover">
+      <table class="table table-bordered table-sm table-hover text-center">
         <thead class="thead-light">
           <tr>
             <th scope="col">#</th>
@@ -62,11 +62,17 @@
           </tr>
         </thead>
         <tbody>
-          {% for group in b12_groups|dictsort:"chel_gene_group" %}
+          {% for gene_name, gene_list in b12_genes %}
             <tr>
               <td>{{ forloop.counter }}</td>
-              <td>{{ group.chel_gene_group }}</td>
-              <td></td>
+              <td>{{ gene_name }}</td>
+              {% if gene_list %}
+              <td class="table-info">
+              {% else %}
+              <td>
+              {% endif %}
+                {{ gene_list|length }}
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -75,7 +81,7 @@
 
     <div class="col-auto ml-5">
       <h5>Chlorophyll</h5>
-      <table class="table table-bordered table-sm table-hover">
+      <table class="table table-bordered table-sm table-hover text-center">
         <thead class="thead-light">
           <tr>
             <th scope="col">#</th>
@@ -84,11 +90,17 @@
           </tr>
         </thead>
         <tbody>
-          {% for group in chlorophyll_groups|dictsort:"chel_gene_group" %}
+          {% for gene_name, gene_list in chl_genes %}
             <tr>
               <td>{{ forloop.counter }}</td>
-              <td>{{ group.chel_gene_group }}</td>
-              <td></td>
+              <td>{{ gene_name }}</td>
+              {% if gene_list %}
+                <td class="table-success">
+              {% else %}
+                <td>
+              {% endif %}
+                {{ gene_list|length }}
+              </td>
             </tr>
           {% endfor %}
         </tbody>

@@ -134,3 +134,19 @@ class ChelataseOrgModelTests(ChelataseTestCase):
                       if f.prm.chel_gene_group == 'cysG_cobA']
         self.assertEqual(len(cobA_feats), 1)
 
+        # Test the get_full_pathway_gene_dict()
+        b12_genes = org.get_full_pathway_gene_dict(pathway='B12')
+        self.assertTrue('cobN' in b12_genes)
+        self.assertTrue('cobP_cobU' in b12_genes)
+        self.assertTrue('chlD_bchD' not in b12_genes)
+        self.assertEqual(len(b12_genes['cobN']), 1)
+        self.assertEqual(len(b12_genes['cobT']), 0)
+
+        chl_genes = org.get_full_pathway_gene_dict(pathway='Chlorophyll')
+        self.assertTrue('cobN' not in chl_genes)
+        self.assertTrue('cobP_cobU' not in chl_genes)
+        self.assertTrue('chlD_bchD' in chl_genes)
+        self.assertTrue('chlH_bchH' in chl_genes)
+        self.assertEqual(len(chl_genes['chlD_bchD']), 1)
+        self.assertEqual(len(chl_genes['chlH_bchH']), 0)
+

@@ -27,6 +27,7 @@ class Command(BaseCommand):
 
         # Create new annotation from scratch
         org.create_annotation()
+        org.create_all_params()
 
         self.stdout.write(self.style.SUCCESS(
             "Successfully updated annotation for org '%s' (id=%s)" %

@@ -3,7 +3,6 @@ from django.http import HttpResponse
 from django.views.generic import ListView, DetailView
 
 from chelatase_db.models import ChelataseOrg
-from chelatase_db.lib.config import read_pathway_gene_info
 
 
 class OrgListView(ListView):
@@ -27,22 +26,11 @@ class OrgDetailView(DetailView):
         """
         context = super().get_context_data(**kwargs)
 
-        # Get statistics about B12/CHL genes in the given org
-        info_dict = read_pathway_gene_info()
-        all_gene_groups = {}
-        for gene in info_dict.values():
-            # e.g. 'cobD_cobC'
-            gene_group = gene['chel_gene_group']
-            if gene_group not in all_gene_groups:
-                all_gene_groups[gene_group] = gene
-
-        context['b12_groups'] = []
-        context['chlorophyll_groups'] = []
-        for group in all_gene_groups.values():
-            if group['chel_pathway'] == 'B12':
-                context['b12_groups'].append(group)
-            elif group['chel_pathway'] == 'Chlorophyll':
-                context['chlorophyll_groups'].append(group)
+        # About sorted: https://stackoverflow.com/a/8018989/310453
+        b12_dict = self.object.get_full_pathway_gene_dict(pathway='B12')
+        chl_dict = self.object.get_full_pathway_gene_dict(pathway='Chlorophyll')
+        context['b12_genes'] = sorted(b12_dict.items())
+        context['chl_genes'] = sorted(chl_dict.items())
 
         return context
 
