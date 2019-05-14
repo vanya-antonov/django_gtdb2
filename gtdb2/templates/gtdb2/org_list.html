@@ -14,7 +14,7 @@
     <tbody>
       {% for org in object_list %}
         <tr>
-          <td>{{ org.id }}</td>
+          <td>{{ forloop.counter }}</td>
           <td>
             <a href="{% url 'gtdb2-org-detail' org.id %}">
               {{ org.name }}
