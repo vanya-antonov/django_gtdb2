@@ -7,7 +7,7 @@ from gtdb2.models.fshift import Fshift
 from gtdb2.tests import GtdbTestCase
 
 
-class SeqModelTests(GtdbTestCase):
+class FeatModelTests(GtdbTestCase):
 
     def setUp(self):
         super().setUp()
@@ -30,6 +30,9 @@ class SeqModelTests(GtdbTestCase):
         # Check params
         self.assertEqual(feat.prm['protein_id'], 'WP_015791742.1')
         self.assertTrue(feat.prm['translation'].startswith('MQYIYPFTAIVGQ'))
+        # https://www.ncbi.nlm.nih.gov/nuccore/NC_013156.1?report=fasta&from=1121860&to=1122960
+        self.assertTrue(feat.prm.seq_nt.startswith('ATGCAATAT'))
+        self.assertTrue(feat.prm.seq_nt.endswith('AATTAA'))
 
         # Make sure new feature is not created if we call the function again
         # and the existing Feat is returned
@@ -62,6 +65,10 @@ class SeqModelTests(GtdbTestCase):
         # Check the fsCDS params
         self.assertTrue(fscds.prm.translation.startswith('MQYIYPFTA'))
         self.assertTrue(fscds.prm.translation.endswith('ICKGFVEY'))
+
+        # https://www.ncbi.nlm.nih.gov/nuccore/NC_013156.1?report=fasta&from=1121859&to=1123904
+        self.assertTrue(fscds.prm.seq_nt.startswith('ATGCAATAT'))
+        self.assertTrue(fscds.prm.seq_nt.endswith('TATTAG'))
 
         # Make sure new feature is not created if we call the function again
         # and the existing Feat is returned

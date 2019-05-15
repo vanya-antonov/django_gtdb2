@@ -1,5 +1,7 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+import logging
+
 from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
 from django.db import models
 
@@ -29,6 +31,7 @@ class Feat(AbstractUnit):
         'gene_synonym': {},
         'protein_id': {},
         'ribosomal_slippage': {},
+        'seq_nt': {'value_attr': 'data'},
         'translation': {'value_attr': 'data'},
     }.items()))
 
@@ -150,14 +153,47 @@ class Feat(AbstractUnit):
         return fscds
 
     def create_all_params(self):
-        if self.type == 'fsCDS':
-            self._make_fscds_name()
-            self._make_param_fscds_translation()
+        """Create feature params depending on its type (CDS, fsCDS, rRNA etc)
+        and origin (genbank, gtdb).
+        """
+        #TODO: if self.origin == 'gtdb':
+        if self.origin == 'genetack':
+            if self.type == 'fsCDS':
+                self._make_param_gtdb_fscds()
+            elif self.type == 'CDS':
+                raise NotImplementedError("Parent GTDB CDS feat!!")
+                self._make_param_gtdb_cds()
+            else:
+                raise ValueError("Unknonwn feature type = '%s'" % self.type)
+        #TODO: if self.origin == 'genbank':
+        elif self.origin == 'annotation':
+            # f is a Bio.SeqFeature.SeqFeature object
+            f = get_overlapping_feats_from_record(
+                self.seq.record, self.start, self.end, self.strand,
+                all_types=[self.type], min_overlap=1, max_feats=1
+            )[0]
+            if self.type == 'CDS':
+                self._make_param_gbk_cds(f)
+            elif self.type == 'fsCDS':
+                raise NotImplementedError("Annotated fsCDS feat!!")
+                self._make_param_gbk_fscds(f)
+            elif self.type == 'rRNA':
+                # see add_16S_rRNA() from
+                # ~/_my/Programming/python/scripts/frameshift/gtdb2_manager.py
+                raise NotImplementedError("rRNA feat!!")
+                self._make_param_gbk_rrna(f)
+            else:
+                raise ValueError("Unknonwn feature type = '%s'" % self.type)
+        else:
+            raise ValueError("Unknonwn feature origin = '%s'" % self.origin)
 
-        if self.origin == 'annotation':
-            self._make_all_params_gbk()
+    def _make_param_gtdb_fscds(self):
+        """Creates params for predicted and not-annotated fsCDS feat.
+        """
+        self._make_param_fscds_name()
+        self._make_param_fscds_seqs()
 
-    def _make_fscds_name(self):
+    def _make_param_fscds_name(self):
         "Creates fsCDS name like 'MEFER_RS06095_fs1122957'."
         if self.parent.name is None:
             all_parts = ['fsCDS']
@@ -173,33 +209,50 @@ class Feat(AbstractUnit):
         self.name = '_'.join(all_parts)
         self.save()
 
-    def _make_param_fscds_translation(self):
+    def _make_param_fscds_seqs(self):
         fscds_nt = self.feature.extract(self.seq.seq)
         fscds_aa = fscds_nt.translate(table=self.seq.transl_table)
 
         # Remove possible stop codon at the end
         fscds_aa = fscds_aa.rstrip('*')
         self.add_param('translation', data=fscds_aa, num=len(fscds_aa))
+        self.add_param('seq_nt', data=fscds_nt, num=len(fscds_nt))
 
-    def _make_all_params_gbk(self):
-        # f is a Bio.SeqFeature.SeqFeature object
-        f = get_overlapping_feats_from_record(
-            self.seq.record, self.start, self.end, self.strand,
-            all_types=[self.type], min_overlap=1, max_feats=1)[0]
-
+    def _make_param_gbk_cds(self, f):
+        """f is a Bio.SeqFeature.SeqFeature object.
+        """
         self._make_param_from_q(f, 'gene')
         self._make_param_from_q(f, 'gene_synonym')
+        self._make_param_from_q(f, 'protein_id')
+        self._make_param_from_q(f, 'ribosomal_slippage')
 
-        if self.type == 'CDS':
-            self._make_param_from_q(f, 'protein_id')
-            self._make_param_from_q(f, 'ribosomal_slippage')
+        self._make_param_gbk_cds_seqs(f)
 
-            for prot_seq in f.qualifiers.get('translation', []):
-                self.add_param('translation', data=prot_seq, num=len(prot_seq))
-        elif self.type == 'rRNA':
-            # see add_16S_rRNA() from
-            # ~/_my/Programming/python/scripts/frameshift/gtdb2_manager.py
-            raise NotImplementedError("rRNA feat!!")
+    def _make_param_gbk_cds_seqs(self, f):
+        """f is a Bio.SeqFeature.SeqFeature object.
+        """
+        # Get the seqs
+        cds_nt = f.extract(self.seq.seq).upper()
+        cds_aa = cds_nt.translate(
+            table=self.seq.transl_table, to_stop=True
+        ).upper()
+
+        # Some checks
+        if len(cds_nt) % 3 != 0:
+            raise ValueError(
+                "CDS sequence len is not divisible by 3 for feature '%s'" % f)
+
+        if 'translation' in f.qualifiers:
+            translation = f.qualifiers['translation'][0]
+            if translation.upper() != cds_aa.upper():
+                raise ValueError(
+                    "The annotated and generated translations do not match!")
+        else:
+            logging.error(
+                "Feature '%s' doesn't have annotated translation!" % f)
+
+        self.add_param('seq_nt', data=cds_nt, num=len(cds_nt))
+        self.add_param('translation', data=cds_aa, num=len(cds_aa))
 
     def _make_param_from_q(self, f, name):
         "Create param based on gbk qualifier."
