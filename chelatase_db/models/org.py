@@ -100,7 +100,9 @@ class ChelataseOrg(Org):
         user = self.gtdb.get_or_create_annotation_user()
 
         # Annotation is only created for orgs with chld gene(s)
+        logging.info("Searching for chlD genes...")
         chld_feats = self._get_or_create_chld_feats(user)
+        logging.info("Number of identified chlD genes = %s" % len(chld_feats))
         if len(chld_feats) == 0:
             return
         super().create_annotation()
@@ -110,6 +112,9 @@ class ChelataseOrg(Org):
         faa_fn = os.path.join(settings.BASE_DIR, PATHWAY_GENES_FAA)
         all_hsps = run_tblastn_file_vs_db(faa_fn, db_path, self.transl_table)
         for hsp in all_hsps:
+            logging.info(
+                "Processing hit '%s' from query '%s' (evalue=%.1e)" %
+                (hsp.sbjct_id, hsp.query_id, hsp.expect))
             seq = ChelataseSeq.get_or_create_from_ext_id(
                 user, self, hsp.sbjct_id)
             ChelataseFeat.get_or_create_from_gbk_annotation(
