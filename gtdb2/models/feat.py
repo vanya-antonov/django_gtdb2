@@ -36,15 +36,22 @@ class Feat(AbstractUnit):
     }.items()))
 
     @property
-    def feature(self):
-        "Retruns a Bio.SeqFeature.SeqFeature object."
+    def location(self):
+        """Returns a Bio.SeqFeature.FeatureLocation object
+        https://github.com/biopython/biopython/blob/master/Bio/SeqFeature.py
+        """
         if self.type == 'fsCDS':
             all_fshifts = list(self.fshift_set.all())
             stop_coord = self.end if self.strand == 1 else self.start
             loc = _make_compound_location(self.parent, all_fshifts, stop_coord)
         else:
             loc = FeatureLocation(self.start, self.end, self.strand)
-        return SeqFeature(loc, type=self.type)
+        return loc
+
+    @property
+    def feature(self):
+        "Retruns a Bio.SeqFeature.SeqFeature object."
+        return SeqFeature(self.location, type=self.type)
 
     @classmethod
     def get_or_create_from_gbk_annotation(cls, user, seq, start, end, strand,
@@ -52,15 +59,29 @@ class Feat(AbstractUnit):
         """Loads features from GenBank file that overlap with the given
         target region.
         """
-        overlapping_feats = get_overlapping_feats_from_record(
-            seq.record, start, end, strand, all_types=[f_type],
-            min_overlap=1, max_feats=1)
+        if f_type == 'CDS':
+            all_types = ['CDS', 'fsCDS']
+        else:
+            all_types = [f_type]
+
+        half_len = (end-start)/2
+
+        # Check if a feature already exists in DB for the specified region
+        db_feats = get_overlapping_feats_from_list(
+            seq.feat_set.all(), start, end, strand,
+            min_overlap=half_len, all_types=all_types)
+        if len(db_feats) > 0:
+            return db_feats[0]
+
+        overlapping_feats = get_overlapping_feats_from_list(
+            seq.record.features, start, end, strand,
+            min_overlap=half_len, all_types=all_types)
 
         if len(overlapping_feats) == 0:
             return None
         f = overlapping_feats[0]
 
-        # Check if this feature already present in DB
+        # Make sure this feature is not present in the DB
         feat = cls.objects.filter(
             seq=seq, type=f.type, strand=f.location.strand,
             start=int(f.location.start), end=int(f.location.end)
@@ -168,9 +189,9 @@ class Feat(AbstractUnit):
         #TODO: if self.origin == 'genbank':
         elif self.origin == 'annotation':
             # f is a Bio.SeqFeature.SeqFeature object
-            f = get_overlapping_feats_from_record(
-                self.seq.record, self.start, self.end, self.strand,
-                all_types=[self.type], min_overlap=1, max_feats=1
+            f = get_overlapping_feats_from_list(
+                self.seq.record.features, self.start, self.end, self.strand,
+                all_types=[self.type], min_overlap=len(self.feature)/2
             )[0]
             if self.type == 'CDS':
                 self._make_param_gbk_cds(f)
@@ -233,8 +254,10 @@ class Feat(AbstractUnit):
         """
         # Get the seqs
         cds_nt = f.extract(self.seq.seq).upper()
+
+        # http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc25
         cds_aa = cds_nt.translate(
-            table=self.seq.transl_table, to_stop=True
+            table=self.seq.transl_table, to_stop=True, cds=True
         ).upper()
 
         # Some checks
@@ -243,10 +266,12 @@ class Feat(AbstractUnit):
                 "CDS sequence len is not divisible by 3 for feature '%s'" % f)
 
         if 'translation' in f.qualifiers:
-            translation = f.qualifiers['translation'][0]
-            if translation.upper() != cds_aa.upper():
-                raise ValueError(
-                    "The annotated and generated translations do not match!")
+            translation = f.qualifiers['translation'][0].upper()
+            if translation != cds_aa:
+                logging.error(
+                    "The annotated and generated translations do not match "
+                    "for feature '%s':\n\n%s\n%s\n\n" %
+                    (f, translation, cds_aa))
         else:
             logging.error(
                 "Feature '%s' doesn't have annotated translation!" % f)
@@ -333,27 +358,34 @@ def _find_downstream_stop(seq, start_coord, strand, gcode):
 
     return coord
 
-def get_overlapping_feats_from_record(
-    record, start, end, strand, all_types=['CDS'], min_overlap=1, max_feats=None):
-    """    _overlap_len attribute will be added to returned features
+def get_overlapping_feats_from_list(all_feats, start, end, strand,
+                                    all_types=None, min_overlap=1):
+    """Returns a list of objects from f_list that overlap with the specified
+    genomic location. The returned objects will be sorted (descending) by the
+    value of the '_overlap_len' attribute (int) that will be added to each
+    object.
+
+    Arguments:
+     - all_feats - a list of feature-objects (e.g. Bio.SeqFeature.SeqFeature or
+     gtdb2.models.feat.Feat) that have the .type (string) and the .location
+     (Bio.SeqFeature.FeatureLocation) attributes.
     """
     target_loc = FeatureLocation(start, end, strand)
     overlapping_feats = []
-    for f in record.features:
-        if f.type not in all_types:
+    for f in all_feats:
+        if all_types is not None and f.type not in all_types:
             continue
+
+        if f.location.end < start or end < f.location.start:
+            continue
+
         f._overlap_len = get_FeatureLocation_overlap_len(f.location, target_loc)
         if f._overlap_len >= min_overlap:
             overlapping_feats.append(f)
 
-    if max_feats is not None and len(overlapping_feats) > max_feats:
-        # Sort by overlap_len: https://docs.python.org/3.6/howto/sorting.html
-        overlapping_feats = sorted(overlapping_feats, reverse=True,
-                                   key=lambda f: f._overlap_len)
-        # Take the longest feats only
-        overlapping_feats = overlapping_feats[0:max_feats]
-
-    return overlapping_feats
+    # Sort by overlap_len: https://docs.python.org/3.6/howto/sorting.html
+    return sorted(overlapping_feats, reverse=True,
+                  key=lambda f: f._overlap_len)
 
 def get_FeatureLocation_overlap_len(f1, f2):
     # https://github.com/biopython/biopython/issues/896
