@@ -1,5 +1,6 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+from pprint import pprint
 import logging
 
 from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
@@ -256,9 +257,16 @@ class Feat(AbstractUnit):
         cds_nt = f.extract(self.seq.seq).upper()
 
         # http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc25
-        cds_aa = cds_nt.translate(
-            table=self.seq.transl_table, to_stop=True, cds=True
-        ).upper()
+        try:
+            cds_aa = cds_nt.translate(
+                table=self.seq.transl_table, to_stop=True, cds=True
+            ).upper()
+        except:
+            # In-frame stop codon will cause the KeyError
+            logging.error(
+                "Can't translate CDS feat '%s' from seq '%s':\n%s" %
+                (f.location, self.seq.id, cds_nt))
+            cds_aa = None
 
         # Some checks
         if len(cds_nt) % 3 != 0:
@@ -267,6 +275,9 @@ class Feat(AbstractUnit):
 
         if 'translation' in f.qualifiers:
             translation = f.qualifiers['translation'][0].upper()
+            if cds_aa is None:
+                cds_aa = translation
+
             if translation != cds_aa:
                 logging.error(
                     "The annotated and generated translations do not match "
@@ -274,10 +285,11 @@ class Feat(AbstractUnit):
                     (f, translation, cds_aa))
         else:
             logging.error(
-                "Feature '%s' doesn't have annotated translation!" % f)
+                "The feature '%s' doesn't have annotated translation!" % f)
 
         self.add_param('seq_nt', data=cds_nt, num=len(cds_nt))
-        self.add_param('translation', data=cds_aa, num=len(cds_aa))
+        if cds_aa is not None:
+            self.add_param('translation', data=cds_aa, num=len(cds_aa))
 
     def _make_param_from_q(self, f, name):
         "Create param based on gbk qualifier."
