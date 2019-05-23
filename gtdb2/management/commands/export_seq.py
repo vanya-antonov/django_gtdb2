@@ -25,17 +25,14 @@ class Command(AbstractCommand):
                             IDs (no header) or read the IDs from STDIN
                             (default)""")
 
-        parser.add_argument('--seqname', metavar='FMT', default='__INPUT_ID__',
-                            help="""[__INPUT_ID__] seqname format.
-                            <FMT> may include the following special names:  
-                            __INPUT_ID__,
-                            __ORG_ID__, __ORG_NAME__, __ORG_KINGDOM__,
-                            __ORG_GENUS__, __ORG_PHYLUM__,
-                            __SEQ_ID__, __SEQ_NAME__, __SEQ_DESCR__,
-                            __FEAT_ID__, __FEAT_NAME__, __FEAT_DESCR__,
-                            __FSHIFT_ID__, __FSHIFT_NAME__, __FSHIFT_DESCR__,
-                            etc
-                            """)
+        parser.add_argument(
+            '--seqname', metavar='FMT', default='__INPUT_ID__',
+            help="""[__INPUT_ID__] seqname format.
+            <FMT> may include the following special names: __INPUT_ID__,
+            __ORG_ID__, __ORG_NAME__, __ORG_KINGDOM__, __ORG_GENUS__,
+            __ORG_PHYLUM__, __SEQ_ID__, __SEQ_NAME__, __SEQ_DESCR__,
+            __FEAT_ID__, __FEAT_NAME__, __FEAT_DESCR__, __FEAT_PRM_GENE__,
+            __FSHIFT_ID__, __FSHIFT_NAME__, __FSHIFT_DESCR__, etc""")
         parser.add_argument('--upper', action='store_true',
                             help='capitalize all sequence letters')
         parser.add_argument('--add_frame', action='store_true',
@@ -102,6 +99,7 @@ def _fmt_process_feat(fmt, info):
     fmt = re.compile('__FEAT_NAME__').sub(str(info.name), fmt)
     fmt = re.compile('__FEAT_DESCR__').sub(str(info.descr), fmt)
     fmt = re.compile('__FEAT_TYPE__').sub(str(info.type), fmt)
+    fmt = re.compile('__FEAT_PRM_GENE__').sub(str(info.prm.get('gene', '')), fmt)
     return fmt
 
 def _fmt_process_fshift(fmt, info):
