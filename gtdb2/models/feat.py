@@ -270,8 +270,8 @@ class Feat(AbstractUnit):
 
         # Some checks
         if len(cds_nt) % 3 != 0:
-            raise ValueError(
-                "CDS sequence len is not divisible by 3 for feature '%s'" % f)
+            logging.error(
+                "CDS sequence len is not divisible by 3 for feature:\n%s" % f)
 
         if 'translation' in f.qualifiers:
             translation = f.qualifiers['translation'][0].upper()
@@ -285,7 +285,7 @@ class Feat(AbstractUnit):
                     (f, translation, cds_aa))
         else:
             logging.error(
-                "The feature '%s' doesn't have annotated translation!" % f)
+                "The feature doesn't have annotated translation:\n%s" % f)
 
         self.add_param('seq_nt', data=cds_nt, num=len(cds_nt))
         if cds_aa is not None:
