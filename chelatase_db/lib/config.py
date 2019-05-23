@@ -12,6 +12,7 @@ DEFAULT_EVALUE = 1e-6
 
 PATHWAY_GENES_FAA = 'chelatase_db/data/pathway_genes.faa'
 PATHWAY_GENES_TXT = 'chelatase_db/data/pathway_genes.txt'
+CHEL_VIEWS_SQL = 'chelatase_db/data/chel_views.sql'
 
 
 def read_pathway_gene_info():
@@ -47,3 +48,4 @@ def read_pathway_gene_info():
             row['_max_len'] = int(row['_max_len'])
 
     return info_dict
+

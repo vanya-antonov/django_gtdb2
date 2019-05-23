@@ -12,8 +12,9 @@ class OrgListView(ListView):
     # context_object_name = 'object_list'
     # ordering = ['name']
     queryset = ChelataseOrg.objects.filter(
-        param_set__name='chel_num_chld',
-        param_set__num__gt=0)
+        seq__feat__param_set__name='chel_subunit',
+        seq__feat__param_set__value='M'
+    ).distinct()
 
 
 class OrgDetailView(DetailView):
