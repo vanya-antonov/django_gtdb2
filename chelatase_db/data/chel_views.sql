@@ -4,11 +4,14 @@ create table chel_feats_v as
 select f.id, f.seq_id, s.org_id,
     f.type, f.name, f.descr, f.start, f.end, f.strand,
     (select t.num from feat_params t where t.parent_id=f.id and t.name='translation') AS prot_len,
+    (select t.value from feat_params t where t.parent_id=f.id and t.name='gene') AS gene,
     (select t.value from feat_params t where t.parent_id=f.id and t.name='chel_gene') AS chel_gene,
     (select t.value from feat_params t where t.parent_id=f.id and t.name='chel_subunit') AS chel_subunit,
     (select t.num   from feat_params t where t.parent_id=f.id and t.name='chel_evalue') AS chel_evalue,
     (select fs.len from feat_fshifts ff, fshifts fs where ff.feat_id=f.id and fs.id=ff.fshift_id limit 1) AS fs_len,
-    o.name AS org_name, o.phylum, o.kingdom, o.genus
+    o.name AS org_name, o.phylum, o.kingdom, o.genus,
+    (select t.data from feat_params t where t.parent_id=f.id and t.name='translation') AS translation,
+    (select t.data from feat_params t where t.parent_id=f.id and t.name='seq_nt') AS seq_nt
 from orgs o, seqs s, feats f
 where s.org_id=o.id and f.seq_id=s.id;
 CREATE INDEX chelfeatsv_id_i ON chel_feats_v(id);
