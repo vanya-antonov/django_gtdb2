@@ -9,6 +9,7 @@ select f.id, f.seq_id, s.org_id,
     (select t.value from feat_params t where t.parent_id=f.id and t.name='chel_subunit') AS chel_subunit,
     (select t.num   from feat_params t where t.parent_id=f.id and t.name='chel_evalue') AS chel_evalue,
     (select fs.len from feat_fshifts ff, fshifts fs where ff.feat_id=f.id and fs.id=ff.fshift_id limit 1) AS fs_len,
+    (select count(1) from feats t where t.parent_id=f.id) AS num_kids,
     o.name AS org_name, o.phylum, o.kingdom, o.genus,
     (select t.data from feat_params t where t.parent_id=f.id and t.name='translation') AS translation,
     (select t.data from feat_params t where t.parent_id=f.id and t.name='seq_nt') AS seq_nt
