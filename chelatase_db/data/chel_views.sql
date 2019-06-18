@@ -2,13 +2,14 @@
 drop table if exists chel_feats_v;
 create table chel_feats_v as
 select f.id, f.seq_id, s.org_id,
-    f.type, f.name, f.descr, f.start, f.end, f.strand,
+    f.type, f.name, f.descr, f.start, f.end, f.strand, f.parent_id,
     (select t.num from feat_params t where t.parent_id=f.id and t.name='translation') AS prot_len,
     (select t.value from feat_params t where t.parent_id=f.id and t.name='gene') AS gene,
     (select t.value from feat_params t where t.parent_id=f.id and t.name='chel_gene') AS chel_gene,
     (select t.value from feat_params t where t.parent_id=f.id and t.name='chel_subunit') AS chel_subunit,
     (select t.num   from feat_params t where t.parent_id=f.id and t.name='chel_evalue') AS chel_evalue,
     (select fs.len from feat_fshifts ff, fshifts fs where ff.feat_id=f.id and fs.id=ff.fshift_id limit 1) AS fs_len,
+    (select fs.len from feats t, feat_fshifts ff, fshifts fs where t.parent_id=f.id and ff.feat_id=t.id and fs.id=ff.fshift_id limit 1) AS child_fs_len,
     (select count(1) from feats t where t.parent_id=f.id) AS num_kids,
     o.name AS org_name, o.phylum, o.kingdom, o.genus,
     (select t.data from feat_params t where t.parent_id=f.id and t.name='translation') AS translation,
