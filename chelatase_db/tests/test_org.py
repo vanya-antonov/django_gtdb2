@@ -150,3 +150,20 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(len(chl_genes['chlD_bchD']), 1)
         self.assertEqual(len(chl_genes['chlH_bchH']), 0)
 
+    def test_org_make_params_kegg(self):
+        # M. fervens org should be created together with the COF
+        mf_org = ChelataseOrg.objects.filter(
+            name='Methanocaldococcus fervens AG86'
+        ).first()
+        mf_org._make_params_kegg()
+        self.assertEqual(mf_org.prm.kegg_org_code, 'mfe')
+
+        # Create chld COF with 1 fshift only
+        self.create_chld_cof_from_pickles(
+            seed_gtdb1_ids = [self.MS_GTDB1_ID])
+        ms_org = ChelataseOrg.objects.filter(
+            name='Methanocaldococcus sp. FS406-22'
+        ).first()
+        ms_org._make_params_kegg()
+        self.assertEqual(ms_org.prm.kegg_org_code, 'mfs')
+

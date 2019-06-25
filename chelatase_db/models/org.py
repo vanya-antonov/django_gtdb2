@@ -9,7 +9,8 @@ from Bio.Data import CodonTable
 from django.conf import settings
 
 from chelatase_db.lib.bio import run_tblastn_seq_vs_db, run_tblastn_file_vs_db
-from chelatase_db.lib.config import PATHWAY_GENES_FAA, read_pathway_gene_info
+from chelatase_db.lib.config import (
+    PATHWAY_GENES_FAA, read_pathway_gene_info, read_kegg_orgs)
 from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.feat import ChelataseFeat
 from chelatase_db.models.fshift import ChelataseFshift
@@ -28,6 +29,7 @@ class ChelataseOrg(Org):
     # Merge two dicts: https://stackoverflow.com/a/38990/310453
     PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
         'chel_num_chld': {'value_attr': 'num', 'type_fun': int},
+        'kegg_org_code': {},
     }.items()))
 
     @property
@@ -92,6 +94,7 @@ class ChelataseOrg(Org):
         """
         super().create_all_params()
         self._make_params_chel_statistics()
+        self._make_params_kegg()
 
     def create_annotation(self):
         """Creates feats homologous to the cholorophyll and B12
@@ -152,6 +155,25 @@ class ChelataseOrg(Org):
          - chel_num_M - total number of M chelatase subunits (cobT/chlD/bchD).
         """
         self.set_param('chel_num_chld', num=self.chld_feat_set.count())
+
+    def _make_params_kegg(self):
+        """Creates params that will allow to show links to the KEGG
+        database like: https://www.genome.jp/kegg-bin/show_pathway?dac00860
+        """
+        kegg_dict = read_kegg_orgs()
+        if self.name in kegg_dict:
+            self.set_param('kegg_org_code', kegg_dict[self.name]['org_code'])
+            return
+
+        # Couldn't find the exact name in the KEGG table -- try to use species
+        my_species = _org_name_to_species(self.name)
+        if my_species is None:
+            return
+
+        for kegg_org, kegg_info in kegg_dict.items():
+            if my_species == _org_name_to_species(kegg_org):
+                self.set_param('kegg_org_code', kegg_info['org_code'])
+                return
 
     def _get_or_create_chld_feats(self, user):
         """Returns a list of ChelataseFeat objects."""
@@ -420,4 +442,15 @@ def _make_hits_dict(hsp_list):
     for hsp in hsp_list:
         all_hits.setdefault(hsp.sbjct_id, []).append(hsp)
     return all_hits
+
+def _org_name_to_species(org_name):
+    """Extracts species (the first two words) form the org name, e.g.:
+    'Methanocaldococcus sp. FS406-22'  => 'Methanocaldococcus sp'
+    """
+    sprecies_re = re.compile(r'^[a-z]+ [a-z]+', re.IGNORECASE)
+    mo = sprecies_re.search(org_name)
+    if mo is not None:
+        return mo.group()
+    else:
+        return None
 
