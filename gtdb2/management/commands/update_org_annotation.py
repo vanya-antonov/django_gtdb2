@@ -1,9 +1,8 @@
-import logging
-from pprint import pprint
 
 from django.core.management.base import BaseCommand, CommandError
 
 from chelatase_db.models import ChelataseOrg
+from gtdb2.lib.command import AbstractCommand
 from gtdb2.models import Org, Feat, Fshift
 
 
@@ -14,9 +13,7 @@ class Command(BaseCommand):
         parser.add_argument('id', type=int, help="database id")
 
     def handle(self, *args, **options):
-        # Make sure the progress messages will be printed during normal run
-        if options['verbosity'] > 0:
-            logging.getLogger().setLevel(logging.INFO)
+        super().handle(*args, **options)
 
         # https://docs.djangoproject.com/en/2.1/howto/custom-management-commands/
         org_id = options['id']

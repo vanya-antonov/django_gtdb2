@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from gtdb2.models.org import Org
 
-from ._abstract import AbstractCommand
+from gtdb2.lib.command import AbstractCommand
 
 
 class Command(AbstractCommand):

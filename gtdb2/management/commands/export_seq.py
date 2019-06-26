@@ -1,12 +1,11 @@
 
-from pprint import pprint
 import re
 
 from django.core.management.base import BaseCommand, CommandError
 
 from gtdb2.lib.baseutil import get_all_ids
 from gtdb2.models import Feat, Fshift
-from ._abstract import AbstractCommand
+from gtdb2.lib.command import AbstractCommand
 
 
 class Command(AbstractCommand):
