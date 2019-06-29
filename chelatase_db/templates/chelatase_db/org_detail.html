@@ -11,6 +11,17 @@
 		</ol>
 	</nav>
 
+	<h3>External Links</h3>
+	<ul>
+	{% if object.prm_dict.kegg_org_code %}
+			<li>
+				<a href="https://www.genome.jp/kegg-bin/show_pathway?{{object.prm_dict.kegg_org_code}}00860">
+					KEGG Porphyrin and chlorophyll metabolism pathway
+				</a>
+			</li>
+	{% endif %}
+	</ul>
+
   <h3>Magnesium / Cobalt chelatase subunits</h3>
 	<table style="width: auto;" class="table table-bordered table-sm table-hover">
     <thead class="thead-light">
