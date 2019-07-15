@@ -30,6 +30,7 @@ class Feat(AbstractUnit):
     PRM_INFO = dict(list(AbstractUnit.PRM_INFO.items()) + list({
         'gene': {},
         'gene_synonym': {},
+        'location_str': {},
         'protein_id': {},
         'ribosomal_slippage': {},
         'seq_nt': {'value_attr': 'data'},
@@ -178,6 +179,8 @@ class Feat(AbstractUnit):
         """Create feature params depending on its type (CDS, fsCDS, rRNA etc)
         and origin (genbank, gtdb).
         """
+        self._make_param_location_str()
+
         #TODO: if self.origin == 'gtdb':
         if self.origin == 'genetack':
             if self.type == 'fsCDS':
@@ -208,6 +211,14 @@ class Feat(AbstractUnit):
                 raise ValueError("Unknonwn feature type = '%s'" % self.type)
         else:
             raise ValueError("Unknonwn feature origin = '%s'" % self.origin)
+
+    def _make_param_location_str(self):
+        """Creates location_str param like 'NC_000911.2:123-456(+)'.
+        """
+        strand_str = '+' if self.strand == 1 else '-'
+        location_str = '%s:%d-%d(%s)' % (
+            self.seq.id, self.start, self.end, strand_str)
+        self.set_param('location_str', location_str)
 
     def _make_param_gtdb_fscds(self):
         """Creates params for predicted and not-annotated fsCDS feat.

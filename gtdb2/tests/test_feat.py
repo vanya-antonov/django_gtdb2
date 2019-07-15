@@ -1,5 +1,7 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+from pprint import pprint
+
 from gtdb2.models.org import Org
 from gtdb2.models.seq import Seq
 from gtdb2.models.feat import Feat
@@ -28,6 +30,7 @@ class FeatModelTests(GtdbTestCase):
         self.assertEqual(feat.origin, 'annotation')
 
         # Check params
+        self.assertEqual(feat.prm.location_str, 'NC_013156.1:1121859-1122960(+)')
         self.assertEqual(feat.prm['protein_id'], 'WP_015791742.1')
         self.assertTrue(feat.prm['translation'].startswith('MQYIYPFTAIVGQ'))
         # https://www.ncbi.nlm.nih.gov/nuccore/NC_013156.1?report=fasta&from=1121860&to=1122960
