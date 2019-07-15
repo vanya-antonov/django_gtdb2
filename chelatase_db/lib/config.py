@@ -16,21 +16,12 @@ PATHWAY_GENES_FAA = 'chelatase_db/data/pathway_genes.faa'
 PATHWAY_GENES_TXT = 'chelatase_db/data/pathway_genes.txt'
 CHEL_VIEWS_SQL = 'chelatase_db/data/chel_views.sql'
 KEGG_ORGS_TXT = 'chelatase_db/data/kegg_orgs.txt'
-#KEGG_ORGS_PICKLE = 'chelatase_db/data/kegg_orgs.pickle'
 
 
 def read_kegg_orgs():
     """Returns a dict of dicts where keys are KEGG org_names. The duplicated
     org_names are removed.
     """
- #   pickle_fn = os.path.join(settings.BASE_DIR, KEGG_ORGS_PICKLE)
- #   if os.path.exists(pickle_fn):
- #       logging.info('Reading KEGG data from pickle...')
- #       print('Reading KEGG data from pickle...' + pickle_fn)
- #       # Read info from pickle and return
- #       with open(pickle_fn, 'rb') as handle:
- #           return pickle.load(handle)
-
     # The pickle doesn't exist -- read the text file and create the pickle
     info_fn = os.path.join(settings.BASE_DIR, KEGG_ORGS_TXT)
     info_dict = {}
@@ -49,12 +40,6 @@ def read_kegg_orgs():
     for name in duplicated_names:
         # https://stackoverflow.com/a/11277439/310453
         info_dict.pop(name)
-
-#    # Create pickle
-#    with open(pickle_fn, 'wb') as f:
-#        logging.info('Saving KEGG data to pickle...')
-#        # Pickle the dictionary using the highest protocol available
-#        pickle.dump(info_dict, f, pickle.HIGHEST_PROTOCOL)
 
     return info_dict
 
