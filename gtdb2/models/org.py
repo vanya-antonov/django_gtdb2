@@ -1,5 +1,6 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
+from collections import Counter   # https://stackoverflow.com/a/5829377/310453
 import logging
 import os
 import shutil
@@ -15,6 +16,7 @@ from django.db.models import signals
 from django.dispatch import receiver
 
 from gtdb2.lib.db import GeneTackDB
+import gtdb2.models # to avoid circular importing
 from gtdb2.models.abstract import AbstractUnit, AbstractParam
 
 
@@ -38,6 +40,7 @@ class Org(AbstractUnit):
         'blastdb_nucl_all': {},
         'dir_name': {},
         'num_seqs': {'value_attr': 'num', 'type_fun': int},
+        'seq_rrna_16s': {'value_attr': 'data'},
         'short_name': {},
         'source_fn': {},
         'taxonomy': {'is_list': True, 'sort_attr': 'num'},
@@ -175,15 +178,25 @@ class Org(AbstractUnit):
         self._make_param_xref(record)
 
         self._make_param_transl_table()
+        self._make_param_rrna_16s()
 
         self._make_param_blastdb()
         #org.make_genetack_model()
 
     def create_annotation(self):
+        """Uses some parts of the GenBank annotation to create new features
+        in db.
+        """
+        user = self.gtdb.get_or_create_annotation_user()
+
+        # create 16S rRNA feats
+        logging.info("Creating rRNA features...")
+        for gbk_fn in self.get_all_seq_ids(fullpath=True):
+            record = SeqIO.read(gbk_fn, "genbank")
+            self._annotate_16S_rRNA(user, record)
+
         # create annotated fshifts
         # create genetack fshifts
-        # create 16S rRNA feats
-        pass
 
     def update_seqs_with_gbk(self, gbk_fn):
         """Compares current list of org seqs with the seqs from the gbk file.
@@ -199,6 +212,27 @@ class Org(AbstractUnit):
             return []
             #return {"n_new": 0, "n_updated": 0, "n_deleted": 0}
         raise NotImplementedError("Some org seqs should be updated!")
+
+    def _annotate_16S_rRNA(self, user, record):
+        """Creates all 16S rRNA feats based on the info from the .gbk file and
+        choose one of them as the org rRNA.
+        """
+        for f in record.features:
+            f_product = f.qualifiers.get('product', [''])[0]
+            if f_product != '16S ribosomal RNA':
+                continue
+
+            f_seq = f.extract(record.seq)
+            acgt_only_re = re.compile('^[ACGT]+$', re.IGNORECASE)
+            if not acgt_only_re.match(str(f_seq)):
+                logging.warning("Sequence '%s:%s' contains non-ACGT chars and "
+                                "will be ignored" % (record.id, f.location))
+                continue
+
+            seq = gtdb2.models.Seq.get_or_create_from_ext_id(
+                user, self, record.id)
+            feat = gtdb2.models.Feat.get_or_create_from_SeqFeature(
+                user, seq, f)
 
     def _get_grandchildren_set(self, grandchildren_cls_name):
         """Retruns a QuerySet of all grandchildren of particular type
@@ -286,6 +320,29 @@ class Org(AbstractUnit):
         self.delete_param('transl_table')
         for gcode, num_f in all_gcodes.items():
             self.add_param('transl_table', value=gcode, num=num_f)
+
+    def _make_param_rrna_16s(self):
+        """If the org has several rRNA genes, choose the one to
+        represent the entire org.
+        """
+        # Get all 16S rRNA feats
+        all_rrna_feats = self.feat_set.filter(
+            type='rRNA', descr__contains='16S'
+        ).all()
+        if len(all_rrna_feats) == 0:
+            self.delete_param('seq_rrna_16s')
+            return
+
+        # Find the most common 16S rRNA sequence only
+        # https://stackoverflow.com/a/20872750/310453
+        all_rrna_seqs = [feat.prm.seq_nt for feat in all_rrna_feats]
+        best_seq = Counter(all_rrna_seqs).most_common(1)[0][0]
+        for feat in all_rrna_feats:
+            if feat.prm.seq_nt == best_seq:
+                best_feat = feat
+                break
+        self.set_param('seq_rrna_16s', value=best_feat.name,
+                       num=len(best_seq), data=best_seq)
 
     def _make_param_blastdb(self):
         "Creates all blastdbs and saves them as org params."

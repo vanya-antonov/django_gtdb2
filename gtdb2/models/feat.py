@@ -82,20 +82,24 @@ class Feat(AbstractUnit):
         if len(overlapping_feats) == 0:
             return None
         f = overlapping_feats[0]
+        return cls.get_or_create_from_SeqFeature(
+            user, seq, f)
 
+    @classmethod
+    def get_or_create_from_SeqFeature(cls, user, seq, f, **kwargs):
+        """The argument f is a Bio.SeqFeature.SeqFeature object.
+        """
         # Make sure this feature is not present in the DB
         feat = cls.objects.filter(
             seq=seq, type=f.type, strand=f.location.strand,
             start=int(f.location.start), end=int(f.location.end)
         ).first()
-        if feat is not None:
-            return feat
-
-        return cls.create_from_SeqFeature(
-            user, seq, f, origin='annotation')
+        if feat is None:
+            feat = cls.create_from_SeqFeature(user, seq, f, **kwargs)
+        return feat
 
     @classmethod
-    def create_from_SeqFeature(cls, user, seq, f, origin):
+    def create_from_SeqFeature(cls, user, seq, f, origin='annotation'):
         """The argument f is a Bio.SeqFeature.SeqFeature object.
         """
         self = cls(user=user, seq=seq, type=f.type,
@@ -203,9 +207,6 @@ class Feat(AbstractUnit):
                 raise NotImplementedError("Annotated fsCDS feat!!")
                 self._make_param_gbk_fscds(f)
             elif self.type == 'rRNA':
-                # see add_16S_rRNA() from
-                # ~/_my/Programming/python/scripts/frameshift/gtdb2_manager.py
-                raise NotImplementedError("rRNA feat!!")
                 self._make_param_gbk_rrna(f)
             else:
                 raise ValueError("Unknonwn feature type = '%s'" % self.type)
@@ -251,6 +252,11 @@ class Feat(AbstractUnit):
         self.add_param('translation', data=fscds_aa, num=len(fscds_aa))
         self.add_param('seq_nt', data=fscds_nt, num=len(fscds_nt))
 
+    def _make_param_gbk_rrna(self, f):
+        """f is a Bio.SeqFeature.SeqFeature object.
+        """
+        self._make_param_seq_nt()
+
     def _make_param_gbk_cds(self, f):
         """f is a Bio.SeqFeature.SeqFeature object.
         """
@@ -259,9 +265,18 @@ class Feat(AbstractUnit):
         self._make_param_from_q(f, 'protein_id')
         self._make_param_from_q(f, 'ribosomal_slippage')
 
-        self._make_param_gbk_cds_seqs(f)
+        self._make_param_seq_nt()
+        self._make_param_translation(f)
 
-    def _make_param_gbk_cds_seqs(self, f):
+    def _make_param_seq_nt(self):
+        """Extracts the nt sequence of the feature and saves it in
+        the params table.
+        """
+        # self.feature is a Bio.SeqFeature.SeqFeature object
+        seq_nt = self.feature.extract(self.seq.seq).upper()
+        self.add_param('seq_nt', data=seq_nt, num=len(seq_nt))
+
+    def _make_param_translation(self, f):
         """f is a Bio.SeqFeature.SeqFeature object.
         """
         # Get the seqs
@@ -298,7 +313,6 @@ class Feat(AbstractUnit):
             logging.error(
                 "The feature doesn't have annotated translation:\n%s" % f)
 
-        self.add_param('seq_nt', data=cds_nt, num=len(cds_nt))
         if cds_aa is not None:
             self.add_param('translation', data=cds_aa, num=len(cds_aa))
 

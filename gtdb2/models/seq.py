@@ -1,6 +1,7 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 from collections import Counter
+import logging
 import os
 
 from django.db import models

@@ -24,7 +24,7 @@ class OrgModelTests(GtdbTestCase):
                     'NZ_BDBV01000039.1']
         self.assertEqual(set(all_ids), set(true_ids))
 
-        # Make sure full paths are returned if requested
+        # Make sure full paths are returned if requested (.gbk files)
         gbk_paths = org.get_all_seq_ids(fullpath=True)
         self.assertTrue(os.path.exists(gbk_paths[0]))
         self.assertTrue(os.path.getsize(gbk_paths[0]) > 0)
@@ -32,7 +32,7 @@ class OrgModelTests(GtdbTestCase):
         with self.assertRaises(StopIteration):
             next(SeqIO.parse(gbk_paths[0], "fasta"))
 
-        # Make sure full paths are returned if requested
+        # Make sure full paths are returned if requested (.fasta files)
         fna_paths = org.get_all_seq_ids(seq_dir='seq_fna', fullpath=True)
         self.assertTrue(os.path.exists(fna_paths[0]))
         self.assertTrue(os.path.getsize(fna_paths[0]) > 0)
@@ -120,8 +120,24 @@ class OrgModelTests(GtdbTestCase):
         self.assertEqual(org, OrgParam.get_parent_by_xref(
             'taxon', 1210089))
 
+        # Verify the created features - one 16S rRNA
+        all_rrna_feats = org.feat_set.filter(type='rRNA').all()
+        self.assertEqual(len(all_rrna_feats), 1)
+        rrna_feat = all_rrna_feats[0]
+        self.assertEqual(rrna_feat.name, 'NM1_RS40620')
+        self.assertEqual(rrna_feat.descr, '16S ribosomal RNA')
+
+        # Make sure the seq was loaded
+        self.assertTrue(rrna_feat.prm.seq_nt.startswith('TTCAACGGAGAGTT'))
+        self.assertTrue(rrna_feat.prm.seq_nt.endswith('GGATCACCTCCTTTCTAA'))
+
+        # This rRNA should also be assigned as org rRNA
+        self.assertTrue('seq_rrna_16s' in org.prm)
+        self.assertEqual(org.prm.seq_rrna_16s, rrna_feat.prm.seq_nt)
+
         # Make sure blastdbs were created
         db_path = self.gtdb.get_full_path_to(org.prm['blastdb_nucl_all'])
         db_files = [db_path + '.nsq', db_path + '.nhr', db_path + '.nin']
         for fn in db_files:
             self.assertTrue(os.path.exists(fn) and os.path.getsize(fn) > 0)
+
