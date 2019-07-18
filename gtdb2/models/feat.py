@@ -197,10 +197,15 @@ class Feat(AbstractUnit):
         #TODO: if self.origin == 'genbank':
         elif self.origin == 'annotation':
             # f is a Bio.SeqFeature.SeqFeature object
-            f = get_overlapping_feats_from_list(
+            all_f = get_overlapping_feats_from_list(
                 self.seq.record.features, self.start, self.end, self.strand,
-                all_types=[self.type], min_overlap=len(self.feature)/2
-            )[0]
+                all_types=[self.type], min_overlap=len(self.feature)/2)
+            if len(all_f) == 0:
+                logging.error("Can't find GenBank feature for Feat "
+                              "with id=%s and type=%s" % (self.id, self.type))
+                return
+
+            f = all_f[0]
             if self.type == 'CDS':
                 self._make_param_gbk_cds(f)
             elif self.type == 'fsCDS':

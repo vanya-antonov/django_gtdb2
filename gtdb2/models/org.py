@@ -229,6 +229,10 @@ class Org(AbstractUnit):
                                 "will be ignored" % (record.id, f.location))
                 continue
 
+            if len(f_seq) < 1000 or len(f_seq) > 2000:
+                logging.warning("16S rRNA '%s:%s' has wrong length = %s" %
+                                (record.id, f.location, len(f_seq)))
+
             seq = gtdb2.models.Seq.get_or_create_from_ext_id(
                 user, self, record.id)
             feat = gtdb2.models.Feat.get_or_create_from_SeqFeature(
@@ -325,24 +329,29 @@ class Org(AbstractUnit):
         """If the org has several rRNA genes, choose the one to
         represent the entire org.
         """
-        # Get all 16S rRNA feats
+        # Get all 16S rRNA feats with seqs
         all_rrna_feats = self.feat_set.filter(
-            type='rRNA', descr__contains='16S'
+            type='rRNA', descr='16S ribosomal RNA',
+            param_set__name='seq_nt'
         ).all()
         if len(all_rrna_feats) == 0:
             self.delete_param('seq_rrna_16s')
             return
 
-        # Find the most common 16S rRNA sequence only
-        # https://stackoverflow.com/a/20872750/310453
-        all_rrna_seqs = [feat.prm.seq_nt for feat in all_rrna_feats]
-        best_seq = Counter(all_rrna_seqs).most_common(1)[0][0]
-        for feat in all_rrna_feats:
-            if feat.prm.seq_nt == best_seq:
-                best_feat = feat
-                break
-        self.set_param('seq_rrna_16s', value=best_feat.name,
-                       num=len(best_seq), data=best_seq)
+        # Select the longest rRNA seq
+        best_feat = sorted(
+            all_rrna_feats, key=lambda f: -len(f.prm.seq_nt)
+        )[0]
+
+        # Make sure rRNA has reasonable length
+        if len(best_feat.prm.seq_nt) < 1000:
+            self.delete_param('seq_rrna_16s')
+            return
+
+        self.set_param('seq_rrna_16s',
+                       value=best_feat.name,
+                       num=len(best_feat.prm.seq_nt),
+                       data=best_feat.prm.seq_nt)
 
     def _make_param_blastdb(self):
         "Creates all blastdbs and saves them as org params."
