@@ -23,16 +23,16 @@ CREATE INDEX chelfeatsv_id_i ON chel_feats_v(id);
 CREATE INDEX chelfeatsv_seqid_i ON chel_feats_v(seq_id);
 CREATE INDEX chelfeatsv_orgid_i ON chel_feats_v(org_id);
 
-
 drop table if exists chel_orgs_v;
 create table chel_orgs_v as
 select o.id, o.name, o.genus, o.phylum, o.kingdom,
+    (select t.value from org_params t where t.parent_id=o.id and t.name='dir_name') AS dir_name,
     (select t.value from org_params t where t.parent_id=o.id and t.name='taxonomy' and t.num=2) AS tax2,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='L') AS num_L,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='M') AS num_M,
+	(select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='S' and t.num_kids=0) AS num_S,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit_tree='M') AS num_M_tree,
-    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='S') AS num_S,
-    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit_tree='S') AS num_S_tree,
+    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit_tree='S' and t.num_kids=0) AS num_S_tree,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='M' and t.fs_len not in (-1,1)) AS num_M_zero,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='M' and t.fs_len in (-1,1)) AS num_M_fs,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='M' and t.fs_len =-1) AS num_M_minus,
@@ -43,9 +43,9 @@ select o.id, o.name, o.genus, o.phylum, o.kingdom,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='cobT') AS num_cobT,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='chlD') AS num_chlD,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='bchD') AS num_bchD,
-    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='cobS') AS num_cobS,
-    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='chlI') AS num_chlI,
-    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='bchI') AS num_bchI,
+    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='cobS' and t.num_kids=0) AS num_cobS,
+    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='chlI' and t.num_kids=0) AS num_chlI,
+    (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_gene='bchI' and t.num_kids=0) AS num_bchI,
     (select min(t.chel_evalue) from chel_feats_v t where t.org_id=o.id and t.chel_gene='cobN') AS evalue_cobN,
     (select min(t.chel_evalue) from chel_feats_v t where t.org_id=o.id and t.chel_gene='chlH') AS evalue_chlH,
     (select min(t.chel_evalue) from chel_feats_v t where t.org_id=o.id and t.chel_gene='bchH') AS evalue_bchH,
