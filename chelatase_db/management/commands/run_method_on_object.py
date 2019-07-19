@@ -30,7 +30,7 @@ class Command(AbstractCommand):
         else:
             module_name = 'gtdb2.models'
 
-        # Get the class object its name from the module
+        # Get the class object by its name from the module
         # https://stackoverflow.com/a/4821120/310453
         module = importlib.import_module(module_name)
         cls = getattr(module, options['cls_name'])

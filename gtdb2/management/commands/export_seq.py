@@ -1,24 +1,27 @@
 
+import importlib
 import re
 
 from django.core.management.base import BaseCommand, CommandError
 
 from gtdb2.lib.baseutil import get_all_ids
-from gtdb2.models import Feat, Fshift
+from gtdb2.models import Org, Feat, Fshift
 from gtdb2.lib.command import AbstractCommand
 
 
 class Command(AbstractCommand):
     help = "Export various sequences from the database."
 
+    ALL_CLS_NAMES = ['Org', 'Seq', 'Feat', 'Fshift']
+
     def add_arguments(self, parser):
-        parser.add_argument('prm_name', metavar='seq_type', default=None,
+        parser.add_argument('prm_name', default=None,
                             help="""type of the sequence to export (e.g.
-                            'seq_prot', 'seq_nt_n' or 'translation' --
-                            see the NAME filed of the *_PARAMS tables)""")
-        all_types = ['feat', 'fshift']
-        parser.add_argument('obj_type', metavar='obj_type', choices = all_types,
-                            help='valid values: ' + ', '.join(all_types))
+                            'seq_nt' or 'translation')""")
+        all_cls_str = ', '.join(self.ALL_CLS_NAMES)
+        parser.add_argument('cls_name', metavar='cls_name',
+                            choices = self.ALL_CLS_NAMES,
+                            help='valid values: ' + all_cls_str)
         parser.add_argument('input_ids', nargs='?', default='-',
                             help="""a single ID or a file name with a list of
                             IDs (no header) or read the IDs from STDIN
@@ -29,7 +32,8 @@ class Command(AbstractCommand):
             help="""[__INPUT_ID__] seqname format.
             <FMT> may include the following special names: __INPUT_ID__,
             __ORG_ID__, __ORG_NAME__, __ORG_KINGDOM__, __ORG_GENUS__,
-            __ORG_PHYLUM__, __SEQ_ID__, __SEQ_NAME__, __SEQ_DESCR__,
+            __ORG_PHYLUM__, __ORG_DIR_NAME__,
+            __SEQ_ID__, __SEQ_NAME__, __SEQ_DESCR__,
             __FEAT_ID__, __FEAT_NAME__, __FEAT_DESCR__, __FEAT_PRM_GENE__,
             __FSHIFT_ID__, __FSHIFT_NAME__, __FSHIFT_DESCR__, etc""")
         parser.add_argument('--upper', action='store_true',
@@ -38,13 +42,15 @@ class Command(AbstractCommand):
                             help='indicate the frame by _')
 
     def handle(self, *args, **options):
-        all_ids = get_all_ids(options['input_ids'])
-        if options['obj_type'] == 'fshift':
-            self._export_table_object_prm(Fshift, all_ids, options)
-        elif options['obj_type'] == 'feat':
-            self._export_table_object_prm(Feat, all_ids, options)
+        super().handle(*args, **options)
 
-    def _export_table_object_prm(self, cls, all_ids, options):
+        # Get the class object by its name from the module
+        # https://stackoverflow.com/a/4821120/310453
+        module_name = 'gtdb2.models'
+        module = importlib.import_module(module_name)
+        cls = getattr(module, options['cls_name'])
+
+        all_ids = get_all_ids(options['input_ids'])
         prm_name = options['prm_name']
         for db_id in all_ids:
             obj = cls.objects.filter(pk=db_id).first()
@@ -80,7 +86,9 @@ def _get_seqname_for_fmt(fmt, obj):
     """
     fmt = re.compile('__INPUT_ID__').sub(str(obj.id), fmt)
 
-    if type(obj) == Feat:
+    if type(obj) == Org:
+        fmt = _fmt_process_org(fmt, obj)
+    elif type(obj) == Feat:
         fmt = _fmt_process_feat(fmt, obj)
         fmt = _fmt_process_seq(fmt, obj.seq)
         fmt = _fmt_process_org(fmt, obj.seq.org)
@@ -122,5 +130,6 @@ def _fmt_process_org(fmt, info):
     fmt = re.compile('__ORG_GENUS__').sub(str(info.genus), fmt)
     fmt = re.compile('__ORG_PHYLUM__').sub(str(info.phylum), fmt)
     fmt = re.compile('__ORG_KINGDOM__').sub(str(info.kingdom), fmt)
+    fmt = re.compile('__ORG_DIR_NAME__').sub(str(info.prm.dir_name), fmt)
     return fmt
 
