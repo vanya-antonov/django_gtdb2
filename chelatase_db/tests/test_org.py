@@ -129,15 +129,14 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(cobn_feat.prm.chel_gene, 'cobN')
 
         # The org also has some other genes from the B12 pathway
-        all_feats = list(org.feat_set.all())
-        cobQ_feats = [f for f in all_feats if f.prm.chel_gene_group == 'cobQ']
+        chel_feats = [f for f in org.feat_set.all() if 'chel_gene_group' in f.prm]
+        cobQ_feats = [f for f in chel_feats if f.prm.chel_gene_group == 'cobQ']
         self.assertEqual(len(cobQ_feats), 1)
 
-        cobO_feats = [f for f in all_feats if f.prm.chel_gene_group == 'cobO']
+        cobO_feats = [f for f in chel_feats if f.prm.chel_gene_group == 'cobO']
         self.assertEqual(len(cobO_feats), 1)
 
-        cobA_feats = [f for f in all_feats
-                      if f.prm.chel_gene_group == 'cysG_cobA']
+        cobA_feats = [f for f in chel_feats if f.prm.chel_gene_group == 'cysG_cobA']
         self.assertEqual(len(cobA_feats), 1)
 
         # Test the get_full_pathway_gene_dict()

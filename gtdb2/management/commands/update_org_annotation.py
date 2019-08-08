@@ -6,7 +6,7 @@ from gtdb2.lib.command import AbstractCommand
 from gtdb2.models import Org, Feat, Fshift
 
 
-class Command(BaseCommand):
+class Command(AbstractCommand):
     help = "Re-creates annotation for the org"
 
     def add_arguments(self, parser):

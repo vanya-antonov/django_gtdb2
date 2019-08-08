@@ -69,7 +69,7 @@ class ChelataseOrg(Org):
         info_dict = read_pathway_gene_info()
         all_gene_groups = {}
         for gene in info_dict.values():
-            if pathway is not None and gene['chel_pathway'] != pathway:
+            if pathway is not None and gene.get('chel_pathway', '') != pathway:
                 continue
 
             # e.g. 'cobD_cobC'
