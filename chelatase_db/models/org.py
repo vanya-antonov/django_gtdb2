@@ -184,9 +184,11 @@ class ChelataseOrg(Org):
         # Verify the automatic annotation of chlD genes
         for chld in chld_feats:
             if 'chel_subunit' not in chld.prm or chld.prm.chel_subunit != 'M':
-                self.delete()
-                raise ValueError("The identified chlD gene was not "
-                                 "automatically annotated as medium subunit!")
+                logging.warning(
+                    "The identified chlD gene (%s) was not automatically "
+                    "annotated as medium subunit and will be removed" %
+                    chld.prm.location_str)
+                chld.delete()
         return chld_feats
 
     def _get_or_create_feats_from_tblastn_hits(
