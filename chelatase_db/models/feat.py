@@ -8,7 +8,6 @@ from django.conf import settings
 
 from chelatase_db.lib.bio import run_blastp_seq_vs_file
 from chelatase_db.lib.config import PATHWAY_GENES_FAA, read_pathway_gene_info
-from chelatase_db.lib.db import CHEL_DB
 from gtdb2.models.feat import Feat
 
 
@@ -24,7 +23,6 @@ class ChelataseFeat(Feat):
         'chel_pathway': {},
         'chel_query': {},
         'chel_subunit': {},
-        'chel_subunit_tree': {},
     }.items()))
 
     @property
@@ -43,15 +41,6 @@ class ChelataseFeat(Feat):
         """Extend the parent's method to create additional params."""
         super().create_all_params()
         self._make_params_chel_pathway()
-        self._make_params_from_bed_file()
-
-    def _make_params_from_bed_file(self):
-        """Creates params from the matching regions from the .bed file.
-        The param names are: chel_subunit_tree.
-        """
-        for d in CHEL_DB.get_prm_from_bed_for_feat(self):
-            self.set_param(name=d['name'], value=d.get('value'),
-                          num=d.get('num'), data=d.get('data'))
 
     def _make_params_chel_pathway(self):
         """Tries to determine if this feature (CDS or fsCDS) is homologous

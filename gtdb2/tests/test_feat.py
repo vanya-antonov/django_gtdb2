@@ -39,10 +39,10 @@ class FeatModelTests(GtdbTestCase):
 
         # Make sure new feature is not created if we call the function again
         # and the existing Feat is returned
-        self.assertEqual(Feat.objects.count(), 1)
+        self.assertEqual(Feat.objects.filter(type='CDS').count(), 1)
         feat2 = Feat.get_or_create_from_gbk_annotation(
             self.user, self.seq, start+10, end-20, 1)
-        self.assertEqual(Feat.objects.count(), 1)
+        self.assertEqual(Feat.objects.filter(type='CDS').count(), 1)
         self.assertEqual(feat, feat2)
 
     def test_feat_get_or_create_fscds_from_parent(self):
@@ -75,9 +75,9 @@ class FeatModelTests(GtdbTestCase):
 
         # Make sure new feature is not created if we call the function again
         # and the existing Feat is returned
-        self.assertEqual(Feat.objects.count(), 2)
+        self.assertEqual(Feat.objects.filter(type='fsCDS').count(), 1)
         fscds2 = Feat.get_or_create_fscds_from_parent(
             self.user, parent_feat, [fshift])
-        self.assertEqual(Feat.objects.count(), 2)
+        self.assertEqual(Feat.objects.filter(type='fsCDS').count(), 1)
         self.assertEqual(fscds, fscds2)
 

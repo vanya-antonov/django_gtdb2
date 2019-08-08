@@ -77,15 +77,9 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(feat.fshift.len, -1)
         self.assertEqual(feat.prm.chel_subunit, 'M')
 
-        self.assertTrue('chel_subunit_tree' in feat.prm)
-        self.assertEqual(feat.prm.chel_subunit_tree, 'M')
-
         # Make sure the parent CDS was created as well
         self.assertTrue(feat.parent is not None)
         self.assertEqual(feat.parent.prm.chel_subunit, 'S')
-
-        self.assertTrue('chel_subunit_tree' in feat.parent.prm)
-        self.assertEqual(feat.parent.prm.chel_subunit_tree, 'S')
 
     def test_org_create_from_gbk(self):
         """Creates chlD and other pathway feats by tBLASTn."""

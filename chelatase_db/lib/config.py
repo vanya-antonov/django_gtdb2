@@ -16,7 +16,6 @@ PATHWAY_GENES_FAA = 'chelatase_db/data/pathway_genes.faa'
 PATHWAY_GENES_TXT = 'chelatase_db/data/pathway_genes.txt'
 CHEL_VIEWS_SQL = 'chelatase_db/data/chel_views.sql'
 KEGG_ORGS_TXT = 'chelatase_db/data/kegg_orgs.txt'
-FEAT_PARAMS_BED = 'chelatase_db/data/feat_params.bed'
 
 
 def read_kegg_orgs():
