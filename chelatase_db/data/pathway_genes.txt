@@ -66,16 +66,16 @@ BAA10812.1	BAA10812.1	Chlorophyll	chlM_bchM	-	-	-	-	-
 BAA18745.1	BAA18745.1	Chlorophyll	chlL_bchL	-	-	-	-	-
 BAA18746.1	BAA18746.1	Chlorophyll	chlN_bchN	-	-	-	-	-
 YP_353353.1	YP_353353.1	Chlorophyll	chlG_bchG	-	-	-	-	-
-BCM27_RS15705	BCM27_RS15705	-	false_M	false_M	-	-	-	nicotinate-nucleotide--dimethylbenzimidazole phosphoribosyltransferase (Gordonia terrae)
-NS506_RS15770	NS506_RS15770	-	false_M	false_M	-	-	-	nicotinate-nucleotide--dimethylbenzimidazole phosphoribosyltransferase (Nocardia seriolae)
+BCM27_RS15705	BCM27_RS15705	B12	cobT_cobU	false_cobT	-	-	-	nicotinate-nucleotide--dimethylbenzimidazole phosphoribosyltransferase (Gordonia terrae)
+NS506_RS15770	NS506_RS15770	B12	cobT_cobU	false_cobT	-	-	-	nicotinate-nucleotide--dimethylbenzimidazole phosphoribosyltransferase (Nocardia seriolae)
 DACI_RS01420	DACI_RS01420	-	false_M	false_M	-	-	-	ATP-dependent protease (Delftia acidovorans SPH-1)
 RPC_RS01600	RPC_RS01600	-	false_M	false_M	-	-	-	ATP-binding protein (Rhodopseudomonas palustris BisB18)
 RD1_RS05500	RD1_RS05500	-	false_M	false_M	-	-	-	ATP-binding protein (Roseobacter denitrificans OCh 114)
 SFUM_RS13680	SFUM_RS13680	-	false_M	false_M	-	-	-	ATP-dependent protease (Syntrophobacter fumaroxidans MPOB)
 XM52_RS00830	XM52_RS00830	-	false_M	false_M	-	-	-	DUF3520 domain-containing protein (Roseovarius indicus)
 BLW24_RS23070	BLW24_RS23070	-	false_M	false_M	-	-	-	DUF3520 domain-containing protein (Pseudomonas anguilliseptica)
-Rv2208	Rv2208	-	false_S	false_S	-	-	-	adenosylcobinamide-GDP ribazoletransferase (Mycobacterium tuberculosis H37Rv)
-PP_1681	PP_1681	-	false_S	false_S	-	-	-	adenosylcobinamide-GDP ribazoletransferase (Pseudomonas putida KT2440)
+Rv2208	Rv2208	B12	cobV_cobS	false_cobS	-	-	-	adenosylcobinamide-GDP ribazoletransferase (Mycobacterium tuberculosis H37Rv)
+PP_1681	PP_1681	B12	cobV_cobS	false_cobS	-	-	-	adenosylcobinamide-GDP ribazoletransferase (Pseudomonas putida KT2440)
 RD1_RS07205	RD1_RS07205	-	false_S	false_S	-	-	-	CbbQ/NirQ/NorQ/GpvN family protein (Roseobacter denitrificans OCh 114)
 APZ15_RS35280	APZ15_RS35280	-	false_S	false_S	-	-	-	ATPase AAA (Burkholderia cepacia ATCC 25416)
 PNI01S_RS24580	PNI01S_RS24580	-	false_S	false_S	-	-	-	CbbQ/NirQ/NorQ/GpvN family protein (Pseudomonas nitroreducens NBRC 12694)
