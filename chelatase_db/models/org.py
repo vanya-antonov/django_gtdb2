@@ -211,6 +211,13 @@ class ChelataseOrg(Org):
                     # This is normal CDS -- no need to create fshift
                     feat = ChelataseFeat.get_or_create_from_gbk_annotation(
                         user, seq, fs['start'], fs['end'], fs['strand'])
+                elif fs['len'] is None or fs['len'] == 0:
+                    # TODO: there is something strange with Rhodococcus
+                    # kunmingensis (fs_len == 0  -- is it in-frame stop?)
+                    logging.warning(
+                        "Strange fs-gene (fs_coord = %s, but fs_len=%s) -- "
+                        "skipping..." % (fs['coord'], fs['len']))
+                    continue
                 else:
                     # fsCDS needs a frameshift for full length translation
                     fshift = ChelataseFshift.get_or_create(

@@ -62,7 +62,8 @@ class FeatModelTests(GtdbTestCase):
 
         self.assertEqual(fscds.type, 'fsCDS')
         self.assertEqual(fscds.origin, 'genetack')
-        self.assertEqual(fscds.name, 'MEFER_RS06095_fs1122957')
+        self.assertEqual(fscds.name, 'MEFER_RS06095_fs_MEFER_RS06100')
+        self.assertEqual(fscds.descr, 'magnesium chelatase | VWA domain-containing protein')
         self.assertEqual(list(fscds.fshift_set.all()), [fshift])
 
         # Check the fsCDS params

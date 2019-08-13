@@ -233,19 +233,34 @@ class Feat(AbstractUnit):
         self._make_param_fscds_seqs()
 
     def _make_param_fscds_name(self):
-        "Creates fsCDS name like 'MEFER_RS06095_fs1122957'."
-        if self.parent.name is None:
-            all_parts = ['fsCDS']
-        else:
-            all_parts = [self.parent.name]
+        """Creates fsCDS name like 'MEFER_RS06095_fs_MEFER_RS06100' and
+        descr like 'magnesium chelatase | VWA domain-containing protein'.
+        """
+        # Get parts of the CompoundLocation
+        all_gbk_feats = self.seq.record.features
+        name_parts = []
+        descr_parts = []
+        for loc in self.location.parts:
+            all_f = get_overlapping_feats_from_list(
+                all_gbk_feats, loc.start, loc.end, loc.strand,
+                all_types=['CDS'], min_overlap=len(loc)/2)
 
-        # Sort frameshifts in the order of their appearance during translation
-        all_fshifts = sorted(self.fshift_set.all(), key=lambda fs: fs.coord,
-                             reverse=(self.strand == -1))
-        for fs in all_fshifts:
-            all_parts.append('fs' + str(fs.coord))
+            name = None
+            descr = None
+            if len(all_f) > 0:
+                name = all_f[0].qualifiers.get('locus_tag', [None])[0]
+                descr = all_f[0].qualifiers.get('product', [None])[0]
 
-        self.name = '_'.join(all_parts)
+            if name is None:
+                name = str(loc.start)
+            if descr is None:
+                descr = str(loc)
+
+            name_parts.append(name)
+            descr_parts.append(descr)
+
+        self.name = '_fs_'.join(name_parts)
+        self.descr = ' | '.join(descr_parts)
         self.save()
 
     def _make_param_fscds_seqs(self):
