@@ -1,6 +1,6 @@
 attrdict==2.0.1
 biopython==1.73
-Django==2.2.2
+Django==2.2.4
 mysqlclient==1.4.2.post1
 numpy==1.16.4
 pkg-resources==0.0.0
