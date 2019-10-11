@@ -122,6 +122,9 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(cobn_feat.prm.chel_subunit, 'L')
         self.assertEqual(cobn_feat.prm.chel_gene, 'cobN')
 
+        # Verify the genotype string
+        self.assertEqual(org.prm.chel_genotype_genes, '1xcobN, 1xchlD')
+
         # The org also has some other genes from the B12 pathway
         chel_feats = [f for f in org.feat_set.all() if 'chel_gene_group' in f.prm]
         cobQ_feats = [f for f in chel_feats if f.prm.chel_gene_group == 'cobQ']
