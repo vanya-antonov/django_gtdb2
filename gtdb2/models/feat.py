@@ -55,6 +55,13 @@ class Feat(AbstractUnit):
         "Retruns a Bio.SeqFeature.SeqFeature object."
         return SeqFeature(self.location, type=self.type)
 
+    @property
+    def children_feat_set(self):
+        """Returns a QuerySet of the children Feats, i.e. the ones that
+        have the current feat as a parent.
+        """
+        return Feat.objects.filter(parent=self)
+
     @classmethod
     def get_or_create_from_gbk_annotation(cls, user, seq, start, end, strand,
                                          f_type='CDS'):

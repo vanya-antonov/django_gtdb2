@@ -29,6 +29,7 @@ class ChelataseOrg(Org):
     # Merge two dicts: https://stackoverflow.com/a/38990/310453
     PRM_INFO = dict(list(Org.PRM_INFO.items()) + list({
         'chel_num_chld': {'value_attr': 'num', 'type_fun': int},
+        'chel_genotype_genes': {},
         'kegg_org_code': {},
     }.items()))
 
@@ -94,6 +95,7 @@ class ChelataseOrg(Org):
         """
         super().create_all_params()
         self._make_params_chel_statistics()
+        self._make_genotype_str()
         self._make_params_kegg()
 
     def create_annotation(self):
@@ -155,6 +157,44 @@ class ChelataseOrg(Org):
          - chel_num_M - total number of M chelatase subunits (cobT/chlD/bchD).
         """
         self.set_param('chel_num_chld', num=self.chld_feat_set.count())
+
+    def _make_genotype_str(self):
+        """Creates the 'chel_genotype_genes' param like '1xcobN, 1xfs-chlD'.
+        """
+        group2name = {
+            'cobN': 'cobN',
+            'cobT': 'cobT',
+            'cobS': 'cobS',
+            'chlH_bchH': 'chlH',
+            'chlD_bchD': 'chlD',
+            'chlI_bchI': 'chlI'}
+
+        all_pathway_genes = self.get_full_pathway_gene_dict()
+        chel_genes = {}
+        for key, feats in all_pathway_genes.items():
+            if key == 'chlD_bchD':
+                # Separate the fs-chlD and chlD
+                chel_genes['chlD'] = [f for f in feats if f.fshift is None]
+                chel_genes['fs-chlD'] = [f for f in feats if f.fshift is not None]
+            elif key == 'chlI_bchI':
+                # Remove chlI that are the short products of fs-chlD genes
+                chel_genes['chlI'] = [
+                    f for f in feats if f.children_feat_set.count() == 0]
+            elif key in group2name:
+                # Change some names: 'chlD_bchD'  =>   'chlD'
+                new_key = group2name[key]
+                chel_genes[new_key] = feats
+
+        genotype_names = [
+            'cobN', 'cobT', 'cobS', 'chlH', 'chlD', 'fs-chlD', 'chlI']
+        genotype_parts = []
+        for name in genotype_names:
+            num = len(chel_genes[name])
+            if num > 0:
+                genotype_parts.append(str(num) + 'x' + name)
+        genotype_str = ', '.join(genotype_parts)
+
+        self.set_param('chel_genotype_genes', genotype_str)
 
     def _make_params_kegg(self):
         """Creates params that will allow to show links to the KEGG
