@@ -27,6 +27,7 @@ create table chel_orgs_v as
 select o.id, o.name, o.genus, o.phylum, o.kingdom,
     (select t.value from org_params t where t.parent_id=o.id and t.name='dir_name') AS dir_name,
     (select t.value from org_params t where t.parent_id=o.id and t.name='taxonomy' and t.num=2) AS tax2,
+    (select t.value from org_params t where t.parent_id=o.id and t.name='chel_genotype_genes') AS genotype,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='L') AS num_L,
     (select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='M') AS num_M,
 	(select count(distinct t.id) from chel_feats_v t where t.org_id=o.id and t.chel_subunit='S' and t.num_kids=0) AS num_S,
