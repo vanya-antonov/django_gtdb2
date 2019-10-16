@@ -21,7 +21,7 @@ WP_002971872.1	WP_002971872.1	B12	cobS	cobS	S	250	500	-
 BAA17166.1	BAA17166.1	Chlorophyll	chlI_bchI	chlI	S	250	500	-
 YP_353347.1	YP_353347.1	Chlorophyll	chlI_bchI	bchI	S	250	500	-
 WP_085243324.1	WP_085243324.1	Chlorophyll	chlI_bchI	bchI	S	250	500	Putative S-subunit in Actinobacteria [Mycobacterium europaeum]
-WP_006076756.1	WP_006076756.1	Chlorophyll	chlI_bchI	bchI	S	250	500	Putative S-subunit in Archaea (MoxR family ATPase) [PMID: 22491058, 21148420]
+WP_006076756.1	WP_006076756.1	-	MoxR	MoxR	-	250	500	Putative S-subunit in Archaea (MoxR family ATPase) [PMID: 22491058, 21148420]
 ADC69074.1	ADC69074.1	B12	cobD_cobC	-	-	-	-	-
 ADC69303.1	ADC69303.1	B12	cobV_cobS	-	-	-	-	-
 ADC69892.1	ADC69892.1	B12	cysG_cobA	-	-	-	-	-
