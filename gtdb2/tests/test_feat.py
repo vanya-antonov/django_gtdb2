@@ -11,14 +11,15 @@ from gtdb2.tests import GtdbTestCase
 
 class FeatModelTests(GtdbTestCase):
 
-    def setUp(self):
-        super().setUp()
+#    def setUp(self):
+#        super().setUp()
+
+    def test_feat_create_from_gbk_annotation(self):
         fn = self.get_full_path_to_test_file('M_fervens.gbk')
         self.org = Org.create_from_gbk(self.user, fn)
         self.seq = Seq.create_from_ext_id(
             self.user, self.org, 'NC_013156.1')
 
-    def test_feat_create_from_gbk_annotation(self):
         start, end = 1121860-1, 1122960   # convert to 0-based coordinates
         feat = Feat.get_or_create_from_gbk_annotation(
             self.user, self.seq, start, end, 1)
@@ -46,6 +47,11 @@ class FeatModelTests(GtdbTestCase):
         self.assertEqual(feat, feat2)
 
     def test_feat_get_or_create_fscds_from_parent(self):
+        fn = self.get_full_path_to_test_file('M_fervens.gbk')
+        self.org = Org.create_from_gbk(self.user, fn)
+        self.seq = Seq.create_from_ext_id(
+            self.user, self.org, 'NC_013156.1')
+
         start, end = 1121860-1, 1122960   # convert to 0-based coordinates
         parent_feat = Feat.get_or_create_from_gbk_annotation(
             self.user, self.seq, start, end, 1)
@@ -81,4 +87,22 @@ class FeatModelTests(GtdbTestCase):
             self.user, parent_feat, [fshift])
         self.assertEqual(Feat.objects.filter(type='fsCDS').count(), 1)
         self.assertEqual(fscds, fscds2)
+
+    def test_get_or_create_from_frameshifted_SeqFeature(self):
+        fn = self.get_full_path_to_test_file('frameshifted_cds.gbk')
+        org = Org.create_from_gbk(self.user, fn)
+        seq = Seq.create_from_ext_id(self.user, org, 'NZ_CM001436.1')
+
+        all_cds = [f for f in seq.record.features if f.type == 'CDS']
+        self.assertEqual(len(all_cds), 1)
+
+        feat = Feat.get_or_create_from_frameshifted_SeqFeature(
+            self.user, seq, all_cds[0])
+        self.assertEqual(feat.type, 'CDS')
+        self.assertEqual(len(feat.feature) % 3, 0)
+        self.assertTrue(len(feat.feature) < len(all_cds[0]))
+        self.assertTrue(feat.prm.seq_nt.startswith('ATGACT'))
+        self.assertTrue(feat.prm.seq_nt.endswith('ACGTAG'))
+        self.assertTrue(feat.prm.translation.startswith('MTHHIRR'))
+        self.assertTrue(feat.prm.translation.endswith('QKKTIMSRT'))
 

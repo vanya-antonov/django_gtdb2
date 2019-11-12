@@ -1,0 +1,180 @@
+LOCUS       NZ_CM001436             2070 bp    DNA     linear   CON 17-APR-2017
+DEFINITION  Methanoplanus limicola DSM 2279 chromosome, whole genome shotgun
+            sequence.
+ACCESSION   NZ_CM001436 REGION: 2465624..2467693
+VERSION     NZ_CM001436.1
+DBLINK      BioProject: PRJNA224116
+            BioSample: SAMN02261391
+            Assembly: GCF_000243255.1
+KEYWORDS    WGS; GSC:MIGS:2.1; IMPROVED_HIGH_QUALITY_DRAFT; RefSeq.
+SOURCE      Methanoplanus limicola DSM 2279
+  ORGANISM  Methanoplanus limicola DSM 2279
+            Archaea; Euryarchaeota; Methanomicrobia; Methanomicrobiales;
+            Methanomicrobiaceae; Methanoplanus.
+REFERENCE   1  (bases 1 to 2070)
+  AUTHORS   Lucas,S., Copeland,A., Lapidus,A., Glavina del Rio,T., Dalin,E.,
+            Tice,H., Bruce,D., Goodwin,L., Pitluck,S., Peters,L.,
+            Mikhailova,N., Lu,M., Kyrpides,N., Mavromatis,K., Ivanova,N.,
+            Markowitz,V., Cheng,J.-F., Hugenholtz,P., Woyke,T., Wu,D.,
+            Wirth,R., Brambilla,E.-M., Klenk,H.-P. and Eisen,J.A.
+  CONSRTM   US DOE Joint Genome Institute (JGI-PGF)
+  TITLE     The Improved High-Quality Draft genome of Methanoplanus limicola
+            DSM 2279
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 2070)
+  AUTHORS   Lucas,S., Copeland,A., Lapidus,A., Glavina del Rio,T., Dalin,E.,
+            Tice,H., Bruce,D., Goodwin,L., Pitluck,S., Peters,L.,
+            Mikhailova,N., Lu,M., Kyrpides,N., Mavromatis,K., Ivanova,N.,
+            Markowitz,V., Cheng,J.-F., Hugenholtz,P., Woyke,T., Wu,D.,
+            Wirth,R., Brambilla,E.-M., Klenk,H.-P. and Eisen,J.A.
+  CONSRTM   US DOE Joint Genome Institute (JGI-PGF)
+  TITLE     Direct Submission
+  JOURNAL   Submitted (11-OCT-2011) US DOE Joint Genome Institute, 2800
+            Mitchell Drive, Walnut Creek, CA 94598-1698, USA
+COMMENT     REFSEQ INFORMATION: The reference sequence was derived from
+            CM001436.
+            URL -- http://www.jgi.doe.gov
+            JGI Project ID: 4085574
+            Source DNA and organism available from Hans-Peter Klenk at the
+            German Collection of Microorganisms and Cell Cultures (DSMZ)
+            (hans-peter.klenk@dsmz.de)
+            Contacts: Jonathan A. Eisen (jaeisen@ucdavis.edu)
+                      David Bruce (microbe@cuba.jgi-psf.org)
+            Whole genome sequencing and draft assembly at JGI-PGF
+            Annotation by JGI-PGF and JGI-ORNL
+            The JGI and collaborators endorse the principles for the
+            distribution and use of large scale sequencing data adopted by the
+            larger genome sequencing community and urge users of this data to
+            follow them. It is our intention to publish the work of this
+            project in a timely fashion and we welcome collaborative
+            interaction on the project and analysis.
+            (http://www.genome.gov/page.cfm?pageID=10506376).
+            Annotation was added by the NCBI Prokaryotic Genome Annotation
+            Pipeline (released 2013). Information about the Pipeline can be
+            found here: https://www.ncbi.nlm.nih.gov/genome/annotation_prok/
+            
+            ##MIGS-Data-START##
+            investigation_type  :: bacteria_archaea
+            project_name        :: Methanoplanus limicola M3, DSM 2279
+            collection_date     :: Missing
+            lat_lon             :: Missing
+            depth               :: Missing
+            alt_elev            :: Missing
+            country             :: Italy
+            environment         :: Mud
+            num_replicons       :: 1
+            ref_biomaterial     :: DSM 2279, ATCC 35062, OCM 101
+            biotic_relationship :: Free living
+            trophic_level       :: Missing
+            rel_to_oxygen       :: Anaerobe
+            isol_growth_condt   :: Missing
+            sequencing_meth     :: WGS
+            assembly            :: Newbler v. 2.3 (pre-release)
+            finishing_strategy  :: Finished
+            GOLD Stamp ID       :: Gi02923
+            Type Strain         :: Yes
+            Greengenes ID       :: 252
+            Gene Calling Method :: Prodigal 1.4, GenePRIMP
+            Isolation Site      :: Mud of drilling swamp from Italy
+            Temperature Range   :: Mesophile
+            Temperature Optimum :: 30 - 35C
+            Gram Staining       :: Gram-
+            Diseases            :: None
+            ##MIGS-Data-END##
+            
+            ##Genome-Assembly-Data-START##
+            Finishing Goal           :: Finished
+            Current Finishing Status :: Improved High-Quality Draft
+            Assembly Method          :: Newbler v. 2.3
+            Genome Coverage          :: 30x
+            Sequencing Technology    :: 454; Illumina
+            ##Genome-Assembly-Data-END##
+            
+            ##Genome-Annotation-Data-START##
+            Annotation Provider               :: NCBI
+            Annotation Date                   :: 04/15/2017 00:38:55
+            Annotation Pipeline               :: NCBI Prokaryotic Genome
+                                                 Annotation Pipeline
+            Annotation Method                 :: Best-placed reference protein
+                                                 set; GeneMarkS+
+            Annotation Software revision      :: 4.1
+            Features Annotated                :: Gene; CDS; rRNA; tRNA; ncRNA;
+                                                 repeat_region
+            Genes (total)                     :: 3,092
+            CDS (total)                       :: 3,028
+            Genes (coding)                    :: 2,967
+            CDS (coding)                      :: 2,967
+            Genes (RNA)                       :: 64
+            rRNAs                             :: 5, 1, 1 (5S, 16S, 23S)
+            complete rRNAs                    :: 5, 1, 1 (5S, 16S, 23S)
+            tRNAs                             :: 55
+            ncRNAs                            :: 2
+            Pseudo Genes (total)              :: 61
+            Pseudo Genes (ambiguous residues) :: 0 of 61
+            Pseudo Genes (frameshifted)       :: 26 of 61
+            Pseudo Genes (incomplete)         :: 31 of 61
+            Pseudo Genes (internal stop)      :: 11 of 61
+            Pseudo Genes (multiple problems)  :: 7 of 61
+            ##Genome-Annotation-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..2070
+                     /organism="Methanoplanus limicola DSM 2279"
+                     /mol_type="genomic DNA"
+                     /strain="DSM 2279"
+                     /isolation_source="mud of drilling swamp"
+                     /culture_collection="DSM:2279"
+                     /db_xref="taxon:937775"
+                     /country="Italy"
+     gene            2..2070
+                     /locus_tag="METLIM_RS16260"
+                     /old_locus_tag="Metlim_2341"
+                     /pseudo
+     CDS             2..2070
+                     /locus_tag="METLIM_RS16260"
+                     /old_locus_tag="Metlim_2341"
+                     /inference="COORDINATES: similar to AA
+                     sequence:RefSeq:WP_004078651.1"
+                     /note="frameshifted; Derived by automated computational
+                     analysis using gene prediction method: Protein Homology."
+                     /pseudo
+                     /codon_start=1
+                     /transl_table=11
+                     /product="magnesium chelatase"
+ORIGIN      
+        1 catgactcac catatacgca ggaatattct gccatttaca gcaattgtcg ggcaggacca
+       61 gatgaaactc gcacttattc ttaacgcaat taatccccgg atagggggag ttttagtcag
+      121 gggagaaaaa ggcacagcca aatctaccgc agtcagagca cttgcggaaa ttcttccgga
+      181 aattgaggtc ataaagggtt gtcctttcaa ctgcaatcca cataacccaa acgaactctg
+      241 tgattcatgc tatgaaaaat taaataatag cgaatccacc gataccgtaa tacgcaaagt
+      301 acaggttgtt acactccctt taggctcaac tgaggatcgt gtaataggaa cgattgacat
+      361 tgaagaggca ataaaggaag gaacaaaatg ccttgagcca ggaattcttg cggctgtaaa
+      421 caggggaatc ctgtatattg atgaagtcaa ccttctggat gaccatgttg ttgatatcct
+      481 gcttgattcc gcagccatgg gggttaattc tgtcgaacgt gaaggaatat cattttcaca
+      541 cccggcaaaa ttcatactga tcggaacgat gaatcctgaa gaaggagaac tgcgtcctca
+      601 gcttcttgac aggtttgggc ttcaggttac agttgaggga attgccgatg tcagcgaacg
+      661 agttgaggtt gtacatattg ctgatgcctt tgagacagat ccaatctcat ttatggagga
+      721 gtatgaccag aagcagaagc atttcaggga gagaattgtt tctgcaaagg agatactgcc
+      781 aaatgtagtt atctctgatg aacttgtaca caggatagca caaacatgcg tggatatggg
+      841 agttatgacg catcgtgctg agattacaat tgtccgcacc gccaagacga tctctgcttt
+      901 taacggtcgt gaggaggtaa caaccgagga tgtcagagag gctatggccc tggccctgcc
+      961 gcaccgtatg agaaggaaac cttttgaaga cccacaggtt gaccagcaga agatcaatga
+     1021 catgatgcag gacgatcaaa aaaaaacgat aatgagccgg acgtagagga gcagccggaa
+     1081 aacagggatg aaaatcctga agagacaggg gagatcccac ctttcgattt tcctgaagag
+     1141 gaagagaacc gcgacaacga aatacctcca tcgagcggat ctcctcctca ggagatggta
+     1201 tttgatatcg gaagacctat cgagacatca ggaattaact acagttcatg caaagaccgg
+     1261 atgaagcgtt tatatgtatc cgggaggcgt gtggacactc tttctgaaaa gaaccgtggg
+     1321 aggtatgcac gtatctgcat gcctaaggat atggacgata tcgcttttga tgcaactatg
+     1381 cgtgtggcat ctgtccacca gaaaaaaagg cagaagaacg gaaacaggct tataattaag
+     1441 gactctgaca tacgtgaaag gataagggtc ggaaaagttt ctgtaacatg tgtctttgtt
+     1501 gtggatatca gtggctcaat gggtgcggat aagaggatgg aatgcgcaaa gggtgcggtt
+     1561 ctctcgcttc ttgaagatgc ctacagaaac agggacagag tcagcattgt tgcattcagg
+     1621 ggcagtgaag cggaagttgt cctgcctctc tgtaacagtg ttgatctggc atataaatat
+     1681 ctcagggaaa tgcccaccgg aggaaaaact cccttatcac acggtcttat gaaggcttat
+     1741 gaggtcctga tgaatgagaa gaaaaaaagg gaggatataa tccctctgat tatcctcatc
+     1801 tctgacggca gggcaaatta cggatttggg aagaacatta aggaagaaat tttctcaata
+     1861 tccgagagat tccgggatga gagaattcac actgtaataa tagatacgga atccgttaaa
+     1921 aattccttca ttaaatttca gcttggctat tgcagggata tagcagagag atcaggaggt
+     1981 tcctattact ctcttagtga gcttagtaca gagggcgtca gttcaattgc tctgaatgaa
+     2041 aaagagagac ttgtttcttc atatatttag
+//
+

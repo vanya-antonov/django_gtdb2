@@ -6,7 +6,7 @@ import logging
 from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
 from django.db import models
 
-from gtdb2.lib.bio import is_stop
+from gtdb2.lib.bio import is_stop, get_overlapping_feats_from_list
 from gtdb2.models.abstract import AbstractUnit, AbstractParam
 from gtdb2.models.seq import Seq
 from gtdb2.models.fshift import Fshift
@@ -121,6 +121,45 @@ class Feat(AbstractUnit):
         self.create_all_params()
 
         return self
+
+    @classmethod
+    def get_or_create_from_frameshifted_SeqFeature(cls, user, seq, f,
+                                                   origin='annotation'):
+        """The argument f is a Bio.SeqFeature.SeqFeature object that corresponds
+        to a frameshifted CDS which length is not divisible by 3 and that
+        doesn't have annotated translation. So, we create a CDS feat from start
+        until the first stop codon.
+        """
+        # Get the seqs
+        cds_nt = f.extract(seq.seq)
+        cds_aa = cds_nt.translate(table=seq.transl_table, to_stop=True)
+        cds_len = 3 * len(cds_aa) + 3   # +3 to include the stop codon
+
+        if f.location.strand == 1:
+            cds_start = int(f.location.start)
+            cds_end = cds_start + cds_len
+        else:
+            cds_end = int(f.location.end)
+            cds_start = cds_end - cds_len
+
+        # Make sure this feature is not present in the DB
+        feat = cls.objects.filter(
+            seq=seq, type=f.type, strand=f.location.strand,
+            start=cds_start, end=cds_end
+        ).first()
+
+        if feat is None:
+            feat = cls(user=user, seq=seq, type=f.type,
+                       start=cds_start,
+                       end=cds_end,
+                       strand=f.location.strand,
+                       name=f.qualifiers.get('locus_tag', [None])[0],
+                       descr=f.qualifiers.get('product', [None])[0],
+                       origin=origin)
+            feat.save()
+            feat.create_all_params()
+
+        return feat
 
     @classmethod
     def get_or_create_fscds_from_parent(cls, user, parent_cds, all_fshifts):
@@ -245,6 +284,7 @@ class Feat(AbstractUnit):
         """
         # Get parts of the CompoundLocation
         all_gbk_feats = self.seq.record.features
+        processed_f = []
         name_parts = []
         descr_parts = []
         for loc in self.location.parts:
@@ -254,17 +294,17 @@ class Feat(AbstractUnit):
 
             name = None
             descr = None
-            if len(all_f) > 0:
+            if len(all_f) > 0 and all_f[0] not in processed_f:
+                processed_f.append(all_f[0]) # to avoid repeating feats
                 name = all_f[0].qualifiers.get('locus_tag', [None])[0]
                 descr = all_f[0].qualifiers.get('product', [None])[0]
 
             if name is None:
                 name = str(loc.start)
-            if descr is None:
-                descr = str(loc)
-
             name_parts.append(name)
-            descr_parts.append(descr)
+
+            if descr is not None:
+                descr_parts.append(descr)
 
         self.name = '_fs_'.join(name_parts)
         self.descr = ' | '.join(descr_parts)
@@ -307,7 +347,7 @@ class Feat(AbstractUnit):
         """f is a Bio.SeqFeature.SeqFeature object.
         """
         # Get the seqs
-        cds_nt = f.extract(self.seq.seq).upper()
+        cds_nt = self.feature.extract(self.seq.seq).upper()
 
         # http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc25
         try:
@@ -336,9 +376,6 @@ class Feat(AbstractUnit):
                     "The annotated and generated translations do not match "
                     "for feature '%s':\n\n%s\n%s\n\n" %
                     (f, translation, cds_aa))
-        else:
-            logging.error(
-                "The feature doesn't have annotated translation:\n%s" % f)
 
         if cds_aa is not None:
             self.add_param('translation', data=cds_aa, num=len(cds_aa))
@@ -421,47 +458,4 @@ def _find_downstream_stop(seq, start_coord, strand, gcode):
                 break
 
     return coord
-
-def get_overlapping_feats_from_list(all_feats, start, end, strand,
-                                    all_types=None, min_overlap=1):
-    """Returns a list of objects from f_list that overlap with the specified
-    genomic location. The returned objects will be sorted (descending) by the
-    value of the '_overlap_len' attribute (int) that will be added to each
-    object.
-
-    Arguments:
-     - all_feats - a list of feature-objects (e.g. Bio.SeqFeature.SeqFeature or
-     gtdb2.models.feat.Feat) that have the .type (string) and the .location
-     (Bio.SeqFeature.FeatureLocation) attributes.
-    """
-    target_loc = FeatureLocation(start, end, strand)
-    overlapping_feats = []
-    for f in all_feats:
-        if all_types is not None and f.type not in all_types:
-            continue
-
-        if f.location.end < start or end < f.location.start:
-            continue
-
-        f._overlap_len = get_FeatureLocation_overlap_len(f.location, target_loc)
-        if f._overlap_len >= min_overlap:
-            overlapping_feats.append(f)
-
-    # Sort by overlap_len: https://docs.python.org/3.6/howto/sorting.html
-    return sorted(overlapping_feats, reverse=True,
-                  key=lambda f: f._overlap_len)
-
-def get_FeatureLocation_overlap_len(f1, f2):
-    # https://github.com/biopython/biopython/issues/896
-    if not isinstance(f1, (FeatureLocation, CompoundLocation)) or \
-       not isinstance(f2, (FeatureLocation, CompoundLocation)):
-        raise ValueError("Wrong feature types: %s / %s" %
-                         (type(f1), type(f2)))
-
-    if f1.strand is not None and \
-       f2.strand is not None and \
-       f1.strand != f2.strand:
-        return 0
-
-    return len(set(f1).intersection(set(f2)))
 

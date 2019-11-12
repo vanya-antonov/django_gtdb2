@@ -15,6 +15,7 @@ from chelatase_db.models.cof import ChelataseCof
 from chelatase_db.models.feat import ChelataseFeat
 from chelatase_db.models.fshift import ChelataseFshift
 from chelatase_db.models.seq import ChelataseSeq
+from gtdb2.lib.bio import get_overlapping_feats_from_list
 from gtdb2.models.org import Org
 
 
@@ -267,9 +268,8 @@ class ChelataseOrg(Org):
 
                     # Create the parent feature that corresponds to the
                     # upstream part of fsCDS, i.e. where translation begins
-                    parent = ChelataseFeat.get_or_create_from_gbk_annotation(
-                        user, seq, fs['hsp_n'].sbjct_start,
-                        fs['hsp_n'].sbjct_end, fs['hsp_n'].sbjct_strand)
+                    parent = _get_or_create_parent_feat_from_tblastn_hits(
+                        user, seq, fs['hsp_n'], fs['hsp_c'])
 
                     # Finally, create the full-length fsCDS feat
                     feat = ChelataseFeat.get_or_create_fscds_from_parent(
@@ -303,6 +303,48 @@ class ChelataseOrg(Org):
                 all_fs_info.append(fs_dict)
 
         return all_fs_info
+
+def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
+    """For a given pair of tBLASTn hits create the parent feature that
+    corresponds to the upstream part of fsCDS (i.e. the shorter product).
+    """
+    half_len_n = (hsp_n.sbjct_end-hsp_n.sbjct_start)/2
+    hsp_n_all_feats = get_overlapping_feats_from_list(
+        seq.record.features, hsp_n.sbjct_start, hsp_n.sbjct_end,
+        hsp_n.sbjct_strand, min_overlap=half_len_n, all_types=['CDS'])
+
+    half_len_c = (hsp_c.sbjct_end-hsp_c.sbjct_start)/2
+    hsp_c_all_feats = get_overlapping_feats_from_list(
+        seq.record.features, hsp_c.sbjct_start, hsp_c.sbjct_end,
+        hsp_c.sbjct_strand, min_overlap=half_len_c, all_types=['CDS'])
+
+    parent = None
+    if len(hsp_n_all_feats) == 1 and len(hsp_c_all_feats) == 1:
+        hsp_n_feat = hsp_n_all_feats[0]
+        hsp_c_feat = hsp_c_all_feats[0]
+        if hsp_n_feat == hsp_c_feat:
+            # The parent CDS has to be created manually because the
+            # frameshifted gene annotated as a single
+            # frameshifted gene without translation, i.e.
+            #      hsp_n            hsp_c
+            #   ---------         ------------
+            # ====================================>
+            #   hsp_n_feat          hsp_c_feat
+            parent = ChelataseFeat.get_or_create_from_frameshifted_SeqFeature(
+                user, seq, hsp_n_feat)
+        else:
+            # Parent CDS can be created from the annotated feature
+            # because the frameshifted gene annotated as two genes, i.e.:
+            #      hsp_n            hsp_c
+            #   ---------         ------------
+            # ==============>  ====================>
+            #   hsp_n_feat          hsp_c_feat
+            parent = ChelataseFeat.get_or_create_from_SeqFeature(
+                user, seq, hsp_n_feat)
+    else:
+        logging.error("No annotated features for tBLASTn hit(s)!")
+
+    return parent
 
 def _get_closest_hsp_pair(all_hsp_n, all_hsp_c):
     min_dist, min_hsp_n, min_hsp_c = None, None, None
