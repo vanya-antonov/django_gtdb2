@@ -9,6 +9,7 @@
 				<th scope="col">Name</th>
 				<th scope="col">Phylum</th>
 				<th scope="col">Kingdom</th>
+				<th scope="col">Genotype</th>
 			</tr>
 		</thead>
     <tbody>
@@ -23,6 +24,7 @@
           </td>
           <td>{{ org.phylum }}</td>
           <td>{{ org.kingdom }}</td>
+          <td>{{ org.prm_dict.chel_genotype_genes }}</td>
         </tr>
       {% endfor %}
     </tbody>
