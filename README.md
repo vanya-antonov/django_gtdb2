@@ -21,3 +21,26 @@ manage_gtdb2 export_seq  translation  feat  29451
 
 deactivate
 ```
+
+# Transfer MySQL database to a new machine
+```bash
+# [ssh_yulia] Export MySQL data:
+mysqldump -u ivan -p -h 127.0.0.1 chelatase_db | gzip > 200417.chelatase_db.sql.gz
+
+# Copy the data file from ssh_yulia
+scp -P 22194 ivan@83.149.211.146:~/_my/backup/200417.chelatase_db.sql.gz  .
+
+# On ubuntu the root login is a bit tricky: https://stackoverflow.com/a/42742610/310453
+sudo mysql -u root  -p
+create database chelatase_db;
+create user 'antonov'@'%' identified by '***';
+grant all on chelatase_db.* to 'antonov'@'%';
+
+# test connect
+alias chelatase_db='mysql -u antonov -p*** chelatase_db'
+
+# About TIMESTAMP NULL:  https://stackoverflow.com/a/37420863/310453
+zcat 200417.chelatase_db.sql.gz  |\
+perl -pe 's/DATETIME\S+/TIMESTAMP NULL/gi' |\
+chelatase_db
+```
