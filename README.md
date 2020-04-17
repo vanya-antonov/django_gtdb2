@@ -18,6 +18,11 @@ source venv/bin/activate
 pip install wheel
 pip install -r requirements.txt
 
+# Run server with external access:
+# ./manage.py runserver 0.0.0.0:8000
+# Run server at: http://127.0.0.1:8000/chelatase_db/
+./manage.py runserver
+
 # Test
 ./manage.py export_seq  translation  Feat  238533
 #manage_gtdb2 export_seq  translation  Feat  29451
