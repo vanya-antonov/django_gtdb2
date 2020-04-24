@@ -11,8 +11,8 @@ services:
             - MODE=PROD
         env_file:
             - production.env
-        ports:
-            - 8000:8000
+        expose:
+            - 8000
 
     db:
         image: mysql:8.0
@@ -21,8 +21,8 @@ services:
             - MYSQL_RANDOM_ROOT_PASSWORD=yes
         env_file:
             - production.env
-        ports:
-            - 3307:3306
+        expose:
+            - 3306
 
     nginx:
         image: nginx:1.17.10
