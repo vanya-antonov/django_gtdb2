@@ -52,3 +52,23 @@ zcat 200417.chelatase_db.sql.gz  |\
 perl -pe 's/DATETIME\S+/TIMESTAMP NULL/gi' |\
 chelatase_db
 ```
+
+# Deploy with docker-compose
+```bash
+cd django_gtdb2
+#create file prod.env with database name and mysql_user:
+touch prod.env
+echo "MYSQL_DATABASE=chelatase_db" >> prod.env
+echo "MYSQL_USER=gtdb" >> prod.env
+# production.env with secrets will be created automatically
+# create production.env and up db
+sudo bash create_db.sh
+# wait for mysql is ready
+sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE' # should show mysql shell
+# unzip sql.gz file
+gunzip ../dump.sql.gz
+# load mysql dump
+SQL_DUMP_PATH=../dump.sql bash load_dump.sh
+# check loaded tables
+sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "show tables"'
+```

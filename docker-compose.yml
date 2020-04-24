@@ -1,9 +1,10 @@
 version: '3'
-
+# http://pawamoy.github.io/2018/02/01/docker-compose-django-postgres-nginx.html
+# https://testdriven.io/blog/dockerizing-flask-with-postgres-gunicorn-and-nginx/
 services:
     django:
         build: ./django
-        command: python3 manage.py runserver 0.0.0.0:8000
+        command:  gunicorn --bind :8000 mysite.wsgi:application
         environment:
             - MYSQL_HOST=db
             - MYSQL_PORT=3306
@@ -14,12 +15,20 @@ services:
             - 8000:8000
 
     db:
-        image: mysql:latest
+        image: mysql:8.0
         command:  --default-authentication-plugin=mysql_native_password
         environment:
             - MYSQL_RANDOM_ROOT_PASSWORD=yes
         env_file:
             - production.env
         ports:
-          - 3307:3306
+            - 3307:3306
 
+    nginx:
+        image: nginx:1.17.10
+        ports:
+            - 80:80
+        volumes:
+            - ./nginx/conf.d:/etc/nginx/conf.d
+        depends_on:
+            - django
