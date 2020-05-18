@@ -150,7 +150,7 @@
           <td>{{ forloop.counter }}</td>
           <td>
 						<a href="https://www.ncbi.nlm.nih.gov/nuccore/{{feat.seq_id}}?report=graph&from={{feat.start|add:1}}&to={{feat.end}}">
-              {{ feat.name }}</td>
+              {{ feat.name }}
             </a>
           </td>
           <td>{{ feat.descr }}</td>
@@ -160,7 +160,11 @@
           <td>{{ feat.prm_dict.chel_gene_group }}</td>
           <td>{{ feat.prm_dict.chel_subunit }}</td>
           <td>{{ feat.prm_dict.chel_evalue }}</td>
-          <td>{{ feat.prm_dict.chel_query }}</td>
+          <td>
+						<a href="https://www.ncbi.nlm.nih.gov/protein/{{ feat.prm_dict.chel_query }}">
+							{{ feat.prm_dict.chel_query }}
+						</a>
+					</td>
         </tr>
       {% endfor %}
     </tbody>
