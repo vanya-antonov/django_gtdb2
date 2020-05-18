@@ -118,12 +118,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-
-
-###
 # https://stackoverflow.com/a/4909964/310453
-try:
-    from .local_settings import *
-except ImportError:
-    pass
+if os.environ.get('MODE','DEV') == 'PROD':
+    try:
+        from .production_settings import *
+    except ImportError:
+        pass
+else:
+    try:
+        from .local_settings import *
+    except ImportError:
+        pass
 
