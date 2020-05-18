@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from gtdb2.models.org import Org
 
 from gtdb2.lib.command import AbstractCommand
+from gtdb2.lib.db import GeneTackDB
 
 
 class Command(AbstractCommand):
@@ -14,7 +15,11 @@ class Command(AbstractCommand):
             help=".gbk file with all intronless org sequences")
 
     def handle(self, *args, **options):
-        org = Org.create_from_gbk(options['fn'])
+        gbk_fn = options['fn']
+        gtdb = GeneTackDB()
+        user = gtdb.get_or_create_default_user()
+
+        org = Org.get_or_create_from_gbk(user, gbk_fn)
         self.print_success("Successfully created org '%s' with id '%s'" %
                            (org.name, org.id))
 
