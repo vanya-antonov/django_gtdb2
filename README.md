@@ -72,3 +72,10 @@ SQL_DUMP_PATH=../dump.sql bash load_dump.sh
 # check loaded tables
 sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "show tables"'
 ```
+
+# Run unit tests
+```bash
+# -k option keeps the test database for faster testing
+python3 manage.py test -k gtdb2
+python3 manage.py test -k chelatase_db
+```
