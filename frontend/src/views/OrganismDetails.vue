@@ -16,7 +16,7 @@
         <h1>{{ organism.name }}</h1>
 
         <v-expansion-panels
-            :value="Array.from(Array(3).keys())"
+            :value="Array.from(Array(4).keys())"
             multiple
             accordion
         >
@@ -105,11 +105,20 @@
                     </v-row>
                 </v-expansion-panel-content>
             </v-expansion-panel>
+            <v-expansion-panel>
+                <v-expansion-panel-header>
+                    <h3 class="pt-3">Structure</h3>
+                </v-expansion-panel-header>
+                <v-expansion-panel-content>
+                    <v-row><fornac></fornac></v-row>
+                </v-expansion-panel-content>
+            </v-expansion-panel>
         </v-expansion-panels>
     </v-col>
 </template>
 <script>
 import HTTP from "@/http-common";
+import Fornac from "@/components/Fornac";
 
 export default {
     data: function() {
@@ -146,6 +155,9 @@ export default {
                 { text: "#Genes", value: "count", width: "1%" },
             ],
         };
+    },
+    components: {
+        Fornac,
     },
     computed: {
         taxonomyBreadcrumbs() {

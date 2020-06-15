@@ -13,6 +13,8 @@ services:
             - production.env
         expose:
             - 8000
+        ports:
+            - 8000:8000
 
     db:
         image: mysql:8.0
@@ -24,8 +26,8 @@ services:
         expose:
             - 3306
 
-    nginx:
-        image: nginx:1.17.10
+    app:
+        build: ./
         ports:
             - 80:80
         volumes:

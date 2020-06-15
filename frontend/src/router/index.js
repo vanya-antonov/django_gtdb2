@@ -3,7 +3,6 @@ import VueRouter from "vue-router";
 import Home from "../views/Home.vue";
 import OrganismDetails from "../views/OrganismDetails.vue";
 
-
 // const OrganismDetails = () => import("../views/OrganismDetails.vue")
 
 Vue.use(VueRouter);
@@ -27,6 +26,12 @@ const routes = [
     // which is lazy-loaded when the route is visited.
     component: () =>
       import(/* webpackChunkName: "about" */ "../views/About.vue"),
+  },
+  {
+    path: "/rna",
+    name: "RNA",
+    component: () =>
+      import(/* webpackChunkName: "about" */ "../views/RNAView.vue"),
   },
 ];
 
