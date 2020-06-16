@@ -28,10 +28,10 @@ const routes = [
       import(/* webpackChunkName: "about" */ "../views/About.vue"),
   },
   {
-    path: "/rna",
-    name: "RNA",
+    path: "/signals",
+    name: "Signals",
     component: () =>
-      import(/* webpackChunkName: "about" */ "../views/RNAView.vue"),
+      import(/* webpackChunkName: "about" */ "../views/FrameShiftsSignals.vue"),
   },
 ];
 

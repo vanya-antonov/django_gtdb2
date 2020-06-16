@@ -148,10 +148,11 @@ class ChelataseFshift(Fshift):
         if self.strand == 1:
             poly_a_start = self.prm_dict["poly_a_start"]
             seq = seq[poly_a_start : poly_a_start + max_length]
+            seq = seq.transcribe()
         elif self.strand == -1:
             poly_a_end = self.prm_dict["poly_a_end"]
             seq = seq[poly_a_end - max_length : poly_a_end]
-            seq = seq.reverse_complement()
+            seq = seq.reverse_complement().transcribe()
         else:
             raise ValueError
         ss_data = search_stable_secondary_structure(str(seq), 30, max_length)

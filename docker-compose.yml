@@ -27,7 +27,12 @@ services:
             - 3306
 
     app:
-        build: ./
+        build:
+            context: ./
+            args:
+                - VUE_APP_API_BASE_URL=api
+        environment:
+            - VUE_APP_API_BASE_URL=api
         ports:
             - 80:80
         volumes:

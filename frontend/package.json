@@ -11,7 +11,10 @@
     "axios": "^0.19.2",
     "core-js": "^3.6.4",
     "fornac": "^1.1.8",
+    "mark.js": "^8.11.1",
     "vue": "^2.6.11",
+    "vue-draggable-resizable": "^2.2.0",
+    "vue-grid-layout": "^2.3.7",
     "vue-router": "^3.1.6",
     "vuetify": "^2.2.11"
   },

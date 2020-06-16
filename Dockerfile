@@ -1,4 +1,5 @@
 FROM node:latest as build-stage
+ARG VUE_APP_API_BASE_URL=$VUE_APP_API_BASE_URL
 WORKDIR /app/chelatase
 COPY frontend/package*.json ./
 RUN npm install

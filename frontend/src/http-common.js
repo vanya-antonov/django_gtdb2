@@ -2,7 +2,7 @@ import axios from "axios";
 
 const HTTP = axios.create({
 	baseURL:
-		`api` ||
+		process.env.VUE_APP_API_BASE_URL ||
 		`http://localhost:8001/chelatase/api`,
 });
 

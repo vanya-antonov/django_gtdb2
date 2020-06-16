@@ -6,6 +6,7 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'organisms', views.OrgApiViewSet,  basename='org')
+router.register(r'frameshifts-signals', views.FshiftsWithSignalStructureViewSet)
 api_patterns = router.urls
 
 

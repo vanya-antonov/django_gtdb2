@@ -4,19 +4,18 @@ from django.views.generic import ListView, DetailView
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.response import Response
 
-from chelatase_db.models import ChelataseOrg
-from chelatase_db.serializers import ChelataseOrgBaseSerializer, ChelataseOrgDetailSerializer
+from chelatase_db.models import ChelataseOrg, ChelataseFshift
+from chelatase_db.serializers import (
+    ChelataseOrgBaseSerializer,
+    ChelataseOrgDetailSerializer,
+    ChelataseFshiftSerializer,
+)
+
 
 class OrgApiViewSet(ReadOnlyModelViewSet):
-    # def get(self, request):
-    #     orgs = ChelataseOrg.objects.filter(
-    #         seq__feat__param_set__name="chel_subunit", seq__feat__param_set__value="M"
-    #     ).distinct()
-    #     serializer = OrgBaseSerializer(orgs, many=True)
-    #     return Response({"orgs": serializer.data})
     queryset = ChelataseOrg.objects.filter(
-            seq__feat__param_set__name="chel_subunit", seq__feat__param_set__value="M"
-        ).distinct()
+        seq__feat__param_set__name="chel_subunit", seq__feat__param_set__value="M"
+    ).distinct()
 
     def list(self, request):
         queryset = self.get_queryset()
@@ -29,6 +28,12 @@ class OrgApiViewSet(ReadOnlyModelViewSet):
         serializer = ChelataseOrgDetailSerializer(org)
         return Response(serializer.data)
 
+
+class FshiftsWithSignalStructureViewSet(ReadOnlyModelViewSet):
+    queryset = ChelataseFshift.objects.filter(
+        len=-1, feat__param_set__name="chel_subunit", param_set__name="signal_ss_struct",
+    ).all()
+    serializer_class = ChelataseFshiftSerializer
 
 
 class OrgListView(ListView):
