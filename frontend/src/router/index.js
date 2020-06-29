@@ -14,6 +14,12 @@ const routes = [
     path: "/organisms",
     name: "OrganismsList",
     component: OrganismsList,
+    props: (route) => {
+      const props =
+        "filters" in route.query ? JSON.parse(route.query.filters) : {};
+      console.log(props);
+      return props;
+    },
   },
   {
     path: "/organism/:id",

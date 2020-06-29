@@ -116,17 +116,22 @@
                         ><v-card-title>{{ fshift.name }}</v-card-title>
                         <v-row>
                             <v-col>
-                                <fshiftSignalStructure v-if="fshift.signal" :signal="fshift.signal" allowPanningAndZooming applyForce></fshiftSignalStructure>
-                            </v-col
+                                <fshiftSignalStructure
+                                    v-if="fshift.signal"
+                                    :signal="fshift.signal"
+                                    allowPanningAndZooming
+                                    applyForce
+                                ></fshiftSignalStructure> </v-col
                             ><v-col
                                 ><p
                                     class="world"
                                     style="word-break: break-all;"
                                 >
-                                    <span v-html="fshift.signal.coloredSeq"></span>
-                                </p></v-col
-                            ></v-row
-                        >
+                                    <span
+                                        v-if="fshift.signal"
+                                        v-html="fshift.signal.coloredSeq"
+                                    ></span></p></v-col
+                        ></v-row>
                     </v-card>
                 </v-expansion-panel-content>
             </v-expansion-panel>
@@ -183,45 +188,44 @@ export default {
             function updateData(fshift) {
                 let new_fshift = Object.assign(fshift);
                 let fornacColorsStr = ``;
-                let seq = new_fshift.signal.seq;
                 if (new_fshift.signal) {
-                    const stop_codon_coord = new_fshift.signal.stop_codon_coord;
-                    const stopCodonColour = "OrangeRed";
-                    if (stop_codon_coord) {
-                        fornacColorsStr += ` ${
-                            stop_codon_coord[0]+1
-                        }-${stop_codon_coord[1]}:${stopCodonColour}`;
-                        seq =
-                            seq.slice(0, stop_codon_coord[0]) +
-                            `<span style="background-color: ${stopCodonColour}">` +
-                            seq.slice(
-                                stop_codon_coord[0],
+                    let seq = new_fshift.signal.seq;
+                    if (new_fshift.signal) {
+                        const stop_codon_coord =
+                            new_fshift.signal.stop_codon_coord;
+                        const stopCodonColour = "OrangeRed";
+                        if (stop_codon_coord) {
+                            fornacColorsStr += ` ${stop_codon_coord[0] + 1}-${
                                 stop_codon_coord[1]
-                            ) +
-                            `</span>` +
-                            seq.slice(stop_codon_coord[1]);
-                    }
-                    const polyAColour = "DodgerBlue";
-                    const poly_a_coord = new_fshift.signal.poly_a_coord;
-                    if (poly_a_coord) {
-                        let poly_a_coord = new_fshift.signal.poly_a_coord;
-                        fornacColorsStr += ` ${
-                            poly_a_coord[0]+1
-                        }-${poly_a_coord[1]}:${polyAColour}`;
-                        seq =
-                            seq.slice(0, poly_a_coord[0]) +
-                            `<span style="background-color: ${polyAColour}">` +
-                            seq.slice(
-                                poly_a_coord[0],
+                            }:${stopCodonColour}`;
+                            seq =
+                                seq.slice(0, stop_codon_coord[0]) +
+                                `<span style="background-color: ${stopCodonColour}">` +
+                                seq.slice(
+                                    stop_codon_coord[0],
+                                    stop_codon_coord[1]
+                                ) +
+                                `</span>` +
+                                seq.slice(stop_codon_coord[1]);
+                        }
+                        const polyAColour = "DodgerBlue";
+                        const poly_a_coord = new_fshift.signal.poly_a_coord;
+                        if (poly_a_coord) {
+                            let poly_a_coord = new_fshift.signal.poly_a_coord;
+                            fornacColorsStr += ` ${poly_a_coord[0] + 1}-${
                                 poly_a_coord[1]
-                            ) +
-                            `</span>` +
-                            seq.slice(poly_a_coord[1]);
+                            }:${polyAColour}`;
+                            seq =
+                                seq.slice(0, poly_a_coord[0]) +
+                                `<span style="background-color: ${polyAColour}">` +
+                                seq.slice(poly_a_coord[0], poly_a_coord[1]) +
+                                `</span>` +
+                                seq.slice(poly_a_coord[1]);
+                        }
                     }
+                    new_fshift.signal["coloredSeq"] = seq;
+                    new_fshift.signal["fornacColorsStr"] = fornacColorsStr;
                 }
-                new_fshift.signal["coloredSeq"] = seq;
-                new_fshift.signal["fornacColorsStr"] = fornacColorsStr;
-
                 return new_fshift;
             }
             let new_frameshifts = this.organism.fshift_set.map(updateData);

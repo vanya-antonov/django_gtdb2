@@ -8,7 +8,8 @@
 </style>
 
 <template>
-	<div>
+	<v-col cols="auto">
+		<chelTable></chelTable>
 		<div fluid class="d-flex justify-end">
 			<plotlyHeatmap
 				v-if="organisms.length"
@@ -34,14 +35,19 @@
 				:click-callback="smallClickCallback"
 			></plotlyHeatmap>
 		</v-row>
-	</div>
+		<router-link :to="{name: 'OrganismsList',
+		params: {kingdomsToFilterProp: ['Bacteria'],
+		phylumsToFilterProp: ['Actinobacteria', 'Proteobacteria']}}">Organisms 222</router-link>
+	</v-col>
 </template>
 <script>
 import HTTP from "@/http-common";
 import PlotlyHeatmap from "@/components/PlotlyHeatmap";
+import ChelTable from "@/components/ChelTable";
 
 export default {
-	components: { PlotlyHeatmap },
+	components: { PlotlyHeatmap,
+		ChelTable},
 	data: function() {
 		return { organisms: [], clickedIndex: null, zoomedOrganisms: [] };
 	},

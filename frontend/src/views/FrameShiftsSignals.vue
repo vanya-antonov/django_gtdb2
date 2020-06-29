@@ -10,7 +10,7 @@
                                 params: { id: fshift.org_id },
                             }"
                             target="_blank"
-                            >{{ fshift.name }}</router-link
+                            >{{ fshift.org_name }}</router-link
                         ></v-card-title
                     >
                     <v-lazy
