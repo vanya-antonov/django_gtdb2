@@ -209,6 +209,9 @@ export default {
   methods: {
     resetFilters() {
       this.genesToFilter.values = [];
+      this.genesToFiler.type='any';
+      this.phylumsToFilter = [];
+      this.kingdomsToFilter = [];
       this.filteredOrganisms = this.organisms;
     },
     applyFilters() {
