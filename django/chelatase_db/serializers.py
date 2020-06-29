@@ -1,5 +1,44 @@
+from collections import defaultdict
+
+import math
 from rest_framework import serializers
 from chelatase_db.models.org import ChelataseOrg, ChelataseFeat, ChelataseFshift
+
+ORGANISMS_HEATMAP_TAXAS = {
+    "Proteobacteria": 0,
+    "Actinobacteria": 1,
+    "Archaea": 2,
+    "Chloroflexi": 3,
+    "Firmicutes": 4,
+    "Cyanobacteria": 5,
+    "Other": 6,
+}
+
+
+def taxonomy_to_heatmap_taxa(taxonomy):
+    #     print(taxonomy)
+    if taxonomy[0] == "Archaea":
+        return "Archaea"
+    if taxonomy[0] == "Bacteria":
+        bacteria_taxa = taxonomy[1]
+        if bacteria_taxa in ORGANISMS_HEATMAP_TAXAS:
+            return bacteria_taxa
+    return "Other"
+
+
+def log_evalues(evalue):
+    return 100 if evalue < 1e-100 else -math.log10(evalue)
+
+
+def sort_organisms(organisms):
+
+    organisms_taxonomy = []
+    for org in organisms:
+        taxonomy = tuple(param.value for param in org.taxonomy_params)
+        heatmap_taxa_num = ORGANISMS_HEATMAP_TAXAS[taxonomy_to_heatmap_taxa(taxonomy)]
+        organisms_taxonomy.append((org, (heatmap_taxa_num, taxonomy)))
+    organisms_sorted, _ = zip(*sorted(organisms_taxonomy, key=lambda a: a[1]))
+    return organisms_sorted
 
 
 class ChelataseFeatBaseSerializer(serializers.ModelSerializer):
@@ -63,11 +102,64 @@ class ChelataseFshiftSerializer(serializers.ModelSerializer):
 
 
 class ChelataseOrgBaseSerializer(serializers.ModelSerializer):
-    genotype = serializers.CharField(source="prm_dict.chel_genotype_genes")
+    genotype = serializers.SerializerMethodField()
+    evalues = serializers.SerializerMethodField()
+    heatmap_taxa = serializers.SerializerMethodField()
+    num_fshifts = serializers.IntegerField(source='num_fs')
+
+    gene_groups = (
+        "chlI_bchI",
+        "chlD_bchD",
+        "chlH_bchH",
+        "cobN",
+        "cobS",
+        "cobT",
+        "bchE",
+        "chlB_bchB",
+        "chlG_bchG",
+        "chlL_bchL",
+        "chlM_bchM",
+        "chlN_bchN",
+        "cobD_cobC",
+        "cobO",
+        "cobP_cobU",
+        "cobQ",
+        "cobV_cobS",
+        "cysG_cobA",
+    )
 
     class Meta:
         model = ChelataseOrg
-        fields = ("id", "name", "phylum", "kingdom", "genotype")
+        fields = (
+            "id",
+            "name",
+            "phylum",
+            "kingdom",
+            "genotype",
+            "evalues",
+            "heatmap_taxa",
+            "num_fshifts",
+        )
+
+    def get_genotype(self, obj):
+        return obj.prm_dict['chel_genotype_genes'].split(', ')
+
+    def get_evalues(self, obj):
+        chel_evalues = defaultdict(list)
+        for seq in obj.seq_prefetch:
+            for feat in seq.feat_prefetch:
+                chelevals = {param.name: param.value for param in feat.param_prefetch}
+                chel_evalues[chelevals["chel_gene_group"]].append(float(chelevals["chel_evalue"]))
+        chel_evalues = {k: min(v) for k, v in chel_evalues.items() if k in self.gene_groups}
+        gene_groupchel_evalues = {
+            gene_group: log_evalues(chel_evalues.get(gene_group, 1))
+            for gene_group in self.gene_groups
+        }
+        return gene_groupchel_evalues
+
+    def get_heatmap_taxa(self, obj):
+        taxonomy = tuple(param.value for param in obj.taxonomy_params)
+        return taxonomy_to_heatmap_taxa(taxonomy)
 
 
 class ChelataseOrgDetailSerializer(serializers.ModelSerializer):

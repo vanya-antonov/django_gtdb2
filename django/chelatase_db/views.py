@@ -1,15 +1,24 @@
+from functools import lru_cache
+
+from django.db.models import Prefetch, Count, Q
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from django.views.generic import ListView, DetailView
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.response import Response
+from rest_framework_extensions.cache.decorators import (
+    cache_response
+)
+from rest_framework_extensions.cache.mixins import CacheResponseMixin
 
-from chelatase_db.models import ChelataseOrg, ChelataseFshift
+from chelatase_db.models import ChelataseOrg, ChelataseFshift, ChelataseFeat, ChelataseSeq
 from chelatase_db.serializers import (
     ChelataseOrgBaseSerializer,
     ChelataseOrgDetailSerializer,
     ChelataseFshiftSerializer,
+    sort_organisms
 )
+from gtdb2.models import FeatParam, OrgParam
 
 
 class OrgApiViewSet(ReadOnlyModelViewSet):
@@ -17,8 +26,32 @@ class OrgApiViewSet(ReadOnlyModelViewSet):
         seq__feat__param_set__name="chel_subunit", seq__feat__param_set__value="M"
     ).distinct()
 
+    @cache_response(None)
     def list(self, request):
         queryset = self.get_queryset()
+        
+        chel_feats_prefetch = ChelataseFeat.objects.prefetch_related(
+            Prefetch(
+                "param_set",
+                queryset=FeatParam.objects.filter(name__in=["chel_gene_group", "chel_evalue"]),
+                to_attr="param_prefetch",
+            )
+        ).filter(param_set__name="chel_gene_group")
+
+        seq_prefetch = ChelataseSeq.objects.prefetch_related(
+            Prefetch("feat_set", queryset=chel_feats_prefetch, to_attr="feat_prefetch")
+        )
+        org_taxonomy_prefetch = OrgParam.objects.filter(name="taxonomy").order_by("num")
+
+        queryset = queryset.prefetch_related(
+            Prefetch("seq_set", to_attr="seq_prefetch", queryset=seq_prefetch),
+            Prefetch(
+            "param_set", to_attr="taxonomy_params", queryset=org_taxonomy_prefetch
+        ),
+        )
+        queryset=queryset.annotate(
+            num_fs=Count("seq__feat", filter=Q(seq__feat__type="fsCDS")))
+        queryset = sort_organisms(queryset)[::-1]
         serializer = ChelataseOrgBaseSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -29,7 +62,7 @@ class OrgApiViewSet(ReadOnlyModelViewSet):
         return Response(serializer.data)
 
 
-class FshiftsWithSignalStructureViewSet(ReadOnlyModelViewSet):
+class FshiftsWithSignalStructureViewSet(CacheResponseMixin, ReadOnlyModelViewSet):
     queryset = ChelataseFshift.objects.filter(
         len=-1, feat__param_set__name="chel_subunit", param_set__name="signal_ss_struct",
     ).all()

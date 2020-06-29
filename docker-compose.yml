@@ -4,17 +4,26 @@ version: '3'
 services:
     django:
         build: ./django
-        command:  gunicorn --bind :8000 mysite.wsgi:application
+        command:  gunicorn --bind :8000 mysite.wsgi:application --capture-output
         environment:
             - MYSQL_HOST=db
             - MYSQL_PORT=3306
             - MODE=PROD
+            - DJANGO_LOGLEVEL=DEBUG
         env_file:
             - production.env
         expose:
             - 8000
         ports:
             - 8000:8000
+            
+    cache:
+       image: memcached:1.6
+       ports:
+         - "11211:11211"
+       entrypoint:
+        - memcached
+        - -m 64
 
     db:
         image: mysql:8.0
@@ -32,7 +41,7 @@ services:
             args:
                 - VUE_APP_API_BASE_URL=api
         environment:
-            - VUE_APP_API_BASE_URL=api
+            - VUE_APP_API_BASE_URL=http://django:8000/chelatase/api/
         ports:
             - 80:80
         volumes:

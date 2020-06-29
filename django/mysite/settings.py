@@ -54,7 +54,10 @@ MIDDLEWARE = [
 
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:8080",
-    "http://127.0.0.1:9000"
+    "http://127.0.0.1:9000",
+    "http://localhost:5000",
+    "http://localhost:8003",
+    "http://localhost:8002"
 ]
 
 ROOT_URLCONF = 'mysite.urls'

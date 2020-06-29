@@ -283,7 +283,7 @@ export default {
             else return "white";
         },
     },
-    created: function() {
+    mounted: function() {
         HTTP.get(`organisms/` + this.$route.params.id)
             .then((response) => {
                 // JSON responses are automatically parsed.
