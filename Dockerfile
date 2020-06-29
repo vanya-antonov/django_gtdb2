@@ -4,7 +4,7 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm install
 COPY ./frontend/ .
-RUN npm run build
+RUN npm run build  --loglevel verbose
 
 FROM nginx:1.17.10 as production-stage
 RUN mkdir /app
