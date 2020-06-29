@@ -104,7 +104,6 @@
 </template>
 <script>
 import HTTP from "@/http-common";
-import sendRenderEvent from "@/render-event";
 
 function filterGenotype(organisms, genotypes, type) {
   console.log("filterGenotype");
@@ -252,9 +251,6 @@ export default {
         }));
         this.filteredOrganisms = this.organisms;
         this.applyFilters();
-        this.$nextTick(() => {
-          sendRenderEvent();
-        });
       })
       .catch((error) => {
         console.warn(error);
