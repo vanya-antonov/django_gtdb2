@@ -6,8 +6,6 @@
 </style>
 
 <template>
-  <div>
-  <v-btn @click="plotF">plotF</v-btn>
   <div id="hideyticks">
     <vue-plotly
       ref="plotly"
@@ -16,21 +14,19 @@
       :layout="layout"
       :options="options"
       @relayout="relayout"
+      @click="singleClickHandler"
+      @doubleclick="doubleClickHandler"
     />
   </div>
-</div>
 </template>
 <script>
-import HTTP from "@/http-common";
 import VuePlotly from "@statnett/vue-plotly";
-import sendRenderEvent from "@/render-event";
 
 function groupCategories(categories) {
   let current_category = categories[0];
   let num_current_category = 1;
   let categories_groups = [];
   let cat;
-  console.log(categories)
   for (cat of categories.slice(1)) {
     if (cat != current_category) {
       categories_groups.push([current_category, num_current_category]);
@@ -45,37 +41,62 @@ function groupCategories(categories) {
 }
 
 export default {
+  props: {
+    organisms: Array,
+
+    clickCallback: { type: Function, default: function() {} },
+    height: {
+      type: Number,
+      default: 500,
+    },
+    width: {
+      type: Number,
+      default: 1300,
+    },
+    drawBar: {
+      type: Boolean,
+      default: true,
+    },
+  },
   components: {
     VuePlotly,
   },
 
   methods: {
-    plotF() {
-      console.log("Run mounted")
-      var update = {
-          'yaxis.range': [0, this.organisms.length],   // updates the xaxis range
-      };
-      this.$refs.plotly.relayout(update)
-    },
-    afterplot(){
-      console.log("afterplot")
-    },
-    relayout(eventData){
-      console.log('relayout')
-      console.log(eventData)
-      if ("yaxis2.autorange" in eventData && eventData["yaxis2.autorange"]){
+    relayout(eventData) {
+      console.log("relayout");
+
+      if ("yaxis2.autorange" in eventData && eventData["yaxis2.autorange"]) {
         var update = {
-          'yaxis.range': [0, this.organisms.length],   // updates the xaxis range
+          "yaxis.range": [0, this.organisms.length], // updates the xaxis range
         };
-        this.$refs.plotly.relayout(update)
+        this.$refs.plotly.relayout(update);
+      }
+    },
+    singleClickHandler(eventData) {
+      const interval = 500;
+      let t0 = Date.now();
+
+      // make sure click isn't 2nd click in a double-click
+      if (t0 - this.doubleClickTime > interval) {
+        // wait enough time for double-click to make sure this isn't the first click in a double-click
+        setTimeout(() => {
+          if (t0 - this.doubleClickTime > interval) {
+            this.clickCallback(eventData);
+          }
+        }, interval);
       }
     },
 
+    doubleClickHandler() {
+      this.doubleClickTime = Date.now();
+      console.log("double click");
+    },
   },
   data: function() {
     return {
+      doubleClickTime: 0,
       options: {},
-      organisms: [],
       evaluesX: [
         [
           // '',
@@ -132,17 +153,20 @@ export default {
         return this.evaluesX[1].map((gene) => org.evalues[gene]);
       });
       let fshifts_z = this.organisms.map((org) => [org.num_fshifts]);
-      let categories_groups = groupCategories(y_0);
-      console.log(categories_groups)
-      let data = categories_groups.map((cat_num) => {
-        return {
-          type: "bar",
-          name: cat_num[0],
-          x: [[''],["Taxonomy"]],
-          y: [cat_num[1]],
-          yaxis: "y",
-        };
-      });
+      let data = [];
+      if (this.drawBar) {
+        let categories_groups = groupCategories(y_0);
+
+        data = categories_groups.map((cat_num) => {
+          return {
+            type: "bar",
+            name: cat_num[0],
+            x: [[""], ["Taxonomy"]],
+            y: [cat_num[1]],
+            yaxis: "y",
+          };
+        });
+      }
 
       data.push({
         type: "heatmap",
@@ -154,7 +178,9 @@ export default {
         y: y,
         z: fshifts_z,
         showscale: false,
-        yaxis: 'y2'
+        yaxis: "y2",
+        zmax: 2,
+        zmin: 0,
         // xaxis: 'x1'
       });
       data.push({
@@ -164,56 +190,46 @@ export default {
         x: this.evaluesX,
         y: y,
         z: evalues_z,
-        yaxis: 'y2'
+        yaxis: "y2",
+        zmax: 100,
+        zmin: 0,
 
         // xaxis: 'x'
       });
-      console.log(data)
+      console.log(data);
+      console.log(this.layout);
       return data;
     },
 
     layout() {
       return {
         barmode: "stack",
-        showlegend:false,
+        showlegend: false,
 
         xaxis: {
           type: "multicategory",
           categoryorder: "array",
           automargin: true,
+          mirror: true,
         },
         yaxis: {
           type: "linear",
           range: [0, this.organisms.length],
-
+          visible: false,
         },
         yaxis2: {
           type: "multicategory",
           showdividers: false,
           tickson: "boundaries",
-          overlaying: 'y',
+          overlaying: "y",
           categoryorder: "array",
+          automargin: true,
           side: "left",
         },
-        width: 1300,
-        height: 1400,
+        width: this.width,
+        height: this.height,
       };
     },
-  },
-
-  created() {
-    HTTP.get(`organisms`)
-      .then((response) => {
-        // JSON responses are automatically parsed.
-        this.organisms = response.data;
-        console.log("async get organisms");
-        this.$nextTick(() => {
-          sendRenderEvent();
-        });
-      })
-      .catch((error) => {
-        console.warn(error);
-      });
   },
 };
 </script>
