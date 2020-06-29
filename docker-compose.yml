@@ -29,9 +29,7 @@ services:
         build:
             context: ./
             args:
-                - VUE_APP_API_BASE_URL=api
-        environment:
-            - VUE_APP_API_BASE_URL=http://django:8000/chelatase/api/
+                - VUE_APP_API_BASE_URL=http://ivanya.com/chelatase/api/
         ports:
             - 80:80
         volumes:
