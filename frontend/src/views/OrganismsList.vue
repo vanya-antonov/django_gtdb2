@@ -62,6 +62,7 @@
           hide-details
         ></v-text-field>
         <v-spacer></v-spacer>
+        <v-btn :to="{path: '/about#organismsabout'}" target="_blank" class="ma-6">Help</v-btn>
         <v-btn @click.stop="toggleFilters">{{ toggleButtonText }}</v-btn>
       </v-card-title>
       <v-data-table

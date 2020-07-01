@@ -2,6 +2,9 @@
 #textcol {
     min-width: 20rem;
 }
+#heatmaptext {
+    min-width: 23rem;
+}
 </style>
 
 <template>
@@ -22,7 +25,7 @@
                 </p>
                 <p>
                     In our recent study we analyzed 1200+ prokaryotic genomes
-                    (see the <a href="/organisms">Organisms section</a>) and
+                    (see the <router-link to="/organisms" target="_blank">Organisms section</router-link>) and
                     identified at least 5 taxa-specific strategies that can be
                     used to synthesize these two chelatases (<a
                         href="https://pubmed.ncbi.nlm.nih.gov/32211852/"
@@ -31,7 +34,7 @@
                     programmed frameshifting in the chlD gene to produce both
                     the small and the medium chelatase subunits from the same
                     gene (the predicted frameshifting signals can be found in
-                    the <a href="/signals">Signals section</a>)
+                    the <router-link to="/signals" target="_blank">Signals section</router-link>)
                 </p>
                 <p>
                     Below is a graphical representation of the 5 proposed
@@ -49,17 +52,28 @@
                 <chelTable></chelTable>
             </v-col>
         </v-row>
-        <v-row justify="center">
-            <v-col class="mx-auto">
+        <v-row justify="center" class=" px-6">
+            <v-col id="heatmaptext">
+                <h3>Prediction of the possible phenotypes</h3><ul>
+
+<li>To determine whether the analyzed prokaryotes were able to synthesize (bacterio)chlorophyll or cobalamin (or both), we searched these genomes for genes from these biosynthesis pathways.
+</li><li>On the heatmap below each row is a prokaryotic genome (1100+ species in total) and the columns correspond to presence of various genes in this genome. The species from each taxonomic group were ordered according to the 16S rRNA phylogenetic tree.
+</li><li>The color of the cells corresponds to the tBLASTn -log10(E-value) produced by a set reference proteins that were used as queries. While colors indicate the gene absence. 
+</li><li>All these genomes contain at least one chlD gene (see the chlD_bchD column)
+</li><li>The Frameshift column indicates the presence of the frameshift mutation in the chlD gene.
+</li><li>The heatmap is interactive, so the users can use mouse to determine the species name corresponding to each row as well as the -log10(E-values) for each of the identified gene in the corresponding prokaryotic genome. By clicking on each row a zoomed in version of the heatmap will appear below.</li></ul>
+
+            </v-col>
+            <v-col class="mx-auto" justify="center">
                 <plotlyHeatmap
                     v-if="organisms.length"
                     :click-callback="clickCallback"
                     :organisms="organisms"
                     :height="700"
                 ></plotlyHeatmap>
-                <br /><br />
-                <v-spacing></v-spacing>
-                <h2>
+            </v-col>
+                <v-col v-if="clickedIndex">
+                <h2 align='center'>
                     <router-link
                         v-if="clickedIndex"
                         :to="{
@@ -79,6 +93,8 @@
                     :click-callback="smallClickCallback"
                     :removeY2ticks="false"
                     :addLinksToOrganism="true"
+                    :width="1100"
+                    :height="300"
                 ></plotlyHeatmap>
             </v-col>
         </v-row>

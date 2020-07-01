@@ -217,7 +217,8 @@ E-value: 1E-${org.evalues[gene]}`;
           };
         });
       }
-
+      let ygap = y[0].length < 10? 1:0;
+      console.log(ygap)
       data.push({
         type: "heatmap",
         colorscale: [
@@ -231,6 +232,7 @@ E-value: 1E-${org.evalues[gene]}`;
         yaxis: "y2",
         zmax: 2,
         zmin: 0,
+        ygap: ygap,
         // xaxis: 'x1'
       });
       data.push({
@@ -248,6 +250,7 @@ E-value: 1E-${org.evalues[gene]}`;
         yaxis: "y2",
         zmax: 100,
         zmin: 0,
+        ygap: ygap,
         hovertext: evalues_text,
         hoverinfo: "text",
         colorbar: {
@@ -263,6 +266,7 @@ E-value: 1E-${org.evalues[gene]}`;
     },
 
     layout() {
+      let automargin= !this.removeY2ticks;
       return {
         barmode: "stack",
         showlegend: false,
@@ -284,7 +288,7 @@ E-value: 1E-${org.evalues[gene]}`;
           tickson: "boundaries",
           overlaying: "y",
           categoryorder: "array",
-          // automargin: true,
+          automargin: automargin,
           side: "left",
           tickfont: {
             size: 15,
