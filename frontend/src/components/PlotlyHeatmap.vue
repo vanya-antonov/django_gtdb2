@@ -1,20 +1,9 @@
 <style>
-/*.y2tick {
-  display: none !important;
-  visibility: none !important;
-  width: 0 !important;
-  height: 0;
-  max-width: 0;
-  opacity: 0;
+.js-plotly-plot .plotly, .js-plotly-plot .plotly div {
+  margin: auto !important;
 }
-.y2tick2 {
-  fill: green;
-  justify-content: end;
-}*/
 </style>
-
 <template>
-  <div id="hideyticks" style="">
     <vue-plotly
       ref="plotly"
       :v-if="organisms.length > 0"
@@ -25,8 +14,8 @@
       @click="singleClickHandler"
       @doubleclick="doubleClickHandler"
       :autoResize="false"
+      class="mx-auto"
     />
-  </div>
 </template>
 <script>
 import VuePlotly from "@statnett/vue-plotly";
@@ -281,7 +270,7 @@ E-value: 1E-${org.evalues[gene]}`;
         xaxis: {
           type: "multicategory",
           categoryorder: "array",
-          automargin: true,
+          // automargin: true,
           mirror: true,
         },
         yaxis: {
@@ -295,17 +284,20 @@ E-value: 1E-${org.evalues[gene]}`;
           tickson: "boundaries",
           overlaying: "y",
           categoryorder: "array",
-          automargin: true,
+          // automargin: true,
           side: "left",
+          tickfont: {
+            size: 15,
+          }
         },
         width: this.width,
         height: this.height,
         margin: {
-    l: 60,
-    r: 10,
-    b: 5,
+    l: 110,
+    r: 110,
+    b: 150,
     t: 10,
-    pad: 4
+    // pad: 4
   }
       };
     },

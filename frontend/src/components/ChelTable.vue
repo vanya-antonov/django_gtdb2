@@ -4,10 +4,11 @@
 }
 #cheltable td {
 	max-width: 500px !important;
+	white-space: nowrap;
 }
 </style>
 <template
-	><v-row justify="center">
+	>
 		<v-simple-table id="cheltable">
 			<template v-slot:default>
 				<thead>
@@ -322,7 +323,6 @@
 				</tbody>
 			</template>
 		</v-simple-table>
-	</v-row>
 </template>
 <script>
 export default {};
