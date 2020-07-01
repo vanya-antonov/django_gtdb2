@@ -297,6 +297,7 @@ export default {
             .catch((error) => {
                 console.warn(error);
             });
+         window.scrollTo(0, 0)
     },
 };
 </script>

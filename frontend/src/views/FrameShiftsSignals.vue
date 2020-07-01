@@ -16,7 +16,6 @@
                     <v-lazy
                         v-model="isActive"
                         min-height="200"
-                        transition="fade-transition"
                     >
                         <fshiftSignalStructure
                             v-if="fshift.signal"
@@ -53,42 +52,7 @@ export default {
             .catch((error) => {
                 console.warn(error);
             });
-        // this.fshifts = [
-        //     {
-        //         org_name: "Methanocaldococcus sp. FS406-22",
-        //         org_id: 84,
-        //         name: "NC_013887.1:1224254:-1",
-        //         poly_a_slippery: [1224256, 1224265],
-        //         signal: {
-        //             struct:
-        //                 "..........................(((((((..(........)..)))))))...................................................((((((((((((....((((((...)))))).....))))))))...))))(((((((.......))))))).",
-        //             seq:
-        //                 "AAAAAAAAACAUGAUGAAAUAAGAAAUGAGUUUGAAGAAGAAAAUGAGGAUUCAAAUAAUCAAAAUAAUAAUAACAACUCUAAUAACCAAAAUGAAGAUACACCCGGGGACUUUGAAAGAACGUUUGGCAUAGAUGAGAGCUUUAAAGUAAAUCCCAAGCUUAUACAAUUUAAGCUUA",
-        //             poly_a_coord: [0, 9],
-        //             stop_codon_coord: [19, 22],
-        //             energy: -0.11741573033707864,
-        //         },
-        //         strand: 1,
-        //     },
-        //     {
-        //         org_name: "Methanocaldococcus fervens AG86",
-        //         org_id: 85,
-        //         name: "NC_013156.1:1122957:-1",
-        //         poly_a_slippery: [1122935, 1122946],
-        //         signal: {
-        //             struct:
-        //                 "..................................................................................(((........)))........((((((((((((((...((((((...))))))...)).))))))))..)))).",
-        //             seq:
-        //                 "AAAAAAAAAAACAAGAAUAAAUUAAAUAAUGAAUCAAAUAAUAAUGAGAAUAAUAAUCCAAAUAAUGAACAUGAAAAUAAUAAUCAAAACCAAGAUGAAAAUACUGGAGAUUUUGAGCAAACAUUUGGUAUAGAUGAGAGCGUUAAAGUUAAUCCAA",
-        //             poly_a_coord: [0, 11],
-        //             stop_codon_coord: [22, 25],
-        //             energy: -0.07579617834394904,
-        //         },
-        //         strand: 1,
-        //     },
-        // ];
-        console.log("get fshifts");
-        console.log(this.fshifts);
+        window.scrollTo(0, 0);
     },
 };
 </script>

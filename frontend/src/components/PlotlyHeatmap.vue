@@ -1,12 +1,20 @@
 <style>
-.y2tick {
-  display: none;
-  width: 0;
+/*.y2tick {
+  display: none !important;
+  visibility: none !important;
+  width: 0 !important;
+  height: 0;
+  max-width: 0;
+  opacity: 0;
 }
+.y2tick2 {
+  fill: green;
+  justify-content: end;
+}*/
 </style>
 
 <template>
-  <div id="hideyticks">
+  <div id="hideyticks" style="">
     <vue-plotly
       ref="plotly"
       :v-if="organisms.length > 0"
@@ -16,11 +24,13 @@
       @relayout="relayout"
       @click="singleClickHandler"
       @doubleclick="doubleClickHandler"
+      :autoResize="false"
     />
   </div>
 </template>
 <script>
 import VuePlotly from "@statnett/vue-plotly";
+import * as d3 from "d3";
 
 function groupCategories(categories) {
   let current_category = categories[0];
@@ -47,22 +57,44 @@ export default {
     clickCallback: { type: Function, default: function() {} },
     height: {
       type: Number,
-      default: 500,
+      default: 700,
     },
     width: {
       type: Number,
-      default: 1300,
+      default: 1000,
     },
     drawBar: {
       type: Boolean,
       default: true,
     },
+    removeY2ticks: {
+      type: Boolean,
+      default: true,
+    },
+    addLinksToOrganism: {
+      type: Boolean,
+      default: false,
+    }
   },
   components: {
     VuePlotly,
   },
 
   methods: {
+    toremoveY2ticks() {
+      if (!this.removeY2ticks) {
+        return;
+      }
+      let plot = (plot = d3.select(this.$refs.plotly.$refs.container));
+      plot.attr("x", 288);
+      let y2ticks = plot.selectAll(".y2tick");
+      let x = y2ticks.select("text").attr("x");
+      y2ticks.remove();
+      plot
+        .selectAll("g.y2tick2")
+        .select("text")
+        .attr("x", x);
+    },
     relayout(eventData) {
       console.log("relayout");
 
@@ -72,6 +104,7 @@ export default {
         };
         this.$refs.plotly.relayout(update);
       }
+      this.toremoveY2ticks();
     },
     singleClickHandler(eventData) {
       const interval = 500;
@@ -96,22 +129,33 @@ export default {
   data: function() {
     return {
       doubleClickTime: 0,
-      options: {},
+      options: {
+        modeBarButtonsToRemove: [
+          "zoomIn2d",
+          "zoomOut2d",
+          "resetScale2d",
+          "pan2d",
+          "select2d",
+          "lasso2d",
+          "hoverCompareCartesian",
+          "hoverClosestCartesian",
+        ],
+      },
       evaluesX: [
         [
           // '',
-          "Magnesium chelatase genes",
-          "Magnesium chelatase genes",
-          "Magnesium chelatase genes",
+          "Magnesium <br> chelatase <br> genes",
+          "Magnesium <br> chelatase <br> genes",
+          "Magnesium <br> chelatase <br> genes",
           "Chlorophyll biosynthesis genes",
           "Chlorophyll biosynthesis genes",
           "Chlorophyll biosynthesis genes",
           "Chlorophyll biosynthesis genes",
           "Chlorophyll biosynthesis genes",
           "Chlorophyll biosynthesis genes",
-          "Cobalt chelatase genes",
-          "Cobalt chelatase genes",
-          "Cobalt chelatase genes",
+          "Cobalt <br> chelatase <br> genes",
+          "Cobalt <br> chelatase <br> genes",
+          "Cobalt <br> chelatase <br> genes",
           "Vitamin B12 biosynthesis genes",
           "Vitamin B12 biosynthesis genes",
           "Vitamin B12 biosynthesis genes",
@@ -147,11 +191,28 @@ export default {
   computed: {
     heatmapData() {
       let y_0 = this.organisms.map((org) => org.heatmap_taxa);
-      let y_1 = this.organisms.map((org) => org.name);
+      let y_1;
+      if (this.removeY2ticks) {
+        y_1 = this.organisms.map((org) => org.id)
+      } else if (!this.addLinksToOrganism){
+        y_1 = this.organisms.map((org) => org.name);
+      } else {
+        y_1 = this.organisms.map((org) => {
+          return `<a href="/organism/`+org.id+`">`+org.name+`</a>`
+        })
+      }
       let y = [y_0, y_1];
       let evalues_z = this.organisms.map((org) => {
         return this.evaluesX[1].map((gene) => org.evalues[gene]);
       });
+      let evalues_text = this.organisms.map((org) =>
+        this.evaluesX[1].map((gene) => {
+          return `
+${org.name} (${org.heatmap_taxa})<br>
+query protein: ${gene}<br>
+E-value: 1E-${org.evalues[gene]}`;
+        })
+      );
       let fshifts_z = this.organisms.map((org) => [org.num_fshifts]);
       let data = [];
       if (this.drawBar) {
@@ -185,7 +246,12 @@ export default {
       });
       data.push({
         type: "heatmap",
-        colorscale: "YlOrRd",
+        // colorscale: "YlOrRd",
+        colorscale: [
+        ['0.0','red'],
+        ['0.94','yellow'],
+        ["1.0",'white'],
+        ],
         reversescale: true,
         x: this.evaluesX,
         y: y,
@@ -193,6 +259,12 @@ export default {
         yaxis: "y2",
         zmax: 100,
         zmin: 0,
+        hovertext: evalues_text,
+        hoverinfo: "text",
+        colorbar: {
+          tickprefix: "1e-",
+          showtickprefix: "all",
+        },
 
         // xaxis: 'x'
       });
@@ -228,8 +300,18 @@ export default {
         },
         width: this.width,
         height: this.height,
+        margin: {
+    l: 60,
+    r: 10,
+    b: 5,
+    t: 10,
+    pad: 4
+  }
       };
     },
+  },
+  mounted() {
+    this.toremoveY2ticks();
   },
 };
 </script>

@@ -24,22 +24,10 @@
             ></v-autocomplete></v-col
           ><v-col md="auto">
             <v-radio-group v-model="genesToFilter.type">
-      <v-radio
-        :key="0"
-        label="any"
-        value="any"
-      ></v-radio>
-      <v-radio
-        :key="1"
-        label="all"
-        value="all"
-      ></v-radio>
-      <v-radio
-        :key="2"
-        label="exact"
-        value="exact"
-      ></v-radio>
-    </v-radio-group>
+              <v-radio :key="0" label="any" value="any"></v-radio>
+              <v-radio :key="1" label="all" value="all"></v-radio>
+              <v-radio :key="2" label="exact" value="exact"></v-radio>
+            </v-radio-group>
           </v-col> </v-row
         ><v-row>
           <v-autocomplete
@@ -107,16 +95,16 @@ import HTTP from "@/http-common";
 
 function filterGenotype(organisms, genotypes, type) {
   console.log("filterGenotype");
-  console.log(type)
+  console.log(type);
   let f;
-  if (type == 'all') {
+  if (type == "all") {
     f = (org) => genotypes.every((gene) => org.genotype.includes(gene));
-  } else if (type== 'any') {
+  } else if (type == "any") {
     f = (org) => genotypes.some((gene) => org.genotype.includes(gene));
-  } else if (type == 'exact') {
-    f = (org) => (genotypes.sort().join(', ') == org.genotypeText)
+  } else if (type == "exact") {
+    f = (org) => genotypes.sort().join(", ") == org.genotypeText;
   } else {
-    throw "ValueError"
+    throw "ValueError";
   }
   return organisms.filter(f);
 }
@@ -140,7 +128,7 @@ export default {
   props: {
     genesToFilterProp: {
       type: Object,
-      default: () => ({ values: [], type: 'any' }),
+      default: () => ({ values: [], type: "any" }),
     },
     phylumsToFilterProp: {
       type: Array,
@@ -209,7 +197,7 @@ export default {
   methods: {
     resetFilters() {
       this.genesToFilter.values = [];
-      this.genesToFiler.type='any';
+      this.genesToFiler.type = "any";
       this.phylumsToFilter = [];
       this.kingdomsToFilter = [];
       this.filteredOrganisms = this.organisms;
@@ -244,7 +232,7 @@ export default {
     },
   },
 
-  created: function() {
+  mounted: function() {
     HTTP.get(`organisms`)
       .then((response) => {
         // JSON responses are automatically parsed.
@@ -258,6 +246,7 @@ export default {
       .catch((error) => {
         console.warn(error);
       });
+    window.scrollTo(0, 0);
   },
 };
 </script>

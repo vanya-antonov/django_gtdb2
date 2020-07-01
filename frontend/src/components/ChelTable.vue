@@ -14,7 +14,7 @@
 					<th class="text-h4" style="width: 400px;">
 						Production of Mg-/Co-chelatases
 					</th>
-					<th class="text-h4">Genotype(s) [main taxa] (reference)</th>
+					<th class="text-h4">Possible Genotype(s)</th>
 				</thead>
 				<tbody>
 					<tr key="0">
