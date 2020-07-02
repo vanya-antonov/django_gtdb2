@@ -147,8 +147,11 @@ class ChelataseOrgBaseSerializer(serializers.ModelSerializer):
     def get_evalues(self, obj):
         chel_evalues = defaultdict(list)
         for seq in obj.seq_prefetch:
+            parents = {feat.parent_id for feat in seq.feat_prefetch if feat.parent_id}
+            print("parents: ", parents)
             for feat in seq.feat_prefetch:
-                if feat.pare
+                if feat.id in parents: 
+                    continue
                 chelevals = {param.name: param.value for param in feat.param_prefetch}
                 chel_evalues[chelevals["chel_gene_group"]].append(float(chelevals["chel_evalue"]))
         chel_evalues = {k: min(v) for k, v in chel_evalues.items() if k in self.gene_groups}

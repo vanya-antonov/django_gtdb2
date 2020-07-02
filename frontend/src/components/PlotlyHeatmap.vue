@@ -187,7 +187,7 @@ export default {
         y_1 = this.organisms.map((org) => org.name);
       } else {
         y_1 = this.organisms.map((org) => {
-          return `<a href="/organism/`+org.id+`">`+org.name+`</a>`
+          return `<a href="organism/`+org.id+`">`+org.name+`</a>`
         })
       }
       let y = [y_0, y_1];
