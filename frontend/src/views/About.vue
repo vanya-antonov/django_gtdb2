@@ -81,6 +81,12 @@
 You can use the search form or the filter panel on the right for your convenience.
 </p>
         </v-col>
+        <v-col><h1 align="center">Data</h1>
+            <ul>
+<li>All the database data can be accessed via Django REST API framework available at <a href="http://ivanya.com/chelatase/api/">http://ivanya.com/chelatase/api/</a>.</li>
+<li>The MySQL dump of the whole Chelatase DB: <a href="http://83.149.211.146:23194/~ivan/chelatase_db/chelatase_db.sql.gz">gzip-archive</a> (53Mb)</li>
+</ul>
+</v-col>
         <v-spacer/>
     </v-row>
 </div>
