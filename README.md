@@ -73,6 +73,16 @@ SQL_DUMP_PATH=../dump.sql bash load_dump.sh
 sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "show tables"'
 ```
 
+# Run docker containers
+```
+# List all containers
+docker ps -a
+
+# Run the django_gtdb2_django  and django_gtdb2_app by ID
+docker start d57c34fabf10  de9c7d191035
+```
+
+
 # Run unit tests
 ```bash
 # -k option keeps the test database for faster testing
