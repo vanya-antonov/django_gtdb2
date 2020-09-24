@@ -5,10 +5,9 @@ import logging
 import os
 import re
 
-from Bio.Data import CodonTable
 from django.conf import settings
 
-from chelatase_db.lib.bio import run_tblastn_seq_vs_db, run_tblastn_file_vs_db
+from chelatase_db.lib.bio import run_tblastn_seq_vs_db, run_tblastn_file_vs_db, get_stop_stop_seq
 from chelatase_db.lib.config import (
     PATHWAY_GENES_FAA, read_pathway_gene_info, read_kegg_orgs)
 from chelatase_db.models.cof import ChelataseCof
@@ -392,9 +391,9 @@ def _get_fshift_info_from_two_hits(hsp_n, hsp_c, chr_seq, gencode):
     else:
         raise ValueError("The HSPs are on different strands!")
 
-    l_ss = _get_stop_stop_seq(lh.sbjct_start, lh.sbjct_end, lh.sbjct_strand,
+    l_ss = get_stop_stop_seq(lh.sbjct_start, lh.sbjct_end, lh.sbjct_strand,
                               chr_seq, gencode)
-    r_ss = _get_stop_stop_seq(rh.sbjct_start, rh.sbjct_end, rh.sbjct_strand,
+    r_ss = get_stop_stop_seq(rh.sbjct_start, rh.sbjct_end, rh.sbjct_strand,
                               chr_seq, gencode)
     if l_ss is None or r_ss is None:
         return None
@@ -462,68 +461,6 @@ def get_overlap_region(s1,e1,s2,e2):
         return s1, e2
     else:
         return None, None
-
-def _get_stop_stop_seq(left, right, strand, chr_seq, gencode):
-    """Expand the given CDS part in both directions until stop codons
-    on both sides (the stop codons are included as well).
-    """
-    # Validate the provided coordinates
-    if (right - left) % 3 != 0:
-        raise ValueError("The difference between the left and right "
-                         "coordinates is not divisible by 3!!")
-
-    chr_region = chr_seq[left:right]
-    if not re.compile('^[ACGT]+$', re.IGNORECASE).match(str(chr_region)):
-        logging.warning("Sequence %i-%i contains non-ACGT chars" %
-                        (left, right))
-        return None
-
-    if strand == -1:
-        chr_region = chr_region.reverse_complement()
-    prot_seq = chr_region.translate(table=gencode)
-    if '*' in prot_seq:
-        logging.warning('Given region (%i,%i) already contains a stop codon' %
-                        (left, right))
-        return None
-
-    ss_left = left
-    while ss_left >= 3:
-        cur_codon = chr_seq[ (ss_left-3) : ss_left ]
-        codon_type = get_codon_type(cur_codon, gencode, strand)
-        if codon_type == 'coding':
-            ss_left -= 3  # expand the stop-stop seq
-        elif codon_type == 'stop':
-            ss_left -= 3  # stop-stop seq includes stops as well
-            break
-        else:
-            break
-
-    ss_right = right
-    while ss_right < len(chr_seq)-3:
-        cur_codon = chr_seq[ ss_right : (ss_right+3) ]
-        codon_type = get_codon_type(cur_codon, gencode, strand)
-        if codon_type == 'coding':
-            ss_right += 3  # expand the stop-stop seq
-        elif codon_type == 'stop':
-            ss_right += 3  # stop-stop seq includes stops as well
-            break
-        else:
-            break
-
-    return {'left' : ss_left, 'right' : ss_right}
-
-def get_codon_type(codon, gencode, strand=1):
-    acgt_only_re = re.compile('^[ACGT]+$', re.IGNORECASE)
-    if not acgt_only_re.match(str(codon)):
-        return 'non_ACGT'
-
-    if strand == -1:
-        codon = codon.reverse_complement()
-
-    if codon in CodonTable.unambiguous_dna_by_id[gencode].stop_codons:
-        return 'stop'
-    else:
-        return 'coding'
 
 def _make_hits_dict(hsp_list):
     """Returns a dict where the keys are the hit sequence IDs and
