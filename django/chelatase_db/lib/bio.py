@@ -1,9 +1,12 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 import io
+import logging
+import re
 import subprocess
 
 from Bio.Blast import NCBIXML
+from Bio.Data import CodonTable
 
 from .config import MAX_NUM_THREADS, DEFAULT_EVALUE
 
@@ -98,3 +101,64 @@ def _parse_blast_xml_str(xml_str):
 
     return sorted(all_hsps, key = lambda hsp: hsp.expect)
 
+def get_stop_stop_seq(left, right, strand, chr_seq, gencode):
+    """Expand the given CDS part in both directions until stop codons
+    on both sides (the stop codons are included as well).
+    """
+    # Validate the provided coordinates
+    if (right - left) % 3 != 0:
+        raise ValueError("The difference between the left and right "
+                         "coordinates is not divisible by 3!!")
+
+    chr_region = chr_seq[left:right]
+    if not re.compile('^[ACGT]+$', re.IGNORECASE).match(str(chr_region)):
+        logging.warning("Sequence %i-%i contains non-ACGT chars" %
+                        (left, right))
+        return None
+
+    if strand == -1:
+        chr_region = chr_region.reverse_complement()
+    prot_seq = chr_region.translate(table=gencode)
+    if '*' in prot_seq:
+        logging.warning('Given region (%i,%i) already contains a stop codon' %
+                        (left, right))
+        return None
+
+    ss_left = left
+    while ss_left >= 3:
+        cur_codon = chr_seq[ (ss_left-3) : ss_left ]
+        codon_type = get_codon_type(cur_codon, gencode, strand)
+        if codon_type == 'coding':
+            ss_left -= 3  # expand the stop-stop seq
+        elif codon_type == 'stop':
+            ss_left -= 3  # stop-stop seq includes stops as well
+            break
+        else:
+            break
+
+    ss_right = right
+    while ss_right < len(chr_seq)-3:
+        cur_codon = chr_seq[ ss_right : (ss_right+3) ]
+        codon_type = get_codon_type(cur_codon, gencode, strand)
+        if codon_type == 'coding':
+            ss_right += 3  # expand the stop-stop seq
+        elif codon_type == 'stop':
+            ss_right += 3  # stop-stop seq includes stops as well
+            break
+        else:
+            break
+
+    return {'left' : ss_left, 'right' : ss_right}
+
+def get_codon_type(codon, gencode, strand=1):
+    acgt_only_re = re.compile('^[ACGT]+$', re.IGNORECASE)
+    if not acgt_only_re.match(str(codon)):
+        return 'non_ACGT'
+
+    if strand == -1:
+        codon = codon.reverse_complement()
+
+    if codon.upper() in CodonTable.unambiguous_dna_by_id[gencode].stop_codons:
+        return 'stop'
+    else:
+        return 'coding'
