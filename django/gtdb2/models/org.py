@@ -265,7 +265,7 @@ class Org(AbstractUnit):
         self.set_param('dir_name', dir_name)
 
         dir_path = self.get_full_path_to_subdir()
-        os.makedirs(dir_path)
+        os.makedirs(dir_path, exist_ok=True)
 
     def _create_seq_file(self, record, fmt, subdir):
         "Saves sequence in the org dir in the format specificed as 'fmt'."

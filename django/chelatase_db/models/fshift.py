@@ -30,7 +30,7 @@ def search_poly_a_slippery(seq, strand, parent_feat_coord, fshift_len, transl_ta
     start, end = parent_feat_coord
     seq = seq.lower()
     if strand == -1:
-        pattern = re.compile(r"t{6,20}")
+        pattern = re.compile(r"t{5,20}")
         match = pattern.search(str(seq), start, end)
         if not match:
             return None
@@ -43,7 +43,7 @@ def search_poly_a_slippery(seq, strand, parent_feat_coord, fshift_len, transl_ta
         assert seq[span[0] - 1] != "t"
 
     if strand == 1:
-        pattern = re.compile(r"a{6,20}")
+        pattern = re.compile(r"a{5,20}")
         match = pattern.search(str(seq)[::-1], len(seq) - end)
         if not match:
             return None
