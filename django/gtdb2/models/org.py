@@ -3,6 +3,8 @@
 from collections import Counter   # https://stackoverflow.com/a/5829377/310453
 import logging
 import os
+import pandas as pd
+from pprint import pprint
 import shutil
 import subprocess
 import sys
@@ -10,7 +12,6 @@ import re
 
 from Bio import SeqIO
 
-from django.apps import apps
 from django.db import models
 from django.db.models import signals
 from django.dispatch import receiver
@@ -53,7 +54,8 @@ class Org(AbstractUnit):
         'main': 'orgs/%s/',
         'seq_fna': 'orgs/%s/seq_fna/',
         'seq_gbk': 'orgs/%s/seq_gbk/',
-        'blastdb': 'orgs/%s/blastdb/',}
+        'blastdb': 'orgs/%s/blastdb/',
+        'genetack': 'orgs/%s/genetack/'}
 
     @property
     def feat_set(self):
@@ -142,7 +144,9 @@ class Org(AbstractUnit):
     def get_full_path_to_subdir(self, name='main'):
         "Returns a full path to subdir by its name or alias."
         subdir = self.SUBDIR_INFO[name] % self.prm['dir_name']
-        return self.gtdb.get_full_path_to(subdir)
+        full_path = self.gtdb.get_full_path_to(subdir)
+        os.makedirs(full_path, exist_ok=True)
+        return full_path
 
     def get_all_seq_ids(self, seq_dir='seq_gbk', fullpath=False):
         """Returns a list of all seq ids that are the names of the files in
@@ -181,7 +185,6 @@ class Org(AbstractUnit):
         self._make_param_rrna_16s()
 
         self._make_param_blastdb()
-        #org.make_genetack_model()
 
     def create_annotation(self):
         """Uses some parts of the GenBank annotation to create new features
@@ -196,7 +199,97 @@ class Org(AbstractUnit):
             self._annotate_16S_rRNA(user, record)
 
         # create annotated fshifts
-        # create genetack fshifts
+
+    def run_genetack_gm(self, gm_mod_fn=None, fs_mod_fn=None):
+        """Runs genetack for all the org seqs, reads the produced predictions
+        and creates the corresponding fshift objects in DB. Returns a list of
+        created fshifts.
+        
+        Arguments:
+         - gm_mod_fn, fs_mod_fn - pre-calculated models for genetack_gm.pl
+        """
+        gt_dir = self.get_full_path_to_subdir('genetack')
+        param_str = ' '.join([
+            '--save_fsgene_seqs', os.path.join(gt_dir, 'fsgene_seqs.fna'),
+            '--save_fsprot_seqs', os.path.join(gt_dir, 'fsprot_seqs.faa')])
+
+        gm_mod_path = os.path.join(gt_dir, 'gm_mod.txt')
+        if gm_mod_fn is None:
+            # Need to create the model file
+            param_str += ' --save_gm_mod ' + gm_mod_path
+        else:
+            # Copy pre-computed model file and use it to run genetack 
+            shutil.copyfile(gm_mod_fn, gm_mod_path)
+            param_str += ' --gm_mod_fn ' + gm_mod_path
+
+        fs_mod_path = os.path.join(gt_dir, 'fs_mod.txt')
+        if fs_mod_fn is None:
+            # Need to create the model file
+            param_str += ' --save_fs_mod ' + fs_mod_path
+        else:
+            # Copy pre-computed model file and use it to run genetack 
+            shutil.copyfile(fs_mod_fn, fs_mod_path)
+            param_str += ' --fs_mod_fn ' + fs_mod_path
+
+        all_fna_fn = self.get_all_seq_ids(seq_dir='seq_fna', fullpath=True)
+        if len(all_fna_fn) != 1:
+            raise NotImplementedError(
+                "Orgs with 1 genome seq are currently supported only!")
+
+        gt_out_fn = os.path.join(gt_dir, 'out.genetackgm')
+        genetack_cmd = ' '.join([
+            'genetack_gm.pl', param_str, all_fna_fn[0], '>', gt_out_fn])
+        subprocess.run(genetack_cmd, shell=True)
+
+        return gt_out_fn
+
+    def create_fshifts_from_genetackgm_file(self, user, gtgm_fn, fsgenes_fna_fn):
+        """Reads GeneTack-GM predictions and creates the fshift objects in DB.
+        Returns a list of created fshifts.
+
+        Arguments:
+         - gtgm_fn - (str) full path the the genetack-GM output file
+         - fsgenes_fna_fn - (str) full path the the fasta file with
+           fs-gene nt seqs.
+        """
+        all_seq_ids = self.get_all_seq_ids()
+        if len(all_seq_ids) != 1:
+            raise NotImplementedError(
+                "Orgs with 1 genome seq are currently supported only!")
+        seq = gtdb2.models.Seq.get_or_create_from_ext_id(
+            user, self, all_seq_ids[0])
+
+        # https://stackoverflow.com/a/31324373/310453
+        # all_rows = pd.read_csv(gtgm_fn, sep='\s+').to_dict(orient='records')
+        all_rows = pd.read_csv(gtgm_fn, sep='\s+')
+        fsgene_seqs_d = SeqIO.to_dict(SeqIO.parse(fsgenes_fna_fn, "fasta"))
+
+        all_fshifts = []
+        #for fs in all_rows:
+        for index, fs in all_rows.iterrows():
+            fs.Strand = -1 if fs.Strand == '-' else 1
+
+            fs_start, fs_end = _get_genetack_fs_borders(fs, fsgene_seqs_d)
+            fshift_cls = self.get_cls_by_name(self.FSHIFT_CLS_NAME)
+            fshift = fshift_cls.get_or_create(
+                user=user, seq=seq, origin='genetack', strand=fs.Strand,
+                coord=fs.FS_coord_adj, len=fs.FS_type,
+                start=fs_start, end=fs_end)
+            continue
+
+            # Create the parent feature that corresponds to the
+            # upstream part of fsCDS, i.e. where translation begins
+            feat_cls = self.get_cls_by_name(self.FEAT_CLS_NAME)
+            parent = feat_cls.get_or_create_parent_feat_for_fshift(
+                user, fshift)
+
+            # Finally, create the full-length fsCDS feat
+            feat = feat_cls.get_or_create_fscds_from_parent(
+                user, parent, {fshift})
+
+            all_fshifts.append(fshift)
+
+        return all_fshifts
 
     def update_seqs_with_gbk(self, gbk_fn):
         """Compares current list of org seqs with the seqs from the gbk file.
@@ -249,15 +342,7 @@ class Org(AbstractUnit):
          - grandchildren_cls_name - a string corresponding to grandchildren
          class name (e.g. 'Feat' or 'Fshift')
         """
-        # Get the app name, i.e. 'gtdb2':
-        # https://stackoverflow.com/a/2742722/310453
-        app_label = self._meta.app_label
-
-        # Get the class object for the db model:
-        # https://stackoverflow.com/a/36234846/310453
-        grandchildren_cls = apps.get_model(app_label, grandchildren_cls_name)
-
-        # Create the QuerySet
+        grandchildren_cls = self.get_cls_by_name(grandchildren_cls_name)
         return grandchildren_cls.objects.filter(seq__org=self)
 
     def _create_org_dir(self):
@@ -266,16 +351,13 @@ class Org(AbstractUnit):
         # 'Natranaerobius_thermophilus_JW_NM_WN_LF'
         dir_name = re.compile('[^\w\d]+').sub('_', self.name).strip('_')
         self.set_param('dir_name', dir_name)
-
-        dir_path = self.get_full_path_to_subdir()
-        os.makedirs(dir_path)
+        # os.makedirs will be called inside
+        self.get_full_path_to_subdir()
 
     def _create_seq_file(self, record, fmt, subdir):
         "Saves sequence in the org dir in the format specificed as 'fmt'."
         # Create dir like 'orgs/Delftia_acidovorans_SPH_1/seq_fna' if needed
         full_path = self.get_full_path_to_subdir(subdir)
-        os.makedirs(full_path, exist_ok=True)
-
         file_path = os.path.join(full_path, record.id)
         SeqIO.write(record, file_path, fmt)
 
@@ -444,4 +526,36 @@ def _get_source_feature_xrefs(record):
         if f.type == 'source':
             return f.qualifiers['db_xref']
     return []
+
+def _get_genetack_fs_borders(fs, fsgene_seqs_d):
+    """Returns left and right borders of the fshift based on the fsgene seq.
+    fsgene_seq - (str) nt seq with lower and upper-case letters.
+    """
+    fsgene_seq_r = fsgene_seqs_d.get(str(fs['FS_coord']), None)
+    if fsgene_seq_r is None:
+        logging.error("Can't find fs-gene seq for fshift '%s' in the "
+                      "fasta file '%s'" % (fs['FS_coord'], fsgenes_fna_fn))
+    fsgene_seq = str(fsgene_seq_r.seq)
+
+    up_match = re.compile('^[a-z]+').search(fsgene_seq)
+    down_match = re.compile('[A-Z]+$').search(fsgene_seq)
+    if up_match is None or down_match is None:
+        raise ValueError("Wrong fsgene sequence '%s'" % fs.init_gene_seq)
+    up_len_nt = up_match.end() - up_match.start()
+    down_len_nt = down_match.end() - down_match.start()
+
+    up_len_aa = int(up_len_nt/3)
+    down_len_aa = int(down_len_nt/3)
+
+    if fs.Strand == 1:
+        fs_start = fs.FS_coord_adj - 3*up_len_aa
+        fs_end = fs.FS_coord_adj + 3*down_len_aa
+        fs_end = fs_end + fs.FS_type
+    else:
+        fs_start = fs.FS_coord_adj - 3*down_len_aa
+        fs_end = fs.FS_coord_adj + 3*up_len_aa
+        fs_start = fs_start - fs.FS_type
+
+    return fs_start, fs_end
+
 

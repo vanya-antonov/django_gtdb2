@@ -5,6 +5,7 @@ import logging
 import sys
 
 from attrdict import AttrDict
+from django.apps import apps
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
@@ -132,6 +133,20 @@ class AbstractUnit(models.Model):
 
     # TODO
     # def add_param_xref_data_dict(self, data_dict):
+
+    def get_cls_by_name(self, cls_name):
+        """Retruns a class by its name.
+
+        Arguments:
+         - cls_name - (str) class name (e.g. 'Feat' or 'Fshift')
+        """
+        # Get the app name, i.e. 'gtdb2':
+        # https://stackoverflow.com/a/2742722/310453
+        app_label = self._meta.app_label
+
+        # Get the class object for the db model:
+        # https://stackoverflow.com/a/36234846/310453
+        return apps.get_model(app_label, cls_name)
 
 
 class AbstractParam(models.Model):

@@ -2,6 +2,7 @@
 
 import os
 from pprint import pprint
+import shutil
 
 from Bio import SeqIO
 
@@ -77,6 +78,29 @@ class OrgModelTests(GtdbTestCase):
         # Make sure the org dir is removed if the org is deleted from db
         org.delete()
         self.assertFalse(os.path.isdir(org_dir))
+
+    def test_org_run_genetack_gm(self):
+        gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+
+        # Use pre-calculated models save execution time
+        gm_mod_fn = self.get_full_path_to_test_file('S_griseus.gm_mod.txt')
+        fs_mod_fn = self.get_full_path_to_test_file('S_griseus.fs_mod.txt')
+        gtgm_out_fn = org.run_genetack_gm(
+            gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
+
+        # Make sure the output file exists
+        self.assertTrue(os.path.exists(gtgm_out_fn))
+
+    def test_org_create_genetack_fshifts_from_file(self):
+        gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+
+        gtgm_fn = self.get_full_path_to_test_file('S_griseus.50kb.genetackgm')
+        fsgenes_fna_fn = self.get_full_path_to_test_file(
+            'S_griseus.50kb.fsgene_seqs.fna')
+        all_fshifts = org.create_fshifts_from_genetackgm_file(
+            self.user, gtgm_fn, fsgenes_fna_fn)
 
     def test_org_make_all_params_2(self):
         """Make sure all params are preserved and no duplicates are created
