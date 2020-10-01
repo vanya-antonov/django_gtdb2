@@ -66,9 +66,9 @@ sudo bash create_db.sh
 # wait for mysql is ready
 sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE' # should show mysql shell
 # unzip sql.gz file
-gunzip ../dump.sql.gz
+# gunzip ../dump.sql.gz
 # load mysql dump
-SQL_DUMP_PATH=../dump.sql bash load_dump.sh
+SQL_DUMP_PATH=../170620.chelatase_db.sql bash load_dump.sh
 # check loaded tables
 sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "show tables"'
 
