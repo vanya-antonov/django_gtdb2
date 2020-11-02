@@ -3,6 +3,10 @@ GeneTackDB-2 based on Django and Biopython
 
 # Installation on a new machine
 ```bash
+
+# Install blast
+sudo apt-get install ncbi-blast+
+
 git clone https://vanya-antonov@github.com/vanya-antonov/django_gtdb2
 cd django_gtdb2
 
