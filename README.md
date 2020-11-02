@@ -18,8 +18,11 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install wheel
 
-# On Ubuntu:  https://stackoverflow.com/a/7475296/310453
+# On Ubuntu for mysqlclient:  https://stackoverflow.com/a/7475296/310453
 sudo apt-get install libmysqlclient-dev
+
+# On Ubuntu for numpy: https://stackoverflow.com/a/24892867/310453
+sudo apt-get install python3.8-dev
 
 pip install -r requirements.txt
 
