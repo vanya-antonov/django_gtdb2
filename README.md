@@ -24,6 +24,7 @@ sudo apt-get install libmysqlclient-dev
 # On Ubuntu for numpy: https://stackoverflow.com/a/24892867/310453
 sudo apt-get install python3.8-dev
 
+cd django
 pip install -r requirements.txt
 
 # Run server with external access:
