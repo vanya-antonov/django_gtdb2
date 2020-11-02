@@ -6,7 +6,6 @@ GeneTackDB-2 based on Django and Biopython
 git clone https://vanya-antonov@github.com/vanya-antonov/django_gtdb2
 cd django_gtdb2
 
-# Copy and edit the local_settings.py
 # scp ivan@10.0.1.254:~/_my/github/django_gtdb2/mysite/local_settings.py  mysite/
 # - OR -
 # scp -P 22194 ivan@83.149.211.146:~/_my/github/django_gtdb2/mysite/local_settings.py  mysite/
@@ -26,6 +25,9 @@ sudo apt-get install python3.8-dev
 
 cd django
 pip install -r requirements.txt
+
+# Copy and edit the local_settings.py
+cp -v /home/gtdb/data/local_settings.py  mysite/
 
 # Run server with external access:
 # ./manage.py runserver 0.0.0.0:8000
