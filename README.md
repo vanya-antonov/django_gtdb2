@@ -100,4 +100,7 @@ docker-compose down
 # -k option keeps the test database for faster testing
 python3 manage.py test -k gtdb2
 python3 manage.py test -k chelatase_db
+
+# One test only
+./manage.py test -k gtdb2.tests.test_org.OrgModelTests.test_org_run_genetack_gm
 ```
