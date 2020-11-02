@@ -17,6 +17,10 @@ source venv/bin/activate
 # https://stackoverflow.com/a/44862371/310453
 pip install --upgrade pip
 pip install wheel
+
+# On Ubuntu:  https://stackoverflow.com/a/7475296/310453
+sudo apt-get install libmysqlclient-dev
+
 pip install -r requirements.txt
 
 # Run server with external access:
