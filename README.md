@@ -15,6 +15,7 @@ python3 -m venv  venv
 source venv/bin/activate
 
 # https://stackoverflow.com/a/44862371/310453
+pip install --upgrade pip
 pip install wheel
 pip install -r requirements.txt
 
