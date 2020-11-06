@@ -1,9 +1,16 @@
 attrdict==2.0.1
 biopython==1.73
 Django==2.2.4
+django-cors-headers==3.2.1
+djangorestframework==3.11.0
+drf-extensions==0.6.0
+gunicorn==20.0.4
 mysqlclient==1.4.2.post1
 numpy==1.16.4
+pandas==1.1.4
+pkg-resources==0.0.0
+python-dateutil==2.8.1
+python-memcached==1.59
 pytz==2019.1
 six==1.12.0
 sqlparse==0.3.0
-gunicorn
