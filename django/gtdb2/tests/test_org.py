@@ -1,6 +1,7 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 import os
+import pandas as pd
 from pprint import pprint
 import shutil
 
@@ -101,6 +102,33 @@ class OrgModelTests(GtdbTestCase):
             'S_griseus.50kb.fsgene_seqs.fna')
         all_fshifts = org.create_fshifts_from_genetackgm_file(
             self.user, gtgm_fn, fsgenes_fna_fn)
+
+        # https://stackoverflow.com/a/31324373/310453
+        all_rows = pd.read_csv(gtgm_fn, sep='\s+').to_dict(orient='records')
+
+        # Make sure all the fshifts were created
+        self.assertTrue(len(all_fshifts) == len(all_rows))
+
+        """
+            # Create the parent feature that corresponds to the
+            # upstream part of fsCDS, i.e. where translation begins
+            feat_cls = self.get_cls_by_name(self.FEAT_CLS_NAME)
+            parent = feat_cls.get_or_create_parent_feat_for_fshift(
+                user, fshift)
+            if parent is None:
+                # Couldn't create the parent Feat for some reason...
+                logging.warning(
+                    "Couldn't create a parent gene for fshift %s" % fshift)
+                continue
+            #break
+            #pprint(fshift.prm)
+            pprint(parent)
+            #continue
+
+            # Finally, create the full-length fsCDS feat
+            feat = feat_cls.get_or_create_fscds_from_parent(
+                user, parent, {fshift})
+        """
 
     def test_org_make_all_params_2(self):
         """Make sure all params are preserved and no duplicates are created

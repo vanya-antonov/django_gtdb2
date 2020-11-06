@@ -259,13 +259,10 @@ class Org(AbstractUnit):
         seq = gtdb2.models.Seq.get_or_create_from_ext_id(
             user, self, all_seq_ids[0])
 
-        # https://stackoverflow.com/a/31324373/310453
-        # all_rows = pd.read_csv(gtgm_fn, sep='\s+').to_dict(orient='records')
         all_rows = pd.read_csv(gtgm_fn, sep='\s+')
         fsgene_seqs_d = SeqIO.to_dict(SeqIO.parse(fsgenes_fna_fn, "fasta"))
 
         all_fshifts = []
-        #for fs in all_rows:
         for index, fs in all_rows.iterrows():
             fs.Strand = -1 if fs.Strand == '-' else 1
 
@@ -275,17 +272,6 @@ class Org(AbstractUnit):
                 user=user, seq=seq, origin='genetack', strand=fs.Strand,
                 coord=fs.FS_coord_adj, len=fs.FS_type,
                 start=fs_start, end=fs_end)
-            continue
-
-            # Create the parent feature that corresponds to the
-            # upstream part of fsCDS, i.e. where translation begins
-            feat_cls = self.get_cls_by_name(self.FEAT_CLS_NAME)
-            parent = feat_cls.get_or_create_parent_feat_for_fshift(
-                user, fshift)
-
-            # Finally, create the full-length fsCDS feat
-            feat = feat_cls.get_or_create_fscds_from_parent(
-                user, parent, {fshift})
 
             all_fshifts.append(fshift)
 
@@ -529,7 +515,8 @@ def _get_source_feature_xrefs(record):
 
 def _get_genetack_fs_borders(fs, fsgene_seqs_d):
     """Returns left and right borders of the fshift based on the fsgene seq.
-    fsgene_seq - (str) nt seq with lower and upper-case letters.
+    fsgene_seq - (str) nt seq with lower and upper-case letters. This is
+    needed to handle fs-genes with several predicted fshifts.
     """
     fsgene_seq_r = fsgene_seqs_d.get(str(fs['FS_coord']), None)
     if fsgene_seq_r is None:
