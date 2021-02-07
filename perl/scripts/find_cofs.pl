@@ -179,7 +179,11 @@ DESCRIPTION:
     FS_ONLY.txt  --  recluster only these frameshfits (NO HEADER!)
 
 USAGE:
-    $script   [OPTIONS]   <EVALUE_THR>   <FS_ONLY.txt | COF_ID | __ALL__>
+    $script  <EVALUE_THR>   <FS_ONLY.txt | COF_ID | __ALL__>
+
+EXAMPLE:
+    $script  1e-50  __ALL__
+
 ";
 }
 

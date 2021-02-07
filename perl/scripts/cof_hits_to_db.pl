@@ -31,7 +31,6 @@ use MyLib::BaseUtil qw(min);
 ###
 # CONSTANTS
 my $MIN_FS_DIST = 10; # FS_DIST -- minimal distance from FS to BLAST alignment border
-my $db_name = 'gtdb2_cof'; # DB name
 
 ###
 # Parse input data
@@ -104,8 +103,6 @@ sub hits2db
 	{
 		my( $q_id )  = $res->query_accession =~ /(\d+)/;
 
-#		my $q_info = $gtdb->get_ALL_info_about_fs($q_id); # MyLib::classes::GeneTackDB
-
 		my $q_prot_fs_coord = $bu->exec_SQL_ar(
 			q[SELECT num FROM fshift_params WHERE name='seq_prot_n' AND parent_id=?], $q_id)->[0]{NUM};
 
@@ -119,8 +116,6 @@ sub hits2db
 			my $hit   = $tp->{hit};
 			my($h_id) = $hit->accession =~ /(\d+)/;
 			next if $h_id == $q_id;
-
-			# my $h_info = $gtdb->get_ALL_info_about_fs($h_id);
 
 			my $h_prot_fs_coord = $bu->exec_SQL_ar( q[
 			SELECT num FROM fshift_params WHERE name='seq_prot_n' AND parent_id=?], $h_id )->[0]{NUM};
