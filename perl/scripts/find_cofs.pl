@@ -8,12 +8,13 @@ use warnings;
 ###
 # Ivan Antonov (antonov1986@gmail.com)
 #
-# Наполняет / Изменяет таблицы:
-#	'cof_gtfs' (необходима, из-за хранения промежуточных кластеров)
-#	'cofs'
 # Использует таблицы:
 #	'cof_hits'
 #	'fshifts'
+# Изменяет (наполняет) таблицы:
+#	'fshifts' -- добавляет cof_id найденных кластеров
+#	'cofs'
+#	'cof_params'
 
 $|++; # Turn off buffering
 
@@ -22,19 +23,26 @@ $DB::deep = 10000;
 no warnings "recursion";
 
 use Data::Dumper;
+use Getopt::Long;
 use File::Spec;
 use Cwd 'abs_path';
 
 use MyLib::classes::GeneTackDB;
 use MyLib::BaseUtil qw(ah2a);
 
-die &usage() if @ARGV != 2;
-
 ###
 # CONSTANTS
 my $LABEL_ID = undef;
 my $USER_ID  = undef;
 
+###
+# Parse input data
+GetOptions(
+	'label=i' => \$LABEL_ID,
+	'user=i'  => \$USER_ID,
+) || die &usage();
+
+die &usage() if @ARGV!=2;
 
 ###
 my $START_TIME = time;
@@ -56,24 +64,28 @@ sub run
 	my %opts = @_;
 
 	my $gtdb = MyLib::classes::GeneTackDB->new( MyLib::BaseUtil->new() );
+	my $bu = $gtdb->{bu};
+
+	my $db_name = $bu->{db_name}; # DataBase name
+
+	$bu->exec_SQL_nr('ALTER TABLE cof_params DROP FOREIGN KEY cof_params_ibfk_1');
 
 	my $all_fs_ids = [];
 	my %fs_only    = ();
-	if( $opts{subset} eq '__ALL__' )
+	if( $opts{subset} eq '__ALL__')
 	{
-		$all_fs_ids = ah2a('QID', $gtdb->{bu}->exec_SQL_ar('SELECT DISTINCT q_fs_id AS qid FROM cof_hits') );
+		$all_fs_ids = ah2a('QID', $bu->exec_SQL_ar('SELECT DISTINCT q_fs_id AS qid FROM cof_hits'));
 
 #		warn "Removing COFs....";
-#		$gtdb->delete_cof($_->{COF_ID}) foreach @{$gtdb->{bu}->exec_SQL_ar('select cof_id from cofs')};
+#		$gtdb->delete_cof($_->{COF_ID}) foreach @{$gtdb->{bu}->exec_SQL_ar('select id from cofs')};
 	}
 	elsif( -e $opts{subset} ) # for file FS_ONLY.txt
 	{
-		@$all_fs_ids = grep { length } split /[\n\r]+/, `cat $opts{subset}`;
+		@$all_fs_ids = map { s/\D+//g; if( length ){$_}else{( )} } split /[\n\r]+/, `cat $opts{subset}`;
 	}
 	else		# for COF_ID
 	{
-		$all_fs_ids = $gtdb->get_all_fs_for_cof( $opts{subset} );
-#		$all_fs_ids = ah2a('ID', $gtdb->{bu}->exec_SQL_ar('SELECT DISTINCT id FROM fshifts WHERE cof_id=?', $opts{subset} ) );
+		$all_fs_ids = ah2a('ID', $bu->exec_SQL_ar('SELECT id FROM fshifts WHERE cof_id=?', $opts{subset} ) );
 
 		$gtdb->delete_cof( $opts{subset} );
 
@@ -86,7 +98,20 @@ sub run
 		fs_only => keys(%fs_only) ? \%fs_only : undef,
 	);
 
-	$gtdb->{bu}->commit;
+	$bu->commit;
+
+	# Check for Index existence
+	my $chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
+			WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME='fshifts' AND COLUMN_NAME=?], 'cof_id')->[0]{N};
+
+	$bu->exec_SQL_nr('ALTER TABLE fshifts ADD CONSTRAINT FOREIGN KEY (cof_id) REFERENCES cofs(id)') unless $chk;
+
+	$chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
+			WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME='cof_params' AND COLUMN_NAME=?], 'parent_id')->[0]{N};
+
+	$bu->exec_SQL_nr('ALTER TABLE cof_params ADD CONSTRAINT FOREIGN KEY (parent_id) REFERENCES cofs(id)') unless $chk;
+
+	$bu->commit;
 }
 
 
@@ -97,12 +122,12 @@ sub find_all_cofs
 
 	while(my $q_id = shift @$all_fs_ids )
 	{
-		print "[".@$all_fs_ids."] Processing query $q_id...\n";
+		print '['.@$all_fs_ids."] Processing query $q_id...\n";
 
 		# If this FS is already clustered
 		warn "\tQuery $q_id is already in COF\n" and next if $gtdb->get_cofs_for_fs($q_id)->[0];
 
-		my $q_TYPE = $gtdb->{bu}->exec_SQL_ar('SELECT len FROM fshifts WHERE id=?', $q_id )->[0]{LEN};
+		my $q_TYPE = $bu->exec_SQL_ar('SELECT len FROM fshifts WHERE id=?', $q_id )->[0]{LEN};
 
 		warn "FS $q_id does not have type!!!" and next unless $q_TYPE;
 
@@ -114,7 +139,7 @@ sub find_all_cofs
 		{
 			my $cof = $gtdb->create_new_cof( $cluster, user_id => $opts{user_id} );
 
-			print "\tCOF $cof created with ".@$cluster." elements\n";
+			print "\tCOF $cof is created with ".@$cluster." elements\n";
 		}
 	}
 }
@@ -123,6 +148,7 @@ sub find_all_cofs
 sub add_query_to_cluster
 {
 	my( $gtdb, $q_id, $cluster, $evalue, $type, $visited_ids, %opts ) = @_;
+	my $bu = $gtdb->{bu};
 
 	$visited_ids = {} unless $visited_ids;
 
@@ -133,10 +159,10 @@ sub add_query_to_cluster
 	return if defined( $opts{fs_only} ) and ! exists( $opts{fs_only}{$q_id} );
 
 	# if it is already in COFS
-	if( my $cof_id = $gtdb->get_cofs_for_fs($q_id)->[0] )
+	if( my $cof_id = $gtdb->get_cofs_for_fs( $q_id )->[0] )
 	{
 		# "$q_id is already in a COF -- mearge this COF into a new one
-		my $cof_fs = $gtdb->get_all_fs_for_cof( $cof_id );
+		my $cof_fs = ah2a('ID', $bu->exec_SQL_ar('SELECT id FROM fshifts WHERE cof_id=?', $cof_id ) );
 
 		warn "\tMearging with COF $cof_id (".@$cof_fs." elements)\n";
 
@@ -144,7 +170,6 @@ sub add_query_to_cluster
 		$visited_ids->{$_} = undef foreach @$cof_fs;
 
 		$gtdb->delete_cof( $cof_id );
-
 		return;
 	}
 
@@ -183,6 +208,10 @@ USAGE:
 
 EXAMPLE:
     $script  1e-50  __ALL__
+
+OPTIONS:
+    --user  <ID>  --  specify user_id of the created COFs
+    --label <ID>  --  mark all created COFs with this label
 
 ";
 }

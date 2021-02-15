@@ -71,7 +71,6 @@ my $MODES = {
 	'cgi'    => 1,
 };
 
-
 ##############
 # CONSTRUCTOR
 
@@ -237,25 +236,6 @@ sub exec_SQL_ar_dbg
 	};
 
 	return \@array;
-}
-
-sub get_random_DB_ID
-{
-	my $self  = shift;
-	my $table = shift;
-	my $field = shift;
-	my %opts  = @_;
-	my $pos   = $opts{positive} || 0;
-
-	my $query = sprintf("SELECT 1 AS count FROM %s WHERE %s=?", $table, $field);
-
-	my $id = 0;
-	while( $id <= 10**8 || $self->exec_SQL_ar($query, $id)->[0]->{COUNT} || ($pos && $id < 0) )
-	{
-		$id = int( rand(10**9) );
-	}
-
-	return $id;
 }
 
 sub get_tmp_dir
