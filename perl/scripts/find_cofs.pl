@@ -27,8 +27,8 @@ use Getopt::Long;
 use File::Spec;
 use Cwd 'abs_path';
 
-use MyLib::classes::GeneTackDB;
-use MyLib::BaseUtil qw(ah2a);
+use MyLibGT::classes::GeneTackDB;
+use MyLibGT::BaseUtil qw(ah2a);
 
 ###
 # CONSTANTS
@@ -63,7 +63,7 @@ sub run
 {
 	my %opts = @_;
 
-	my $gtdb = MyLib::classes::GeneTackDB->new( MyLib::BaseUtil->new() );
+	my $gtdb = MyLibGT::classes::GeneTackDB->new( MyLibGT::BaseUtil->new() );
 	my $bu = $gtdb->{bu};
 
 	my $db_name = $bu->{db_name}; # DataBase name

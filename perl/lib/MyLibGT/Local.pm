@@ -1,4 +1,4 @@
-package MyLib::Local;
+package MyLibGT::Local;
 
 # $Id$
 

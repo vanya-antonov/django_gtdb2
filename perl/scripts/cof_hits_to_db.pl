@@ -8,9 +8,9 @@ use warnings;
 ###
 # Ivan Antonov (antonov1986@gmail.com)
 #
-# Наполняет таблицы:
+# Наполняет таблицу:
 #	'cof_hits'
-#	
+#
 # Использует таблицы:
 #	'information_schema'
 #	'fshift_params'
@@ -25,8 +25,8 @@ use Data::Dumper;
 use File::Spec;
 use Bio::SearchIO;
 
-use MyLib::classes::GeneTackDB;
-use MyLib::BaseUtil qw(min);
+use MyLibGT::classes::GeneTackDB;
+use MyLibGT::BaseUtil qw(min);
 
 ###
 # CONSTANTS
@@ -54,8 +54,8 @@ sub run
 {
 	my %opts = @_;
 
-	my $bu   = MyLib::BaseUtil->new();
-	my $gtdb = MyLib::classes::GeneTackDB->new( $bu );
+	my $bu   = MyLibGT::BaseUtil->new();
+	my $gtdb = MyLibGT::classes::GeneTackDB->new( $bu );
 
 	my $db_name = $bu->{db_name}; # DataBase name
 
@@ -67,7 +67,7 @@ sub run
 	&hits2db( $gtdb, $opts{blast_fn} );
 	$bu->commit;
 
-	# Check for cofhits_qfsid_fk index existence (MyLib::classes::GeneTackDB)
+	# Check for cofhits_qfsid_fk index existence (MyLibGT::classes::GeneTackDB)
 	my $chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
 			WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME='cof_hits' AND COLUMN_NAME=?], 'q_fs_id')->[0]{N};
 
@@ -110,7 +110,7 @@ sub hits2db
 #		die "Unknown FS_ID '$q_id'" if !$q_prot_fs_coord;
 
 		warn "Processing hits for '$q_id'...\n";
-		foreach my $tp ( @{ MyLib::classes::GeneTackDB::get_all_TP_hit_hsp( $res, $q_prot_fs_coord, $MIN_FS_DIST ) } )
+		foreach my $tp ( @{ MyLibGT::classes::GeneTackDB::get_all_TP_hit_hsp( $res, $q_prot_fs_coord, $MIN_FS_DIST ) } )
 		{
 			my $hsp   = $tp->{hsp};
 			my $hit   = $tp->{hit};

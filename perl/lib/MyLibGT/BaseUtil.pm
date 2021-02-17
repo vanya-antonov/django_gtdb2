@@ -1,4 +1,4 @@
-package MyLib::BaseUtil;
+package MyLibGT::BaseUtil;
 
 use strict;
 use warnings;
@@ -16,12 +16,7 @@ use warnings;
 #   |
 #   |--->{dbh}
 #   |
-#   |--->{data_path}        -  the value from MyLib::Local module
-#   |--->{tmp_dir}          -  the value from MyLib::Local module
-#   |--->{mylib_path}       -  the value from MyLib::Local module
-#   |--->{exe_path}         -  the value from MyLib::Local module
-#   |--->{script_path}      -  the value from MyLib::Local module
-#   |--->{templates_path}   -  the value from MyLib::Local module
+#   |--->{tmp_dir}          -  the value from MyLibGT::Local module
 #   |
 #   |--->{dir_info}         -  hashref. Information about all folders
 #   |        |
@@ -52,7 +47,7 @@ use Carp qw(cluck confess);
 use Time::HiRes qw(gettimeofday tv_interval);
 use DBI;
 
-use MyLib::Local;
+use MyLibGT::Local;
 
 use Exporter;
 use vars qw(@ISA @EXPORT_OK);
@@ -87,8 +82,8 @@ sub new
 	my $self = bless {
 		warn_debg        => $opts{warn_debg} || 0,
 		mode             => $mode,
-		tmp_dir          => ( $opts{tmp_dir} || MyLib::Local::TMP_DIR() ),
-		db_name          => $MyLib::Local::DB_ACCOUNTS{default}{db_name},
+		tmp_dir          => ( $opts{tmp_dir} || MyLibGT::Local::TMP_DIR() ),
+		db_name          => $MyLibGT::Local::DB_ACCOUNTS{default}{db_name},
 		db_account       => $opts{db_account},
 		debug_sql        => $opts{debug_sql},
 		dbi_decode       => $opts{dbi_decode},
@@ -131,7 +126,7 @@ sub dbh
 	my $self = shift;
 	return $self->{dbh} if $self->{dbh};
 
-	$self->{dbh} = DBI->connect( MyLib::Local::DBH_CONNECT($self->{db_account}), MyLib::Local::DBH_ATTR($self->{db_account}) ) ||
+	$self->{dbh} = DBI->connect( MyLibGT::Local::DBH_CONNECT($self->{db_account}), MyLibGT::Local::DBH_ATTR($self->{db_account}) ) ||
 		confess "Can't connect to database '$self->{db_account}': $DBI::errstr";
 
 	if( $self->{dbi_decode} && $self->{dbi_decode} eq 'utf8' )

@@ -1,4 +1,4 @@
-package MyLib::classes::GeneTackDB;
+package MyLibGT::classes::GeneTackDB;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ use warnings;
 #
 # $self
 #   |
-#   |--->{tbl}  --  MyLib::classes::Table object
+#   |--->{tbl}  --  MyLibGT::classes::Table object
 #   |
 #   |--->{all_fs}   --   reference to hash of hashes
 #   |       |
@@ -32,7 +32,7 @@ use warnings;
 use Data::Dumper;
 use Carp qw(confess);
 use Bio::SeqIO;
-use MyLib::BaseUtil qw(min ah2a);
+use MyLibGT::BaseUtil qw(min ah2a);
 
 
 ##############
