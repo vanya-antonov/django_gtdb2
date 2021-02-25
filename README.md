@@ -1,6 +1,13 @@
 # django_gtdb2
 GeneTackDB-2 based on Django and Biopython
 
+# Run Django test server instead of Apache on port 80
+```bash
+sudo systemctl status apache2
+sudo systemctl stop apache2.service
+sudo python3  ./manage.py  runserver  0.0.0.0:80
+```
+
 # Installation on a new machine
 ```bash
 
