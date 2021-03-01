@@ -7,6 +7,7 @@ import shutil
 
 from Bio import SeqIO
 
+from gtdb2.models import Fshift
 from gtdb2.models.org import Org, OrgParam
 from gtdb2.tests import GtdbTestCase
 
@@ -80,18 +81,43 @@ class OrgModelTests(GtdbTestCase):
         org.delete()
         self.assertFalse(os.path.isdir(org_dir))
 
+    def test_org_create_genetack_fshifts(self):
+        gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+
+        # Use pre-calculated models to save execution time
+        gm_mod_fn = self.get_full_path_to_test_file('S_griseus.gm_mod.txt')
+        fs_mod_fn = self.get_full_path_to_test_file('S_griseus.fs_mod.txt')
+        all_fshifts = org.create_genetack_fshifts(
+            gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
+
+        gtgm_fn = self.get_full_path_to_test_file('S_griseus.50kb.genetackgm')
+        fs_df = pd.read_csv(gtgm_fn, sep='\s+')
+
+        # Make sure all the fshifts were created
+        self.assertTrue(len(all_fshifts) == fs_df.shape[0])
+        self.assertTrue(len(all_fshifts) == Fshift.objects.count())
+
+        # Make sure new FSs are not created when we run the function once again
+        all_fshifts = org.create_genetack_fshifts(
+            gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
+
+        self.assertTrue(len(all_fshifts) == fs_df.shape[0])
+        self.assertTrue(len(all_fshifts) == Fshift.objects.count())
+
     def test_org_run_genetack_gm(self):
         gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
         org = Org.create_from_gbk(self.user, gbk_fn)
 
-        # Use pre-calculated models save execution time
+        # Use pre-calculated models to save execution time
         gm_mod_fn = self.get_full_path_to_test_file('S_griseus.gm_mod.txt')
         fs_mod_fn = self.get_full_path_to_test_file('S_griseus.fs_mod.txt')
-        gtgm_out_fn = org.run_genetack_gm(
+        gtgm_dict = org.run_genetack_gm(
             gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
 
         # Make sure the output file exists
-        self.assertTrue(os.path.exists(gtgm_out_fn))
+        self.assertTrue(os.path.exists(gtgm_dict['gtgm_out_fn']))
+        self.assertTrue(os.path.exists(gtgm_dict['fsgene_seqs_fn']))
 
     def test_org_create_genetack_fshifts_from_file(self):
         gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')

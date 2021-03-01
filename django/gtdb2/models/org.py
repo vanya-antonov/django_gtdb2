@@ -200,6 +200,17 @@ class Org(AbstractUnit):
 
         # create annotated fshifts
 
+    def create_genetack_fshifts(self, gm_mod_fn=None, fs_mod_fn=None):
+        """Runs GeneTack-GM and creates all the predicted fshifts in the db.
+        """
+        gtgm_dict = self.run_genetack_gm(gm_mod_fn, fs_mod_fn)
+
+        user = self.gtdb.get_or_create_annotation_user()
+        all_fshifts = self.create_fshifts_from_genetackgm_file(
+            user, gtgm_dict['gtgm_out_fn'], gtgm_dict['fsgene_seqs_fn'])
+
+        return all_fshifts
+
     def run_genetack_gm(self, gm_mod_fn=None, fs_mod_fn=None):
         """Runs genetack for all the org seqs, reads the produced predictions
         and creates the corresponding fshift objects in DB. Returns a list of
@@ -209,9 +220,11 @@ class Org(AbstractUnit):
          - gm_mod_fn, fs_mod_fn - pre-calculated models for genetack_gm.pl
         """
         gt_dir = self.get_full_path_to_subdir('genetack')
-        param_str = ' '.join([
-            '--save_fsgene_seqs', os.path.join(gt_dir, 'fsgene_seqs.fna'),
-            '--save_fsprot_seqs', os.path.join(gt_dir, 'fsprot_seqs.faa')])
+        
+        fsgene_seqs_fn = os.path.join(gt_dir, 'fsgene_seqs.fna')
+        fsprot_seqs_fn = os.path.join(gt_dir, 'fsprot_seqs.faa')
+        param_str = ' '.join(['--save_fsgene_seqs', fsgene_seqs_fn,
+            '--save_fsprot_seqs', fsprot_seqs_fn])
 
         gm_mod_path = os.path.join(gt_dir, 'gm_mod.txt')
         if gm_mod_fn is None:
@@ -241,7 +254,7 @@ class Org(AbstractUnit):
             'genetack_gm.pl', param_str, all_fna_fn[0], '>', gt_out_fn])
         subprocess.run(genetack_cmd, shell=True)
 
-        return gt_out_fn
+        return {'gtgm_out_fn': gt_out_fn, 'fsgene_seqs_fn': fsgene_seqs_fn}
 
     def create_fshifts_from_genetackgm_file(self, user, gtgm_fn, fsgenes_fna_fn):
         """Reads GeneTack-GM predictions and creates the fshift objects in DB.
@@ -268,12 +281,14 @@ class Org(AbstractUnit):
 
             fs_start, fs_end = _get_genetack_fs_borders(fs, fsgene_seqs_d)
             fshift_cls = self.get_cls_by_name(self.FSHIFT_CLS_NAME)
-            fshift = fshift_cls.get_or_create(
-                user=user, seq=seq, origin='genetack', strand=fs.Strand,
-                coord=fs.FS_coord_adj, len=fs.FS_type,
-                start=fs_start, end=fs_end)
-
-            all_fshifts.append(fshift)
+            try:
+                fshift = fshift_cls.get_or_create(
+                    user=user, seq=seq, origin='genetack', strand=fs.Strand,
+                    coord=fs.FS_coord_adj, len=fs.FS_type,
+                    start=fs_start, end=fs_end)
+                all_fshifts.append(fshift)
+            except:
+                logging.error("Can't create Fshift: %s" % fshift)
 
         return all_fshifts
 
