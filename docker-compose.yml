@@ -4,15 +4,17 @@ version: '3'
 services:
     django:
         build: ./django
-        command:  gunicorn --bind :8000 mysite.wsgi:application
+        command:  gunicorn --bind :8000 mysite.wsgi:application --capture-output
         environment:
             - MYSQL_HOST=db
             - MYSQL_PORT=3306
             - MODE=PROD
+            - DJANGO_LOGLEVEL=DEBUG
         env_file:
             - production.env
         expose:
             - 8000
+        restart: always
 
     db:
         image: mysql:8.0
@@ -23,12 +25,17 @@ services:
             - production.env
         expose:
             - 3306
+        restart: always
 
-    nginx:
-        image: nginx:1.17.10
+    app:
+        build:
+            context: ./
+            args:
+                - VUE_APP_API_BASE_URL=http://ivanya.com/chelatase/api/
         ports:
             - 80:80
         volumes:
             - ./nginx/conf.d:/etc/nginx/conf.d
         depends_on:
             - django
+        restart: always

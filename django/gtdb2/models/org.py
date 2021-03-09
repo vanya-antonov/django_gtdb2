@@ -1,13 +1,11 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
-from collections import Counter   # https://stackoverflow.com/a/5829377/310453
 import logging
 import os
 import pandas as pd
 from pprint import pprint
 import shutil
 import subprocess
-import sys
 import re
 
 from Bio import SeqIO
@@ -16,8 +14,7 @@ from django.db import models
 from django.db.models import signals
 from django.dispatch import receiver
 
-from gtdb2.lib.db import GeneTackDB
-import gtdb2.models # to avoid circular importing
+import gtdb2.models  # to avoid circular importing
 from gtdb2.models.abstract import AbstractUnit, AbstractParam
 
 

@@ -19,5 +19,6 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('gtdb2/', include('gtdb2.urls')),
-    path('chelatase', include('chelatase_db.urls')),
+    path('chelatase/', include('chelatase_db.urls')),
+    # path('chelatase/api/', include('chelatase_db.api_urls'))
 ]
