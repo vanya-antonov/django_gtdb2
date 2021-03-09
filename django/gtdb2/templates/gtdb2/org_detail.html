@@ -25,6 +25,36 @@
     </tbody>
 	</table>
 
+  <h3>All Frameshifts</h3>
+	<table class="table table-bordered table-sm">
+    <thead class="thead-light">
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">ID</th>
+        <th scope="col">Location</th>
+        <th scope="col">Start</th>
+        <th scope="col">End</th>
+        <th scope="col">Strand</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in object.fshift_set %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+					<td>{{ f.id }}</td>
+          <td>
+						<a href="https://www.ncbi.nlm.nih.gov/nuccore/{{f.seq_id}}?report=graph&from={{f.coord}}&to={{f.coord}}">
+						{{f.seq_id}}:{{f.coord}}:{{f.len}}
+						</a>
+					</td>
+          <td>{{ f.start }}</td>
+          <td>{{ f.end }}</td>
+          <td>{{ f.strand }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+	</table>
+
   <h3>All Features</h3>
 	<table class="table table-bordered table-sm">
     <thead class="thead-light">

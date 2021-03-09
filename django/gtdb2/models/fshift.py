@@ -3,6 +3,7 @@
 from pprint import pprint
 import re
 
+from attrdict import AttrDict
 import Bio.Seq
 from Bio.Alphabet import generic_dna, generic_protein
 from django.db import models
@@ -63,6 +64,82 @@ class Fshift(AbstractUnit):
         else:
             raise NotImplemented("Fshift with the closest coord should "
                                  "be returned!")
+
+
+    @classmethod
+    def create_from_genetack(cls, user, seq, fs_coord, fs_len,
+                             fs_strand, fsgene_seq):
+        """Creates Fshift based on the info from GeneTack-GM output.
+
+        Arguments:
+            - fs_coord - (int) frameshift coord (1-based)
+            - fs_len - (int) 1 or -1
+            - fs_strand - (str) '+' or '-'
+            - fsgene_seq - (str) nt seq with lower and upper-case letters.
+        """
+        fs_strand = -1 if fs_strand == '-' else 1
+
+        up_match = re.compile('^[a-z]+').search(fsgene_seq)
+        down_match = re.compile('[A-Z]+$').search(fsgene_seq)
+        if up_match is None or down_match is None:
+            raise ValueError("Wrong fsgene sequence '%s'" % fs.init_gene_seq)
+        up_len_nt = up_match.end() - up_match.start()
+        down_len_nt = down_match.end() - down_match.start()
+
+        print('up_len_nt = ' + str(up_len_nt))
+        print('down_len_nt = ' + str(down_len_nt))
+
+        if fs_strand == 1:
+            fs_start = fs_coord - up_len_nt
+            fs_end = fs_coord + down_len_nt
+        else:
+            fs_start = fs_coord - down_len_nt
+            fs_end = fs_coord + up_len_nt
+
+        # If up_len_nt is not divisible by 3 => the FS was predicted in a
+        # middle of a codon => Move the fs-coord upstream to avoid stop
+        # codon in cases like 'aaa_tgA_CCC'.
+        adjust_len = up_len_nt % 3
+        if fs_strand == 1:
+            fs_coord -= adjust_len
+        else:
+            fs_coord += adjust_len
+        
+        pprint({
+            'strand': fs_strand, 'start': fs_start, 'end': fs_end, 'coord': fs_coord, 'len': fs_len
+        })
+
+        validate_seq = seq.seq[fs_start:fs_end]
+        if fs_strand == -1:
+            validate_seq = validate_seq.reverse_complement()
+        print(fsgene_seq)
+        print(str(validate_seq))
+        return
+
+        return cls.get_or_create(
+            user=user, seq=seq, origin='genetack', strand=fs_strand,
+            start=fs_start, end=fs_end, coord=fs_coord, len=fs_len)
+
+
+        fsgene_seq = seq.record.seq[fs.start:fs.end]
+        if fs.strand == -1:
+            fsgene_seq = fsgene_seq.reverse_complement()
+
+        if fsgene_seq.upper() != fs.init_gene_seq.upper():
+            raise ValueError("GT_FS and fsgene sequences do not match:\n%s\n%s" %
+                             (fs['init_gene_seq'], fsgene_seq))
+
+
+
+
+        gtdb1_fs = AttrDict({
+            'strand': fs_strand,
+            'fs_coord': fs_coord,
+            'init_gene_seq': init_gene_seq})
+        fs = _validate_gtdb1_fs(gtdb1_fs, seq)
+        return cls.get_or_create(
+            user=user, seq=seq, origin='genetack', strand=fs.strand,
+            start=fs.start, end=fs.end, coord=fs.fs_coord, len=fs_len)
 
     @classmethod
     def create_from_gtdb1_fs(cls, user, seq, gtdb1_fs):
@@ -167,6 +244,10 @@ class FshiftParam(AbstractParam):
 def _validate_gtdb1_fs(fs, seq):
     """Makes sure that GTDB1 fs matches GTDB2 seq and modifies/adds some
     attributes to the fs object.
+
+    Arguments:
+        - fs - a gtdb1.GtFs object. Required attributes: strand ('+' or '-'),
+          fs_coord (1-based), init_gene_seq. 
     """
     if fs.job.species not in seq.org.name:
         raise ValueError("Provided gtdb1_fs.species and seq.org do not match:"

@@ -1,10 +1,13 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
 import os
+import pandas as pd
 from pprint import pprint
+import shutil
 
 from Bio import SeqIO
 
+from gtdb2.models import Fshift
 from gtdb2.models.org import Org, OrgParam
 from gtdb2.tests import GtdbTestCase
 
@@ -77,6 +80,81 @@ class OrgModelTests(GtdbTestCase):
         # Make sure the org dir is removed if the org is deleted from db
         org.delete()
         self.assertFalse(os.path.isdir(org_dir))
+
+    def test_org_create_genetack_fshifts(self):
+        gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+
+        # Use pre-calculated models to save execution time
+        gm_mod_fn = self.get_full_path_to_test_file('S_griseus.gm_mod.txt')
+        fs_mod_fn = self.get_full_path_to_test_file('S_griseus.fs_mod.txt')
+        all_fshifts = org.create_genetack_fshifts(
+            gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
+
+        gtgm_fn = self.get_full_path_to_test_file('S_griseus.50kb.genetackgm')
+        fs_df = pd.read_csv(gtgm_fn, sep='\s+')
+
+        # Make sure all the fshifts were created
+        self.assertTrue(len(all_fshifts) == fs_df.shape[0])
+        self.assertTrue(len(all_fshifts) == Fshift.objects.count())
+
+        # Make sure new FSs are not created when we run the function once again
+        all_fshifts = org.create_genetack_fshifts(
+            gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
+
+        self.assertTrue(len(all_fshifts) == fs_df.shape[0])
+        self.assertTrue(len(all_fshifts) == Fshift.objects.count())
+
+    def test_org_run_genetack_gm(self):
+        gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+
+        # Use pre-calculated models to save execution time
+        gm_mod_fn = self.get_full_path_to_test_file('S_griseus.gm_mod.txt')
+        fs_mod_fn = self.get_full_path_to_test_file('S_griseus.fs_mod.txt')
+        gtgm_dict = org.run_genetack_gm(
+            gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
+
+        # Make sure the output file exists
+        self.assertTrue(os.path.exists(gtgm_dict['gtgm_out_fn']))
+        self.assertTrue(os.path.exists(gtgm_dict['fsgene_seqs_fn']))
+
+    def test_org_create_genetack_fshifts_from_file(self):
+        gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+
+        gtgm_fn = self.get_full_path_to_test_file('S_griseus.50kb.genetackgm')
+        fsgenes_fna_fn = self.get_full_path_to_test_file(
+            'S_griseus.50kb.fsgene_seqs.fna')
+        all_fshifts = org.create_fshifts_from_genetackgm_file(
+            self.user, gtgm_fn, fsgenes_fna_fn)
+
+        # https://stackoverflow.com/a/31324373/310453
+        all_rows = pd.read_csv(gtgm_fn, sep='\s+').to_dict(orient='records')
+
+        # Make sure all the fshifts were created
+        self.assertTrue(len(all_fshifts) == len(all_rows))
+
+        """
+            # Create the parent feature that corresponds to the
+            # upstream part of fsCDS, i.e. where translation begins
+            feat_cls = self.get_cls_by_name(self.FEAT_CLS_NAME)
+            parent = feat_cls.get_or_create_parent_feat_for_fshift(
+                user, fshift)
+            if parent is None:
+                # Couldn't create the parent Feat for some reason...
+                logging.warning(
+                    "Couldn't create a parent gene for fshift %s" % fshift)
+                continue
+            #break
+            #pprint(fshift.prm)
+            pprint(parent)
+            #continue
+
+            # Finally, create the full-length fsCDS feat
+            feat = feat_cls.get_or_create_fscds_from_parent(
+                user, parent, {fshift})
+        """
 
     def test_org_make_all_params_2(self):
         """Make sure all params are preserved and no duplicates are created
