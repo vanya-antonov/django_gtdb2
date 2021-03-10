@@ -82,7 +82,7 @@ class OrgModelTests(GtdbTestCase):
         self.assertFalse(os.path.isdir(org_dir))
 
     def test_org_create_genetack_fshifts(self):
-        gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')
+        gbk_fn = self.get_full_path_to_test_file('S_griseus.two_contigs.gbk')
         org = Org.create_from_gbk(self.user, gbk_fn)
 
         # Use pre-calculated models to save execution time
@@ -91,19 +91,12 @@ class OrgModelTests(GtdbTestCase):
         all_fshifts = org.create_genetack_fshifts(
             gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
 
-        gtgm_fn = self.get_full_path_to_test_file('S_griseus.50kb.genetackgm')
-        fs_df = pd.read_csv(gtgm_fn, sep='\s+')
-
-        # Make sure all the fshifts were created
-        self.assertTrue(len(all_fshifts) == fs_df.shape[0])
-        self.assertTrue(len(all_fshifts) == Fshift.objects.count())
+        self.assertTrue(len(all_fshifts) == 9)
 
         # Make sure new FSs are not created when we run the function once again
         all_fshifts = org.create_genetack_fshifts(
             gm_mod_fn=gm_mod_fn, fs_mod_fn=fs_mod_fn)
-
-        self.assertTrue(len(all_fshifts) == fs_df.shape[0])
-        self.assertTrue(len(all_fshifts) == Fshift.objects.count())
+        self.assertTrue(len(all_fshifts) == 9)
 
     def test_org_run_genetack_gm(self):
         gbk_fn = self.get_full_path_to_test_file('S_griseus.50kb.gbk')

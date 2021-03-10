@@ -241,14 +241,17 @@ class Org(AbstractUnit):
             shutil.copyfile(fs_mod_fn, fs_mod_path)
             param_str += ' --fs_mod_fn ' + fs_mod_path
 
+        gt_input_fn = os.path.join(gt_dir, 'input.fasta')
+        if os.path.exists(gt_input_fn):
+            os.remove(gt_input_fn)
+
         all_fna_fn = self.get_all_seq_ids(seq_dir='seq_fna', fullpath=True)
-        if len(all_fna_fn) != 1:
-            raise NotImplementedError(
-                "Orgs with 1 genome seq are currently supported only!")
+        for fn in all_fna_fn:
+            subprocess.run('cat ' + fn + ' >> ' + gt_input_fn, shell=True)
 
         gt_out_fn = os.path.join(gt_dir, 'out.genetackgm')
         genetack_cmd = ' '.join([
-            'genetack_gm.pl', param_str, all_fna_fn[0], '>', gt_out_fn])
+            'genetack_gm.pl', param_str, gt_input_fn, '>', gt_out_fn])
         subprocess.run(genetack_cmd, shell=True)
 
         return {'gtgm_out_fn': gt_out_fn, 'fsgene_seqs_fn': fsgene_seqs_fn}
@@ -262,18 +265,13 @@ class Org(AbstractUnit):
          - fsgenes_fna_fn - (str) full path the the fasta file with
            fs-gene nt seqs.
         """
-        all_seq_ids = self.get_all_seq_ids()
-        if len(all_seq_ids) != 1:
-            raise NotImplementedError(
-                "Orgs with 1 genome seq are currently supported only!")
-        seq = gtdb2.models.Seq.get_or_create_from_ext_id(
-            user, self, all_seq_ids[0])
-
         all_rows = pd.read_csv(gtgm_fn, sep='\s+')
         fsgene_seqs_d = SeqIO.to_dict(SeqIO.parse(fsgenes_fna_fn, "fasta"))
 
         all_fshifts = []
         for index, fs in all_rows.iterrows():
+            seq = gtdb2.models.Seq.get_or_create_from_ext_id(
+                user, self, fs.Seq_ID)
             fs.Strand = -1 if fs.Strand == '-' else 1
 
             fs_start, fs_end = _get_genetack_fs_borders(fs, fsgene_seqs_d)
@@ -532,8 +530,7 @@ def _get_genetack_fs_borders(fs, fsgene_seqs_d):
     """
     fsgene_seq_r = fsgene_seqs_d.get(str(fs['FS_coord']), None)
     if fsgene_seq_r is None:
-        logging.error("Can't find fs-gene seq for fshift '%s' in the "
-                      "fasta file '%s'" % (fs['FS_coord'], fsgenes_fna_fn))
+        logging.error("Can't find fs-gene seq for fshift '%s'" % fs['FS_coord'])
     fsgene_seq = str(fsgene_seq_r.seq)
 
     up_match = re.compile('^[a-z]+').search(fsgene_seq)
