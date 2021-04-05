@@ -11,6 +11,9 @@ use warnings;
 # Наполняет таблицу:
 #	'cof_hits'
 #
+# Использует файл
+#	<HITS.blast>
+#
 # Использует таблицы:
 #	'information_schema'
 #	'fshift_params'
@@ -142,9 +145,9 @@ sub hits2db
 			my $identity= $tp->{hsp}->percent_identity;
 			my $score   = $tp->{hsp}->score;
 
-			if( $bu->exec_SQL_ar(q[SELECT COUNT(*) AS N FROM cof_hits WHERE q_fs_id=? AND h_fs_id=? LIMIT 1], $q_id, $h_id)->[0]{N}){
+			if( $bu->exec_SQL_ar( q[SELECT COUNT(*) AS N FROM cof_hits WHERE q_fs_id=? AND h_fs_id=? LIMIT 1], $q_id, $h_id )->[0]{N}){
 
-				$bu->exec_SQL_nr(q[
+				$bu->exec_SQL_nr( q[
 					UPDATE cof_hits SET q_start=?, q_end=?, q_fs_ali_coord=?, h_start=?, h_end=?,
 h_fs_ali_coord=?, ali_len=?, score=?, evalue=?, identity=? WHERE q_fs_id=? AND h_fs_id=? LIMIT 1],
 $q_start, $q_end, $q_fs_ali_coord, $h_start, $h_end, $h_fs_ali_coord, $ali_len, $score, $evalue, $identity, $q_id, $h_id);

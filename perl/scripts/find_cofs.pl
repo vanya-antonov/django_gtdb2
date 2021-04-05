@@ -42,7 +42,7 @@ GetOptions(
 	'user=i'  => \$USER_ID,
 ) || die &usage();
 
-die &usage() if @ARGV!=2;
+die &usage() if @ARGV != 2;
 
 ###
 my $START_TIME = time;
@@ -195,8 +195,10 @@ sub add_query_to_cluster
 sub usage
 {
 	my($msg) = @_;
-	$msg = $msg ? "$msg\n" : '';
-	my $script = File::Spec->splitpath($0);
+	$msg .= $msg ? "\n" : '';
+
+	my $script = "\x1b[32m" . File::Spec->splitpath($0) . "\x1b[0m";
+
 	return"$msg
 DESCRIPTION:
     The script finds new COFs from all the fs (__ALL__) or it can split existing big COFs (if COF_ID specified)
