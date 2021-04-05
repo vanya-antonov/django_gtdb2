@@ -11,6 +11,9 @@ use DBI;
 
 my $VERSION = '1.04';
 
+# DB for aligment by BLASTp
+my $prot_db = '/home/alessandro/Tasks/Clustering/db/Streptomyces.seq_prot.faa';
+
 ###
 # Default Options
 my $OUTPUT;
@@ -93,7 +96,7 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 	}
 
 	my %dt;
-	my( $organism, $taxon, $num_fs_and_TTA_genes );
+	my( $organism, $taxon, $num_fs_and_TTA_genes, $num_fs_and_TTA_genes_in_cofs );
 
 	for my $feat_obj ($seq_obj->get_SeqFeatures) {
 		my $primary_tag = $feat_obj->primary_tag;
@@ -132,9 +135,9 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		my $len   = $end - $start;
 
 		# Sequence Identifier
-		my $seq_id = "$acc_id:$start.$len";
+		my $gene_id = "$acc_id:$start.$len";
 
-		next if exists $dt{ $seq_id };
+		next if exists $dt{ $gene_id };
 
 		# Get Nucleotide sequence (CDS)
 		my $fna_seq = lc $feat_obj->spliced_seq->seq; # e.g. 'ATTATTTTCGCT...'
@@ -155,7 +158,7 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		if( $feat_obj->has_tag('protein_id') ){
 			push @pp, $feat_obj->get_tag_values('protein_id'); # e.g. 'WP_100112605.1', from a line like /protein_id="WP_100112605.1"
 		}
-		$dt{ $seq_id }{'proteins'} = join ',', @pp if @pp;
+		$dt{ $gene_id }{'proteins'} = join ',', @pp if @pp;
 
 		my @gg; # gene name(s) for FNA/FAA
 		if( $feat_obj->has_tag('gene') ){
@@ -164,20 +167,28 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		}elsif( $feat_obj->has_tag('locus_tag') ){
 			push @gg, $feat_obj->get_tag_values('locus_tag');
 		}
-		$dt{ $seq_id }{'genes'} = join ',', @gg if @gg;
+		$dt{ $gene_id }{'genes'} = join ',', @gg if @gg;
 
 		# Save Gene Location
-		$dt{ $seq_id }{'start'} = $start;
-		$dt{ $seq_id }{'end'}   = $end;
+		$dt{ $gene_id }{'start'} = $start;
+		$dt{ $gene_id }{'end'}   = $end;
 
-		$dt{ $seq_id }{'TTAs'} = \@TTAs; # Save TTA-codons for the future...
+		$dt{ $gene_id }{'TTAs'} = \@TTAs; # Save TTA-codons for the future...
 
 		# Capitalize TTA-codons in sequence (CDS)
 		substr( $fna_seq, $_, 3) = 'TTA' for @TTAs;
-		$dt{ $seq_id }{'fna'} = $fna_seq;
+		$dt{ $gene_id }{'fna'} = $fna_seq;
 
 		# Get protein sequence
-		$dt{ $seq_id }{'faa'} = uc(join '', $feat_obj->get_tag_values('translation')) if $feat_obj->has_tag('translation');
+		$dt{ $gene_id }{'faa'} = uc(join '', $feat_obj->get_tag_values('translation')) if $feat_obj->has_tag('translation');
+
+		my $faa_tmp = 'tmp.faa';
+		open FAATMP, ">$faa_tmp";
+		&save_fasta('FAATMP', 'faa', $gene_id, \%dt );
+		close FAATMP;
+
+		# Aligment by BLASTp and search FS-ortholog and Clasters
+		$num_fs_and_TTA_genes_in_cofs += &BLAST_algn( $faa_tmp, $prot_db );
 
 		# Search corresponding FS for TTA-genes
 		my $num = $dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS num FROM fshifts 
@@ -194,11 +205,11 @@ WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end } );
 				$descr = join ';', $feat_obj->get_tag_values('product'); # from a line like: /product="VWA domain-containing protein"
 			}
 
-			print WOFSTSV join("\t", $seq_id, ($dt{ $seq_id }{'genes'}||''), ($dt{ $seq_id }{'proteins'}||''),
+			print WOFSTSV join("\t", $gene_id, ($dt{ $gene_id }{'genes'}||''), ($dt{ $gene_id }{'proteins'}||''),
 									$strand, $type_seq, $descr ), "\n";
 
-			&save_fasta('WOFSFNA', 'fna', $seq_id, \%dt );
-			&save_fasta('WOFSFAA', 'faa', $seq_id, \%dt );
+			&save_fasta('WOFSFNA', 'fna', $gene_id, \%dt );
+			&save_fasta('WOFSFAA', 'faa', $gene_id, \%dt );
 		}
 
 	}
@@ -233,14 +244,13 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 	$all{ $taxon }{'NUM_FS_GENES_in_COFS'} += $num_fs_genes_in_cofs || 0; # 6
 
 	$all{ $taxon }{'NUM_TTA_GENES_in_COFS'} += 0000000000000 || 0; # 7
-	$all{ $taxon }{'NUM_FS_and_TTA_GENES_in_COFS'} += 0000000000000 || 0; # 8
+	$all{ $taxon }{'NUM_FS_and_TTA_GENES_in_COFS'} += $num_fs_and_TTA_genes_in_cofs || 0; # 8
 
 	push @{ $all{ $taxon }{'ACC_IDs'} }, $acc_id; # 9
 
 }
 
 print "\n# Elapsed time: ".(time - $START_TIME)." sec\n";
-
 
 unless( scalar( keys %all )){
 
@@ -312,6 +322,36 @@ sub save_fasta {
 	push @h, "protein=$dt->{ $head }{'proteins'}" if $dt->{ $head }{'proteins'};
 
 	print $fh join(' ', @h), "\n$dt->{ $head }{ $stype }\n";
+}
+
+
+# Aligment by BLASTp: Search FS-ortholog and Clasters
+sub BLAST_algn {
+	my( $faa_file, $prot_db ) = @_;
+	return 0 unless -s $faa_file;
+
+	my $evalue = '1e-10';
+	my $num_threads = 14;
+
+	my $run = "blastp -query $faa_file -db $prot_db -outfmt 6 -num_threads $num_threads -evalue $evalue";
+# -task blastn -perc_identity $ident -evalue $evalue -max_hsps 1 -outfmt 6 -num_threads $num_threads
+
+	my $num = 0;
+	open( HITSF, "$run |") or die "Can't run BLASTp: $!";
+	while(<HITSF>){
+		chomp;
+		next if /^$/;	# Drop comments
+=comment
+NC_010572.1:66749.1145	6079	37.596	391	213	10	13	381	74	455	2.45e-64	217
+=cut
+		my( $gene_id, $fs_id, $pident, $alen, $mismatches, $gaps, $qstart, $qend, $sstart, $send, $evalue, $bitscore ) = split /\t/;
+		$num = $dbh->selectrow_array( qq{ SELECT COUNT(cof_id) FROM fshifts WHERE cof_id IS NOT NULL AND id = $fs_id } );
+
+		last if $num;
+	}
+	close HITSF;
+
+	return $num;
 }
 
 
