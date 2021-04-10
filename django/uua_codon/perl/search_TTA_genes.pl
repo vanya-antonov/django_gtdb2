@@ -11,8 +11,12 @@ use DBI;
 
 my $VERSION = '1.04';
 
+# BLAST options
+my $evalue = '1e-10';
+my $num_threads = 14;
+
 # DB for aligment by BLASTp
-my $prot_db = '/home/alessandro/Tasks/Clustering/db/Streptomyces.seq_prot.faa';
+my $prot_db = '/home/alessandro/BLASTp/db/Streptomyces.seq_prot.faa';
 
 ###
 # Default Options
@@ -96,7 +100,7 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 	}
 
 	my %dt;
-	my( $organism, $taxon, $num_fs_and_TTA_genes, $num_fs_and_TTA_genes_in_cofs );
+	my( $organism, $taxon, $num_fs_and_TTA_genes, $num_TTA_genes_in_cofs, $num_fs_and_TTA_genes_in_cofs );
 
 	for my $feat_obj ($seq_obj->get_SeqFeatures) {
 		my $primary_tag = $feat_obj->primary_tag;
@@ -154,20 +158,18 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		}
 		next unless @TTAs; # gene/transcript without TTA-codons
 
-		my @pp; # protein_id(s) for FNA/FAA
 		if( $feat_obj->has_tag('protein_id') ){
-			push @pp, $feat_obj->get_tag_values('protein_id'); # e.g. 'WP_100112605.1', from a line like /protein_id="WP_100112605.1"
+			# e.g. 'WP_100112605.1', from a line like /protein_id="WP_100112605.1"
+			$dt{ $gene_id }{'proteins'} = join ',', $feat_obj->get_tag_values('protein_id'); # protein_id(s) for FNA/FAA
 		}
-		$dt{ $gene_id }{'proteins'} = join ',', @pp if @pp;
 
-		my @gg; # gene name(s) for FNA/FAA
 		if( $feat_obj->has_tag('gene') ){
-			push @gg, $feat_obj->get_tag_values('gene');	# e.g. 'NDP', from a line like '/gene="NDP"'
+			# e.g. 'NDP', from a line like '/gene="NDP"'
+			$dt{ $gene_id }{'genes'} = join ',', $feat_obj->get_tag_values('gene'); # gene name(s) for FNA/FAA
 
 		}elsif( $feat_obj->has_tag('locus_tag') ){
-			push @gg, $feat_obj->get_tag_values('locus_tag');
+			$dt{ $gene_id }{'genes'} = join ',', $feat_obj->get_tag_values('locus_tag');
 		}
-		$dt{ $gene_id }{'genes'} = join ',', @gg if @gg;
 
 		# Save Gene Location
 		$dt{ $gene_id }{'start'} = $start;
@@ -180,22 +182,22 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		$dt{ $gene_id }{'fna'} = $fna_seq;
 
 		# Get protein sequence
-		$dt{ $gene_id }{'faa'} = uc(join '', $feat_obj->get_tag_values('translation')) if $feat_obj->has_tag('translation');
+		my $yes_cof;
+		if( $feat_obj->has_tag('translation') ){
+			$dt{ $gene_id }{'faa'} = uc(join '', $feat_obj->get_tag_values('translation'));
 
-		my $faa_tmp = 'tmp.faa';
-		open FAATMP, ">$faa_tmp";
-		&save_fasta('FAATMP', 'faa', $gene_id, \%dt );
-		close FAATMP;
+			# Aligment by BLASTp and search FS-ortholog and Clasters
+			$yes_cof = &BLAST_algn( $dbh, $prot_db, $evalue, $num_threads, $dt{ $gene_id }{'faa'} );
+			++$num_TTA_genes_in_cofs if $yes_cof;
+		}
 
-		# Aligment by BLASTp and search FS-ortholog and Clasters
-		$num_fs_and_TTA_genes_in_cofs += &BLAST_algn( $faa_tmp, $prot_db );
-
-		# Search corresponding FS for TTA-genes
-		my $num = $dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS num FROM fshifts 
+		# Search corresponding FS for TTA-genes: |start...{FS-coord}...end|
+		my $num = $dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS num FROM fshifts
 WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end } );
 
 		if( $num ){
 			$num_fs_and_TTA_genes += $num;
+			++$num_fs_and_TTA_genes_in_cofs if $yes_cof;
 
 		}elsif( $WOFS ){
 			my $strand = $feat_obj->location->strand;
@@ -243,7 +245,7 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 	$all{ $taxon }{'NUM_COFS'} += $num_cofs || 0; # 5
 	$all{ $taxon }{'NUM_FS_GENES_in_COFS'} += $num_fs_genes_in_cofs || 0; # 6
 
-	$all{ $taxon }{'NUM_TTA_GENES_in_COFS'} += 0000000000000 || 0; # 7
+	$all{ $taxon }{'NUM_TTA_GENES_in_COFS'} += $num_TTA_genes_in_cofs || 0; # 7
 	$all{ $taxon }{'NUM_FS_and_TTA_GENES_in_COFS'} += $num_fs_and_TTA_genes_in_cofs || 0; # 8
 
 	push @{ $all{ $taxon }{'ACC_IDs'} }, $acc_id; # 9
@@ -327,27 +329,24 @@ sub save_fasta {
 
 # Aligment by BLASTp: Search FS-ortholog and Clasters
 sub BLAST_algn {
-	my( $faa_file, $prot_db ) = @_;
-	return 0 unless -s $faa_file;
+	my( $dbh, $prot_db, $evalue, $num_threads, $fasta ) = @_;
+	my $num;
 
-	my $evalue = '1e-10';
-	my $num_threads = 14;
+	# -max_hsps 1
+	my $run = qq{echo $fasta | blastp -db $prot_db -outfmt "6 sacc" -num_threads $num_threads -evalue $evalue};
 
-	my $run = "blastp -query $faa_file -db $prot_db -outfmt 6 -num_threads $num_threads -evalue $evalue";
-# -task blastn -perc_identity $ident -evalue $evalue -max_hsps 1 -outfmt 6 -num_threads $num_threads
-
-	my $num = 0;
-	open( HITSF, "$run |") or die "Can't run BLASTp: $!";
+	open( HITSF, "$run 2>/dev/null |") or die "Can't run BLASTp: $!";
 	while(<HITSF>){
 		chomp;
-		next if /^$/;	# Drop comments
+		next if /^$/ or /^\D/;	# Skip empty line or barewords
 =comment
 NC_010572.1:66749.1145	6079	37.596	391	213	10	13	381	74	455	2.45e-64	217
-=cut
-		my( $gene_id, $fs_id, $pident, $alen, $mismatches, $gaps, $qstart, $qend, $sstart, $send, $evalue, $bitscore ) = split /\t/;
-		$num = $dbh->selectrow_array( qq{ SELECT COUNT(cof_id) FROM fshifts WHERE cof_id IS NOT NULL AND id = $fs_id } );
 
-		last if $num;
+my( $gene_id, $fs_id, $pident, $alen, $mismatches, $gaps, $qstart, $qend, $sstart, $send, $evalue, $bitscore ) = split /\t/;
+=cut
+		$num = $dbh->selectrow_array( qq{ SELECT COUNT(cof_id) FROM fshifts WHERE cof_id IS NOT NULL AND id=$_} ); # $fs_id
+
+		last if $num > 0; # Take 1st best COF
 	}
 	close HITSF;
 
@@ -368,11 +367,11 @@ USAGE:
     $script <file.gbk> [OPTIONS]
 
 EXAMPLE:
-    $script NZ_CP023977.1.gbk -auto -output=stdout
+    $script NC_010572.1.gbk -auto -output=stdout
 
-    $script NZ_CP023977.1.gbk -auto
+    $script NC_010572.1.gbk -auto
 OR
-    $script NZ_CP023977.1.gbk -save_fna_seq NZ_CP023977.1.fna -save_faa_seq NZ_CP023977.1.faa -output NZ_CP023977.1.tsv
+    $script NC_010572.1.gbk -save_fna_seq NC_010572.1.fna -save_faa_seq NC_010572.1.faa -output NC_010572.1.tsv
 
 HERE:
     <file.gbk>   -- input GenBank file only
@@ -384,8 +383,20 @@ OPTIONS:
     --auto                       --  autocomplete options: --output, --save_fna_seqs, --save_faa_seqs
     --wofs                       --  save the collection of TTA-genes and their sequences without FrameShift
 
+OUTPUT TABLE FORMAT:
+  0.TAXON                        --  NCBI taxon id of organism
+  1.ORG_NAME                     --  organism name
+  2.NUM_TTA_GENES                --  total number of genes with TTA codon (TTA-genes)
+  3.NUM_FS_GENES                 --  total number of FS-genes
+  4.NUM_FS_and_TTA_GENES         --  intersection of FS-genes with TTA-genes
+  5.NUM_COFS                     --  total number of clusters that include FS-genes
+  6.NUM_FS_GENES_in_COFS         --  total number of FS-genes in clusters
+  7.NUM_TTA_GENES_in_COFS        --  total number of TTA-genes that are 'similar' to FS-genes from ALL clusters
+  8.NUM_FS_and_TTA_GENES_in_COFS --  
+  9.ACC_IDs                      --  Accession ID(;s) of locus/genomic sequence(s)
+
 NOTES:
-    A configuration DB file 'db.cfg' is required
+    A configuration DB file 'db.cfg' is required.
 
 ";
 }
