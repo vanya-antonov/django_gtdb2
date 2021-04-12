@@ -396,7 +396,8 @@ OUTPUT TABLE FORMAT:
   9.ACC_IDs                      --  Accession ID(;s) of locus/genomic sequence(s)
 
 NOTES:
-    A configuration DB file 'db.cfg' is required.
+  1. a configuration DB file 'db.cfg' is required.
+  2. BLAT program is required.
 
 ";
 }

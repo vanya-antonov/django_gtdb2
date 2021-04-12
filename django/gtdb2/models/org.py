@@ -261,8 +261,8 @@ class Org(AbstractUnit):
         Returns a list of created fshifts.
 
         Arguments:
-         - gtgm_fn - (str) full path the the genetack-GM output file
-         - fsgenes_fna_fn - (str) full path the the fasta file with
+         - gtgm_fn - (str) full path to the genetack-GM output file
+         - fsgenes_fna_fn - (str) full path to the fasta file with
            fs-gene nt seqs.
         """
         all_rows = pd.read_csv(gtgm_fn, sep='\s+')
@@ -528,7 +528,7 @@ def _get_genetack_fs_borders(fs, fsgene_seqs_d):
     fsgene_seq - (str) nt seq with lower and upper-case letters. This is
     needed to handle fs-genes with several predicted fshifts.
     """
-    fsgene_seq_r = fsgene_seqs_d.get(str(fs['FS_coord']), None)
+    fsgene_seq_r = fsgene_seqs_d.get( str(fs['Seq_ID']) + ':' + str(fs['FS_coord']), None )
     if fsgene_seq_r is None:
         logging.error("Can't find fs-gene seq for fshift '%s'" % fs['FS_coord'])
     fsgene_seq = str(fsgene_seq_r.seq)
