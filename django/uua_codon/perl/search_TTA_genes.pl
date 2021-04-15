@@ -397,7 +397,7 @@ OUTPUT TABLE FORMAT:
 
 NOTES:
   1. a configuration DB file 'db.cfg' is required.
-  2. BLAT program is required.
+  2. BLAST program is required.
 
 ";
 }
