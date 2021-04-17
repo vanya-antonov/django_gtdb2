@@ -8,11 +8,11 @@ use warnings;
 ###
 # Ivan Antonov (antonov1986@gmail.com)
 #
-# Использует таблицы:
+# DB tables are used:
 #	'cof_hits'
 #	'fshifts'
-# Изменяет (наполняет) таблицы:
-#	'fshifts' -- добавляет cof_id найденных кластеров
+# DB tables are modified/updated and/or filled in:
+#	'fshifts' -- add found 'cof_id' of clusters
 #	'cofs'
 #	'cof_params'
 
@@ -62,13 +62,19 @@ exit;
 sub run
 {
 	my %opts = @_;
+	my $chk;
 
 	my $gtdb = MyLibGT::classes::GeneTackDB->new( MyLibGT::BaseUtil->new() );
 	my $bu = $gtdb->{bu};
 
 	my $db_name = $bu->{db_name}; # DataBase name
 
-	$bu->exec_SQL_nr('ALTER TABLE cof_params DROP FOREIGN KEY cof_params_ibfk_1');
+	# Check for Index existence
+	$chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
+			WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME='cof_params' AND COLUMN_NAME=?], 'parent_id')->[0]{N};
+
+	# remove FOREIGN KEY
+	$bu->exec_SQL_nr('ALTER TABLE cof_params DROP FOREIGN KEY cof_params_ibfk_1') if $chk;
 
 	my $all_fs_ids = [];
 	my %fs_only    = ();
@@ -101,7 +107,7 @@ sub run
 	$bu->commit;
 
 	# Check for Index existence
-	my $chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
+	$chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
 			WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME='fshifts' AND COLUMN_NAME=?], 'cof_id')->[0]{N};
 
 	$bu->exec_SQL_nr('ALTER TABLE fshifts ADD CONSTRAINT FOREIGN KEY (cof_id) REFERENCES cofs(id)') unless $chk;

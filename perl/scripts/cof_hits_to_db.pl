@@ -89,7 +89,7 @@ if !$chk or $chk < 2;
 	unless( $bu->exec_SQL_ar( qq[SELECT COUNT(1) AS N FROM information_schema.STATISTICS
 WHERE table_schema=DATABASE() AND table_name='cof_hits' AND index_name=?], $index_cofhts )->[0]{N} ){
 
-	    $bu->exec_SQL_nr("CREATE UNIQUE INDEX $index_cofhts ON cof_hits(q_fs_id, h_fs_id);");
+		$bu->exec_SQL_nr("CREATE UNIQUE INDEX $index_cofhts ON cof_hits(q_fs_id, h_fs_id);");
 	}
 
 	$bu->commit;

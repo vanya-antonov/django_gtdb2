@@ -25,6 +25,7 @@ my $SAVE_FNA_SEQS;
 my $SAVE_FAA_SEQS;
 my $AUTO;
 my $WOFS;
+my $HEADER;
 
 ###
 # Parse input data
@@ -34,6 +35,7 @@ GetOptions(
 	'save_faa_seqs=s' => \$SAVE_FAA_SEQS,
 	'auto'            => \$AUTO,
 	'wofs'            => \$WOFS,
+	'header'          => \$HEADER,
 ) or die &usage();
 
 my $infile = $ARGV[0] || die &usage(); # 'NZ_CP023977.1.gbk';
@@ -295,9 +297,9 @@ my $head_out = join "\t", 'TAXON', @hh, 'ACC_IDs';
 # Save collection of TTA-genes
 if( $OUTPUT ){
 	open OFILE, ">$OUTPUT";
-	print OFILE "$head_out\n";
+	print OFILE "$head_out\n" if $HEADER;
 }else{
-	print "$head_out\n";
+	print "$head_out\n" if $HEADER;
 }
 
 for my $taxon ( sort keys %all ){
@@ -341,7 +343,6 @@ sub BLAST_algn {
 		next if /^$/ or /^\D/;	# Skip empty line or barewords
 =comment
 NC_010572.1:66749.1145	6079	37.596	391	213	10	13	381	74	455	2.45e-64	217
-
 my( $gene_id, $fs_id, $pident, $alen, $mismatches, $gaps, $qstart, $qend, $sstart, $send, $evalue, $bitscore ) = split /\t/;
 =cut
 		$num = $dbh->selectrow_array( qq{ SELECT COUNT(cof_id) FROM fshifts WHERE cof_id IS NOT NULL AND id=$_} ); # $fs_id
@@ -380,6 +381,7 @@ OPTIONS:
     --output  <file.tsv|stdout>  --  output table. Default STDOUT output
     --save_fna_seqs  <file.fna>  --  save nt sequences of CDS(s) with TTA
     --save_faa_seqs  <file.faa>  --  save sequences of all protein(s) with TTA (Leu)
+    --header                     --  output header of table
     --auto                       --  autocomplete options: --output, --save_fna_seqs, --save_faa_seqs
     --wofs                       --  save the collection of TTA-genes and their sequences without FrameShift
 
@@ -392,7 +394,7 @@ OUTPUT TABLE FORMAT:
   5.NUM_COFS                     --  total number of clusters that include FS-genes
   6.NUM_FS_GENES_in_COFS         --  total number of FS-genes in clusters
   7.NUM_TTA_GENES_in_COFS        --  total number of TTA-genes that are 'similar' to FS-genes from ALL clusters
-  8.NUM_FS_and_TTA_GENES_in_COFS --  
+  8.NUM_FS_and_TTA_GENES_in_COFS --  intersection of FS-genes with TTA-genes in clusters
   9.ACC_IDs                      --  Accession ID(;s) of locus/genomic sequence(s)
 
 NOTES:
