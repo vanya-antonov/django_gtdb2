@@ -76,6 +76,10 @@ sub run
 	# remove FOREIGN KEY
 	$bu->exec_SQL_nr('ALTER TABLE cof_params DROP FOREIGN KEY cof_params_ibfk_1') if $chk;
 
+	# remove ORPHAN (Zombie) cof_id(s) from 'cofs' table if exist, of course
+	$gtdb->delete_cof( $_->{ID} ) for @{ $bu->exec_SQL_ar('SELECT a.id FROM cofs AS a LEFT JOIN(
+SELECT cof_id AS id FROM fshifts UNION SELECT parent_id AS id FROM cof_params ) AS b USING(id) WHERE b.id IS NULL') };
+
 	my $all_fs_ids = [];
 	my %fs_only    = ();
 	if( $opts{subset} eq '__ALL__')
