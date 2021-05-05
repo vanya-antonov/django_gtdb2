@@ -16,7 +16,7 @@
         <h1>{{ organism.name }}</h1>
 
         <v-expansion-panels
-            :value="Array.from(Array(4).keys())"
+            :value="Array.from(Array(5).keys())"
             multiple
             accordion
         >
