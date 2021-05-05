@@ -90,7 +90,8 @@ sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_
 # unzip sql.gz file
 # gunzip ../dump.sql.gz
 # load mysql dump
-SQL_DUMP_PATH=../170620.chelatase_db.sql bash load_dump.sh
+export SQL_DUMP_PATH=../170620.chelatase_db.sql
+bash load_dump.sh
 # check loaded tables
 sudo docker-compose exec db sh -c 'mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "show tables"'
 
@@ -100,6 +101,11 @@ docker-compose up -d
 docker ps -a
 # Stop all the containers:
 docker-compose down
+
+# I can connect to the running containers as follows:
+sudo docker-compose exec  db      bash
+sudo docker-compose exec  app     bash
+sudo docker-compose exec  django  bash
 ```
 
 # Run unit tests
