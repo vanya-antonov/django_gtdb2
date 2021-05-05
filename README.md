@@ -101,6 +101,11 @@ docker-compose up -d
 docker ps -a
 # Stop all the containers:
 docker-compose down
+
+# I can connect to the running containers as follows:
+sudo docker-compose exec  db      bash
+sudo docker-compose exec  app     bash
+sudo docker-compose exec  django  bash
 ```
 
 # Run unit tests
