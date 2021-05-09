@@ -64,7 +64,12 @@
                 </v-expansion-panel-content>
             </v-expansion-panel>
             <v-expansion-panel>
-            <span v-html="organism.plot_gen_diagram" />
+                 <v-expansion-panel-header><h3>
+                      Cobalt chelatase subunits on plot
+                 </h3></v-expansion-panel-header>
+                <v-expansion-panel-content>
+                    <span v-html="organism.plot_gen_diagram" />
+                </v-expansion-panel-content>
             </v-expansion-panel>
             <v-expansion-panel>
                 <v-expansion-panel-header>
