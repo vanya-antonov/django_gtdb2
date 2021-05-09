@@ -316,86 +316,75 @@ class ChelataseOrg(Org):
     def plot_gen_diagram(self):
         id_org = self.id # 86#self.id
 
+        def calculate_label(x):
+            if x // 10 ** 6 >= 1: return str(round(x / 10 ** 6, 2)) + 'M'
+            else:return str(round(x / 10 ** 3)) + 'K'
 
-        #print(self.id, 'Айди для вывода')
-        c_org = ChelataseOrg.objects.get(param_set__name='chel_genotype_genes', id=id_org)  # Берем Delftia acidovorans
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)  # Берем Delftia acidovorans
         f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
 
         ch_set = ChelataseFeat.objects.filter(seq__org=id_org, param_set__name='chel_subunit').all()
         all_parents = [i.parent_id for i in ch_set if i.parent_id is not None]
-        ch_set_draw = [i for i in ch_set if i.id not in all_parents]
-        f_org = ch_set_draw
+        f_org = [i for i in ch_set if i.id not in all_parents]
 
-        dict_plot = {'max': 10}
-        locs = [0]
+        dict_plot, locs = {'max_scale': 10, 'gen_len_max': 0, 'min_scale': 10 ** 8, 'min_loc': 10 ** 10}, [0]
 
         for i in f_org:
             if 'chelatase' in i.descr:
-                if max(i.end, i.start) > dict_plot['max']:
-                    dict_plot['max'] = max(i.end, i.start)
+                if max(i.end, i.start) > dict_plot['max_scale']: dict_plot['max_scale'] = max(i.end, i.start)
+                if i.end - i.start < dict_plot['min_scale']: dict_plot['min_scale'] = i.end - i.start
+                if i.end - i.start > dict_plot['gen_len_max']: dict_plot['gen_len_max'] = i.end - i.start
+                if min(i.end, i.start) < dict_plot['min_loc']: dict_plot['min_loc'] = min(i.end, i.start)
 
-        scale = 50
-        dict_plot['max'] /= scale
+        scale = 100  # Будет считать, что скала это 100%
+        min_dist = 0.10 * scale  # *dict_plot['max_scale']
+        dict_plot['max_scale'] /= scale
+        dict_plot['min_loc'] /= dict_plot['max_scale']
+        dict_plot['gen_len_max'] /= dict_plot['max_scale']
+        min_gen_len = 0.10 * scale * dict_plot['gen_len_max']
 
         for i in f_org:
-            loc = ((i.start + i.end) / 2) / dict_plot['max']
+            loc = ((i.start + i.end) / 2) / dict_plot['max_scale']
             locs.append(loc)
-            dict_plot[i.name] = [{'len': i.end - i.start / dict_plot['max'],
-                                  'start': i.start / dict_plot['max'],
-                                  'end': i.end / dict_plot['max'],
-                                  'loc': loc,
-                                  'label': i.prm.chel_gene,
-                                  'strand': i.strand,
-                                  'type': "gene"
-                                  }]
+            dict_plot[i.name] = [{'len': i.end - i.start / dict_plot['max_scale'],
+                                  'start': i.start / dict_plot['max_scale'], 'end': i.end / dict_plot['max_scale'],
+                                  'loc': loc, 'label': i.prm.chel_gene, 'strand': i.strand, 'type': "gene"}]
 
-        seq = c_org.seq_set.first()
         fsh_set = ChelataseFshift.objects.filter(seq__org=c_org).all()
 
         for i in fsh_set:
-            loc = ((i.start + i.end) / 2) / dict_plot['max']
-            dict_plot[i.name] = [{'len': (i.end - i.start) / dict_plot['max'],
-                                  'start': i.start / dict_plot['max'],
-                                  'end': i.end / dict_plot['max'],
-                                  'loc': loc,
-                                  'type': "fsh"
-                                  }]
+            loc = ((i.start + i.end) / 2) / dict_plot['max_scale']
+            dict_plot[i.name] = [{'len': (i.end - i.start) / dict_plot['max_scale'],
+                                  'start': i.start / dict_plot['max_scale'], 'end': i.end / dict_plot['max_scale'],
+                                  'loc': loc, 'type': "fsh"}]
 
         locs = sorted(locs)
-        new_locs = {0: 0}
-        tabs = []
-        a, b = 0, 0
-        for i in locs:
-            b = i
-            if b - a > 0.3 * scale:
-                new_locs[b] = max(new_locs.values()) + 15  # Сдвигаем
-                b = max(new_locs.values()) + 15
-                a = b
-                tabs.append((b - a) / 2)
-                a = b
+        new_locs, tabs = {0: 0}, {}  # in tabs there are loc and distance
+        left, right, shift = 0, 0, 0
 
-            if b - a < 0.07 * scale and b != 0:
-                new_locs[b] = b - 5
-                a = b - 5
-            else:
-                new_locs[b] = b
-                a = b
+        for i in locs:
+            right = i
+            if right - left > min_dist and left != 0 and right != max(locs):
+                shift += (right - left) * 3 / 4
+                tabs[left + (right - left) / 2 - shift / 2] = calculate_label((right - left) * dict_plot['max_scale'])
+
+            if right - left < min_gen_len and right != 0:
+                new_locs[right] = right - shift + 4
+            else: new_locs[right] = right - shift
+            left = right
 
         features = []
 
         def get_color(gene):
-            if 'chl' in gene:
-                return '#ffcccc'
-            else:
-                return "#ccccff"
+            if 'chl' in gene:return '#ffcccc'
+            else:return "#ccccff"
 
         for k, v in dict_plot.items():
-            if k != 'max' and dict_plot[k][0]['type'] == 'gene':
-                features.append(
-                    GraphicFeature(start=new_locs[dict_plot[k][0]['loc']],
-                                   end=new_locs[dict_plot[k][0]['loc']],
-                                   strand=dict_plot[k][0]['strand'],
-                                   color="#ccccff", label=k))  # Табличка
+            if k not in ['max_scale', 'min_scale', 'gen_len_max', 'min_loc'] and dict_plot[k][0]['type'] == 'gene':
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']],  # Табличка
+                                               end=new_locs[dict_plot[k][0]['loc']],
+                                               strand=dict_plot[k][0]['strand'],
+                                               color="#ccccff", label=k))
                 features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 2,
                                                end=new_locs[dict_plot[k][0]['loc']] + 2,
                                                strand=dict_plot[k][0]['strand'],
@@ -403,25 +392,23 @@ class ChelataseOrg(Org):
                                                thickness=17,
                                                label=dict_plot[k][0]['label']))
 
-        for lo in tabs:
-            features.append(
-                GraphicFeature(start=lo, end=lo + 1 / 4, strand=0, color="#ffd700"))
-            features.append(
-                GraphicFeature(start=lo + 2 / 4, end=lo + 2 / 4, strand=0, color="#ffd700",
-                               label="about 4M \n nucleotides"))
-            features.append(
-                GraphicFeature(start=lo + 3 / 4, end=lo + 4 / 4, strand=0, color="#ffd700")
-            )
+        for lo, dist in tabs.items():
+            features.append(GraphicFeature(start=lo, end=lo + 1 / 4, strand=0, color="#ffd700"))
+            features.append(GraphicFeature(
+                start=lo + 2 / 4, end=lo + 2 / 4, strand=0, color="#ffd700",
+                label="about {} \n nucleotides".format(dist)))
+            features.append(GraphicFeature(start=lo + 3 / 4, end=lo + 4 / 4, strand=0, color="#ffd700"))
 
-        record = GraphicRecord(first_index=0.0, sequence_length=55.0, features=features, feature_level_height=2)
+        delta = 9  # Отступ от края
+        record = GraphicRecord(first_index=dict_plot['min_loc'] - delta,
+                               sequence_length=106 - dict_plot['min_loc'] + delta - shift,
+                               labels_spacing=4, features=features, feature_level_height=2)
 
+        record.plot(figure_width=15, figure_height=3)
         ax, plo = record.plot(figure_width=15, figure_height=3);
-
         svg_pic = StringIO()
-
         ax.figure.savefig(svg_pic, format="svg", bbox_inches='tight')
 
-        print(self.name)
         return svg_pic.getvalue()
 
 
