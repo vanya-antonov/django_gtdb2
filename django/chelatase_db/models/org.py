@@ -315,6 +315,7 @@ class ChelataseOrg(Org):
     @property
     def plot_gen_diagram(self):
         id_org = self.id
+
         def calculate_label(x):
             if x // 10 ** 6 >= 1:
                 return str(round(x / 10 ** 6, 2)) + 'M'
@@ -332,7 +333,9 @@ class ChelataseOrg(Org):
 
         ch_set = ChelataseFeat.objects.filter(seq__org=id_org, param_set__name='chel_subunit').all()
         all_parents = [i.parent_id for i in ch_set if i.parent_id is not None]
-        f_org = [i for i in ch_set if i.id not in all_parents]
+
+        f_org = [i for i in ch_set if i.id not in all_parents]  # Извлекаем все гены
+        fsh_set = ChelataseFshift.objects.filter(seq__org=c_org).all()  # Извлекаем все фрэйм-шифты
 
         dict_plot, locs = {'max_scale': 10, 'gen_len_max': 0, 'min_scale': 10 ** 8, 'min_loc': 10 ** 10}, [0]
 
@@ -348,38 +351,32 @@ class ChelataseOrg(Org):
         dict_plot['min_loc'] /= dict_plot['max_scale']
         dict_plot['gen_len_max'] /= dict_plot['max_scale']
 
-        for i in f_org:
+        for i in f_org:  # Нормируем положения в генах
             loc = ((i.start + i.end) / 2) / dict_plot['max_scale']
             locs.append(loc)
-            dict_plot[i.name] = [{'len': i.end - i.start / dict_plot['max_scale'],
+            dict_plot[i.name] = [{'len': (i.end - i.start) / dict_plot['max_scale'],
                                   'start': i.start / dict_plot['max_scale'], 'end': i.end / dict_plot['max_scale'],
                                   'loc': loc, 'label': i.prm.chel_gene, 'strand': i.strand, 'type': "gene"}]
 
-        fsh_set = ChelataseFshift.objects.filter(seq__org=c_org).all()
-
-        for i in fsh_set:
+        for i in fsh_set:  # нормируем положения в фрэймшифтах
             loc = ((i.start + i.end) / 2) / dict_plot['max_scale']
             dict_plot[i.name] = [{'len': (i.end - i.start) / dict_plot['max_scale'],
                                   'start': i.start / dict_plot['max_scale'], 'end': i.end / dict_plot['max_scale'],
                                   'loc': loc, 'type': "fsh"}]
-
         locs = sorted(locs)
         new_locs, tabs = {0: 0}, {}  # in tabs there are loc and distance
         left, right, shift_tabs, shift_genes = 0, 0, 0, 0
 
-        min_gen_len = 0.10 * dict_plot['gen_len_max']
+        min_gen_len = 10.10 * dict_plot['gen_len_max']
         min_dist = 0.2 * scale  # *dict_plot['max_scale']
 
         for i in locs:
             right = i
             if right - left > min_dist and left != 0 and left != max(locs):
-                # shift_tabs += (right - left)*3/4
-                tabs[(right + left) / 2 - shift_tabs / 2 + shift_genes] = calculate_label(
-                    (right - left) * dict_plot['max_scale'])
-
+                shift_tabs += (right - left) / 2
+                tabs[(right + left) / 2 - shift_tabs / 2] = calculate_label((right - left) * dict_plot['max_scale'])
             if right - left < min_gen_len and right != 0:
-                print(right - left, min_gen_len, 'сдвиг гена')
-                shift_genes = 1
+                shift_genes = 6  # right-left
                 new_locs[right] = right - shift_tabs + shift_genes
                 left = right - shift_tabs + shift_genes
             else:
@@ -388,21 +385,42 @@ class ChelataseOrg(Org):
 
         features = []
         for k, v in dict_plot.items():
-            if k not in ['max_scale', 'min_scale', 'gen_len_max', 'min_loc'] and dict_plot[k][0]['type'] == 'gene':
+
+            if k not in ['max_scale', 'min_scale', 'gen_len_max', 'min_loc'] and dict_plot[k][0][
+                'type'] == 'gene' and "_fs_" in k:
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 4,
+                                               end=new_locs[dict_plot[k][0]['loc']] - 1 / 2,
+                                               strand=dict_plot[k][0]['strand'],
+                                               color=get_color(dict_plot[k][0]['label']),
+                                               thickness=17,
+                                               label=dict_plot[k][0]['label']))
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] + 1 / 2,
+                                               end=new_locs[dict_plot[k][0]['loc']] + 2,
+                                               strand=dict_plot[k][0]['strand'],
+                                               color=get_color(dict_plot[k][0]['label']),
+                                               thickness=17,
+                                               label=dict_plot[k][0]['label']))
+
+            elif k not in ['max_scale', 'min_scale', 'gen_len_max', 'min_loc'] and dict_plot[k][0]['type'] == 'gene':
                 features.append(GraphicFeature(thickness=5,
                                                start=new_locs[dict_plot[k][0]['loc']],  # Табличка
                                                end=new_locs[dict_plot[k][0]['loc']],
                                                strand=dict_plot[k][0]['strand'],
                                                color="#ccccff", label=k))
-                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 3.5,
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 4,
                                                end=new_locs[dict_plot[k][0]['loc']] + 2,
                                                strand=dict_plot[k][0]['strand'],
                                                color=get_color(dict_plot[k][0]['label']),
                                                thickness=17,
                                                label=dict_plot[k][0]['label']))
             if k not in ['max_scale', 'min_scale', 'gen_len_max', 'min_loc'] and dict_plot[k][0]['type'] == 'fsh':
-                # TODOs добавить fsh на график
-                pass
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 1 / 2,
+                                               end=new_locs[dict_plot[k][0]['loc']] + 1 / 2,
+                                               #                                            strand=dict_plot[k][0]['strand'],
+                                               # color= get_color(dict_plot[k][0]['label']),
+                                               thickness=17,
+                                               # label=dict_plot[k][0]['label']
+                                               ))
 
         for lo, dist in tabs.items():
             features.append(GraphicFeature(start=lo - 1 / 5, end=lo + 1 / 5, strand=0, color="#ffd700",
@@ -410,9 +428,8 @@ class ChelataseOrg(Org):
 
         delta = 9  # Отступ от края
         record = GraphicRecord(first_index=dict_plot['min_loc'] - delta,
-                               sequence_length=106 - dict_plot['min_loc'] + delta - shift_tabs,
+                               sequence_length=107 - dict_plot['min_loc'] + delta - shift_tabs,
                                labels_spacing=4, features=features, feature_level_height=2)
-
         record.plot(figure_width=15, figure_height=3)
         ax, plo = record.plot(figure_width=15, figure_height=3);
         svg_pic = StringIO()
