@@ -440,6 +440,50 @@ class ChelataseOrg(Org):
 
         return svg_pic.getvalue()
 
+    def get_prediction_text(self):
+        id_org = self.id
+        Magnesium = ['chlH_bchH', 'chlD_bchD', 'chlI_bchI']
+        Chlorophyll = ['bchE', 'chlB_bchB', 'chlG_bchG', 'chlL_bchL', 'chlM_bchM', 'chlN_bchN']
+        Cobalt = ['cobN', 'cobT', 'cobS']
+        Vitamin_B12 = ['cobD_cobC', 'cobO', 'cobP_cobU', 'cobQ', 'cobV_cobS', 'cysG_cobA']
+
+        Vitamin_B12_genes, Chlorophyll_genes, all_genes_in_org = [], [], []
+
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)  # Берем Delftia acidovorans
+        f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
+
+        for i in f_org:
+            if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
+                if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
+                    Chlorophyll_genes.append(i.prm.chel_gene_group)
+                elif i.prm.chel_pathway == "B12" and i.prm.chel_gene_group in Vitamin_B12:
+                    Vitamin_B12_genes.append(i.prm.chel_gene_group)
+
+                all_genes_in_org.append(i.prm.chel_gene_group)
+
+        feature_1_chlH = len([gen for gen in all_genes_in_org if 'chlH' in gen]) >= 1
+        feature_2_Chlorophyll = len(Chlorophyll_genes) / len(Chlorophyll) >= 0.5
+        feature_3_cobN = len([gen for gen in all_genes_in_org if 'cobN' in gen]) >= 1
+        feature_4_B12 = len(Vitamin_B12_genes) / len(Vitamin_B12) >= 0.5
+
+        feature_12 = feature_1_chlH * feature_2_Chlorophyll
+        feature_34 = feature_3_cobN * feature_4_B12
+
+        def get_prediction(feature_12, feature_34):
+            if feature_12:
+                feature_12 = "Yes"
+            else:
+                feature_12 = 'No'
+            if feature_34:
+                feature_34 = "Yes"
+            else:
+                feature_34 = 'No'
+
+            return 'Prediction: Organism can express Chlorophyll - {}, Organism can express Vitamin B12 {}'.format(
+                feature_12, feature_34)
+
+        return get_prediction(feature_12, feature_34)
+
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
     """For a given pair of tBLASTn hits create the parent feature that

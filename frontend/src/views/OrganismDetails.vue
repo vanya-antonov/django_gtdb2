@@ -71,6 +71,16 @@
                     <span v-html="organism.plot_gen_diagram" />
                 </v-expansion-panel-content>
             </v-expansion-panel>
+
+                 <v-expansion-panel>
+                 <v-expansion-panel-header><h3>
+                  Biosynthesis pathway prediction
+                 </h3></v-expansion-panel-header>
+            <v-expansion-panel-content>
+            <span v-html="organism.get_prediction_text" />
+            </v-expansion-panel-content>
+            </v-expansion-panel>
+
             <v-expansion-panel>
                 <v-expansion-panel-header>
                     <h3 class="pt-3">Biosynthesis pathway genes</h3>
