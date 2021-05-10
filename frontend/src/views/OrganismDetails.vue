@@ -16,7 +16,7 @@
         <h1>{{ organism.name }}</h1>
 
         <v-expansion-panels
-            :value="Array.from(Array(5).keys())"
+            :value="Array.from(Array(4).keys())"
             multiple
             accordion
         >
@@ -65,14 +65,14 @@
             </v-expansion-panel>
             <v-expansion-panel>
                  <v-expansion-panel-header><h3>
-                      Cobalt chelatase subunits on plot
+                  Cobalt chelatase subunits on plot
                  </h3></v-expansion-panel-header>
-                <v-expansion-panel-content>
-                    <span v-html="organism.plot_gen_diagram" />
-                </v-expansion-panel-content>
+            <v-expansion-panel-content>
+            <span v-html="organism.plot_gen_diagram" />
+            </v-expansion-panel-content>
             </v-expansion-panel>
 
-                 <v-expansion-panel>
+                    <v-expansion-panel>
                  <v-expansion-panel-header><h3>
                   Biosynthesis pathway prediction
                  </h3></v-expansion-panel-header>
