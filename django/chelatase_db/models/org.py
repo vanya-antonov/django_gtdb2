@@ -370,14 +370,14 @@ class ChelataseOrg(Org):
         left, right, shift_tabs, shift_genes = 0, 0, 0, 0
 
         min_gen_len = 10.10 * dict_plot['gen_len_max']
-        min_dist = 0.25 * scale  # *dict_plot['max_scale']
-
+        min_dist = 0.20 * 100
         for i in locs:
             right = i
-            if right - left > min_dist and left != 0 and left != max(locs):
+            if right - shift_tabs - left > min_dist and left != 0 and left != max(locs):
                 tabs[(right + left) / 2 - shift_tabs - (right - left) / 4] = calculate_label(
                     (right - left) * dict_plot['max_scale'])
                 shift_tabs += (right - left) / 2
+                last_tabs = (right + left) / 2 - shift_tabs - (right - left) / 4
 
             if right - left < min_gen_len and right != 0 and abs(right - left) != 0:
                 shift_genes = 6  # right-left
@@ -413,7 +413,8 @@ class ChelataseOrg(Org):
             elif dict_plot[k][0]['type'] == 'gene':
                 features.append(
                     GraphicFeature(start=new_locs[dict_plot[k][0]['loc']], end=new_locs[dict_plot[k][0]['loc']],
-                                   strand=dict_plot[k][0]['strand'], color="#ccccff", label=k))  # Табличка
+                                   strand=dict_plot[k][0]['strand'], color=get_color(dict_plot[k][0]['label']),
+                                   label=k))  # Табличка
 
                 features.append(
                     GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 4, end=new_locs[dict_plot[k][0]['loc']] + 2,
@@ -423,8 +424,7 @@ class ChelataseOrg(Org):
                 features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - len_shift,
                                                end=new_locs[dict_plot[k][0]['loc']] + len_shift,
                                                color=get_color('fsh'),
-                                               thickness=14,
-                                               label='fsh'))
+                                               thickness=14, label='fsh'))
 
         for lo, dist in tabs.items():
             features.append(GraphicFeature(start=lo - 1 / 5, end=lo + 1 / 5, strand=0, color="#ffd700",
