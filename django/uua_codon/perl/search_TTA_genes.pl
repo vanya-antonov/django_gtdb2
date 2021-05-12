@@ -279,9 +279,10 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 # 12
 		++$all{ $taxon }{'COF_IDs'}{$_} for @{ $dt{ $gene_id }{'cofs'} };
 # 13
-		$all{ $taxon }{'FS_IDs'}{$_} = undef for @{ $dt{ $gene_id }{'fs_ids'} };
+		push @{ $all{ $taxon }{'FS_IDs'}{$_} }, $gene_id for @{ $dt{ $gene_id }{'fs_ids'} };
 # 14
-		++$all{ $taxon }{'WOFS_IDs'}{$_} for @{ $dt{ $gene_id }{'wofs'} };
+#		++$all{ $taxon }{'WOFS_IDs'}{$_} for @{ $dt{ $gene_id }{'wofs'} };
+		push @{ $all{ $taxon }{'WOFS_IDs'}{$_} }, $gene_id for @{ $dt{ $gene_id }{'wofs'} };
 	}
 
 }
@@ -341,8 +342,9 @@ for my $taxon ( sort keys %all ){
 	my $out = join("\t", $taxon, @{ $all{ $taxon } }{ @hh },
 					join(';', @{ $all{ $taxon }{'ACC_IDs'} } ),
 					join(';', map{"$_=$all{ $taxon }{'COF_IDs'}{$_}"} sort{ $a <=> $b } keys %{ $all{ $taxon }{'COF_IDs'} } ),
-					join(';', sort{ $a <=> $b } keys %{ $all{ $taxon }{'FS_IDs'} } ),
-					join(';', map{"$_=$all{ $taxon }{'WOFS_IDs'}{$_}"} sort{ $a <=> $b } keys( %{ $all{ $taxon }{'WOFS_IDs'} } ) ),
+					join(';', map{"$_=". join(',', @{ $all{ $taxon }{'FS_IDs'}{$_} }) } sort{ $a <=> $b } keys %{ $all{ $taxon }{'FS_IDs'} } ),
+#					join(';', map{"$_=$all{ $taxon }{'WOFS_IDs'}{$_}"} sort{ $a <=> $b } keys %{ $all{ $taxon }{'WOFS_IDs'} } ),
+					join(';', map{"$_=". join(',', @{ $all{ $taxon }{'WOFS_IDs'}{$_} }) } sort{ $a <=> $b } keys %{ $all{ $taxon }{'WOFS_IDs'} } ),
 				);
 
 	if( $OUTPUT ){
@@ -442,7 +444,7 @@ OUTPUT TABLE FORMAT:
  10.NUM_FS_and_TTA_GENES_in_COFS --  intersection of FS-genes with TTA-genes in clusters
  11.ACC_IDs                      --  Accession ID(;s) of locus/genomic sequence(s)
  12.COF_IDs                      --  List of Cluster_ID=number_gene(;s) with TTA codon
- 13.FS_IDs                       --  List of Frameshift ID(;s) with TTA codon
+ 13.FS_IDs                       --  List of Frameshift ID(;s) with TTA-genes
  14.WOFS_IDs                     --  List of Cluster_ID=number_gene(;s) without FS-genes
 
 NOTES:
