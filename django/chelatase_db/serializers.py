@@ -184,6 +184,8 @@ class ChelataseOrgDetailSerializer(serializers.ModelSerializer):
             "b12_genes_count",
             "chl_genes_count",
             "fshift_set",
+            "plot_gen_diagram",
+            "get_prediction_text"
         )
 
     def get_b12_genes_count(self, obj):

@@ -18,6 +18,15 @@ from gtdb2.lib.bio import get_overlapping_feats_from_list
 from gtdb2.models.org import Org
 
 
+# from chelatase_db.models import ChelataseFeat
+from dna_features_viewer import GraphicFeature, GraphicRecord
+# from gtdb2.models import Org
+# from gtdb2.models import Seq
+# from gtdb2.models import Fshift
+from io import StringIO
+
+
+
 class ChelataseOrg(Org):
     class Meta:
         proxy = True
@@ -48,7 +57,7 @@ class ChelataseOrg(Org):
     @property
     def chel_subunit_feat_set(self):
         """Returns a QuerySet of ChelataseFeat objects corresponding to
-        the large, medium or small chelatase subunits (i.e. all the 
+        the large, medium or small chelatase subunits (i.e. all the
         features with the 'chel_subunit' prm.
         """
         return ChelataseFeat.objects.filter(
@@ -57,7 +66,7 @@ class ChelataseOrg(Org):
 
     def get_full_pathway_gene_dict(self, pathway=None):
         """Returns a dict of lists of feats (genes) that have the
-        'chel_pathway' and 'chel_gene_group' params. They keys are 
+        'chel_pathway' and 'chel_gene_group' params. They keys are
         chel_gene_group values (e.g. 'chlI_bchI' or 'cobN').
 
         Arguments:
@@ -302,6 +311,179 @@ class ChelataseOrg(Org):
                 all_fs_info.append(fs_dict)
 
         return all_fs_info
+
+    @property
+    def plot_gen_diagram(self):
+        id_org = self.id
+
+        def calculate_label(x):
+            if x // 10 ** 6 >= 1:
+                return str(round(x / 10 ** 6, 2)) + 'M'
+            else:
+                return str(round(x / 10 ** 3)) + 'K'
+
+        def get_color(gene):
+            if 'fsh' in gene: return "#f60a01"
+            if 'chl' in gene:
+                return '#93d14f'  # '#ffcccc'
+            else:
+                return "#8fb5e5"
+
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)
+        f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
+
+        ch_set = ChelataseFeat.objects.filter(seq__org=id_org, param_set__name='chel_subunit').all()
+        all_parents = [i.parent_id for i in ch_set if i.parent_id is not None]
+
+        f_org = [i for i in ch_set if i.id not in all_parents]  # Извлекаем все гены
+        fsh_set = ChelataseFshift.objects.filter(seq__org=c_org).all()  # Извлекаем все фрэйм-шифты
+
+        dict_plot, locs = {'max_scale': 10, 'gen_len_max': 0, 'min_scale': 10 ** 8, 'min_loc': 10 ** 10}, [0]
+
+        for i in f_org:
+            if max(i.end, i.start) > dict_plot['max_scale']: dict_plot['max_scale'] = max(i.end, i.start)
+            if i.end - i.start < dict_plot['min_scale']: dict_plot['min_scale'] = i.end - i.start
+            if i.end - i.start > dict_plot['gen_len_max']: dict_plot['gen_len_max'] = i.end - i.start
+            if min(i.end, i.start) < dict_plot['min_loc']: dict_plot['min_loc'] = min(i.end, i.start)
+
+        scale = 100  # Будет считать, что вся шкала это 100 единиц
+
+        dict_plot['max_scale'] /= scale
+        dict_plot['min_loc'] /= dict_plot['max_scale']
+        dict_plot['gen_len_max'] /= dict_plot['max_scale']
+
+        for i in f_org:  # Нормируем положения в генах
+            loc = ((i.start + i.end) / 2) / dict_plot['max_scale']
+            locs.append(loc)
+            dict_plot[i.name] = [{'len': (i.end - i.start) / dict_plot['max_scale'],
+                                  'start': i.start / dict_plot['max_scale'], 'end': i.end / dict_plot['max_scale'],
+                                  'loc': loc, 'label': i.prm.chel_gene, 'strand': i.strand, 'type': "gene"}]
+
+        for i in fsh_set:  # нормируем положения в фрэймшифтах
+            loc = ((i.start + i.end) / 2) / dict_plot['max_scale']
+            locs.append(loc)
+            dict_plot[i.name] = [{'len': (i.end - i.start) / dict_plot['max_scale'],
+                                  'start': i.start / dict_plot['max_scale'], 'end': i.end / dict_plot['max_scale'],
+                                  'loc': loc, 'type': "fsh"}]
+        locs = sorted(locs)
+        new_locs, tabs = {0: 0}, {}  # in tabs there are loc and distance
+        left, right, shift_tabs, shift_genes = 0, 0, 0, 0
+
+        min_gen_len = 10.10 * dict_plot['gen_len_max']
+        min_dist = 0.20 * 100
+        for i in locs:
+            right = i
+            if right - shift_tabs - left > min_dist and left != 0 and left != max(locs):
+                tabs[(right + left) / 2 - shift_tabs - (right - left) / 4] = calculate_label(
+                    (right - left) * dict_plot['max_scale'])
+                shift_tabs += (right - left) / 2
+                last_tabs = (right + left) / 2 - shift_tabs - (right - left) / 4
+
+            if right - left < min_gen_len and right != 0 and abs(right - left) != 0:
+                shift_genes = 6  # right-left
+                new_locs[right] = right - shift_tabs + shift_genes
+                left = right - shift_tabs + shift_genes
+            else:
+                new_locs[right] = right - shift_tabs
+                left = right
+
+        features = []
+        len_shift = 1 / 8  # Размер фреймшифта
+        delta = 9  # Отступ от края
+        for k, v in dict_plot.items():
+            if k in ['max_scale', 'min_scale', 'gen_len_max', 'min_loc']: continue
+
+            if dict_plot[k][0]['type'] == 'gene' and "_fs_" in k:
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 4,
+                                               end=new_locs[dict_plot[k][0]['loc']] - len_shift,
+                                               strand=dict_plot[k][0]['strand'],
+                                               color=get_color(dict_plot[k][0]['label']),
+                                               label=dict_plot[k][0]['label']))
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] + len_shift,
+                                               end=new_locs[dict_plot[k][0]['loc']] + 2,
+                                               strand=dict_plot[k][0]['strand'],
+                                               color=get_color(dict_plot[k][0]['label']),
+                                               label=dict_plot[k][0]['label']))
+
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']],  # Табличка
+                                               end=new_locs[dict_plot[k][0]['loc']],
+                                               strand=dict_plot[k][0]['strand'],
+                                               color="#ccccff", label=k))
+
+            elif dict_plot[k][0]['type'] == 'gene':
+                features.append(
+                    GraphicFeature(start=new_locs[dict_plot[k][0]['loc']], end=new_locs[dict_plot[k][0]['loc']],
+                                   strand=dict_plot[k][0]['strand'], color=get_color(dict_plot[k][0]['label']),
+                                   label=k))  # Табличка
+
+                features.append(
+                    GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - 4, end=new_locs[dict_plot[k][0]['loc']] + 2,
+                                   strand=dict_plot[k][0]['strand'], color=get_color(dict_plot[k][0]['label']),
+                                   label=dict_plot[k][0]['label']))
+            if dict_plot[k][0]['type'] == 'fsh':
+                features.append(GraphicFeature(start=new_locs[dict_plot[k][0]['loc']] - len_shift,
+                                               end=new_locs[dict_plot[k][0]['loc']] + len_shift,
+                                               color=get_color('fsh'),
+                                               thickness=14, label='fsh'))
+
+        for lo, dist in tabs.items():
+            features.append(GraphicFeature(start=lo - 1 / 5, end=lo + 1 / 5, strand=0, color="#ffd700",
+                                           label="about {} \n nucleotides".format(dist)))
+
+        record = GraphicRecord(first_index=dict_plot['min_loc'] - delta,
+                               sequence_length=115 - dict_plot['min_loc'] + delta - shift_tabs,
+                               labels_spacing=-9, features=features, feature_level_height=2)
+        record.plot(figure_width=15, figure_height=3)
+        ax, plo = record.plot(figure_width=15, figure_height=3);
+        svg_pic = StringIO()
+        ax.figure.savefig(svg_pic, format="svg", bbox_inches='tight')
+
+        return svg_pic.getvalue()
+
+    def get_prediction_text(self):
+        id_org = self.id
+        Magnesium = ['chlH_bchH', 'chlD_bchD', 'chlI_bchI']
+        Chlorophyll = ['bchE', 'chlB_bchB', 'chlG_bchG', 'chlL_bchL', 'chlM_bchM', 'chlN_bchN']
+        Cobalt = ['cobN', 'cobT', 'cobS']
+        Vitamin_B12 = ['cobD_cobC', 'cobO', 'cobP_cobU', 'cobQ', 'cobV_cobS', 'cysG_cobA']
+
+        Vitamin_B12_genes, Chlorophyll_genes, all_genes_in_org = [], [], []
+
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)  # Берем Delftia acidovorans
+        f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
+
+        for i in f_org:
+            if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
+                if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
+                    Chlorophyll_genes.append(i.prm.chel_gene_group)
+                elif i.prm.chel_pathway == "B12" and i.prm.chel_gene_group in Vitamin_B12:
+                    Vitamin_B12_genes.append(i.prm.chel_gene_group)
+
+                all_genes_in_org.append(i.prm.chel_gene_group)
+
+        feature_1_chlH = len([gen for gen in all_genes_in_org if 'chlH' in gen]) >= 1
+        feature_2_Chlorophyll = len(Chlorophyll_genes) / len(Chlorophyll) >= 0.5
+        feature_3_cobN = len([gen for gen in all_genes_in_org if 'cobN' in gen]) >= 1
+        feature_4_B12 = len(Vitamin_B12_genes) / len(Vitamin_B12) >= 0.5
+
+        feature_12 = feature_1_chlH * feature_2_Chlorophyll
+        feature_34 = feature_3_cobN * feature_4_B12
+
+        def get_prediction(feature_12, feature_34):
+            if feature_12:
+                feature_12 = "Yes"
+            else:
+                feature_12 = 'No'
+            if feature_34:
+                feature_34 = "Yes"
+            else:
+                feature_34 = 'No'
+
+            return 'Prediction: Organism can express Chlorophyll - {}, Organism can express Vitamin B12 {}'.format(
+                feature_12, feature_34)
+
+        return get_prediction(feature_12, feature_34)
+
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
     """For a given pair of tBLASTn hits create the parent feature that
