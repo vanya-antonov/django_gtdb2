@@ -471,15 +471,15 @@ class ChelataseOrg(Org):
 
         def get_prediction(feature_12, feature_34):
             if feature_12:
-                feature_12 = "Yes"
+                feature_12 = "YES"
             else:
-                feature_12 = 'No'
+                feature_12 = 'NO'
             if feature_34:
-                feature_34 = "Yes"
+                feature_34 = "YES"
             else:
-                feature_34 = 'No'
+                feature_34 = 'NO'
 
-            return 'Prediction: Organism can express Chlorophyll - {}, Organism can express Vitamin B12 {}'.format(
+            return 'Chlorophyll biosynthesis - {} \n Vitamin B12 biosynthesis {}'.format(
                 feature_12, feature_34)
 
         return get_prediction(feature_12, feature_34)
