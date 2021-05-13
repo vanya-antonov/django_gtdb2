@@ -338,7 +338,7 @@ class ChelataseOrg(Org):
         f_org = [i for i in ch_set if i.id not in all_parents]  # Извлекаем все гены
         fsh_set = ChelataseFshift.objects.filter(seq__org=c_org).all()  # Извлекаем все фрэйм-шифты
 
-        dict_plot, locs = {'max_scale': 10, 'gen_len_max': 0, 'min_scale': 10 ** 8, 'min_loc': 10 ** 10}, [0]
+        dict_plot, locs, fshs = {'max_scale': 10, 'gen_len_max': 0, 'min_scale': 10 ** 8, 'min_loc': 10 ** 10}, [0], []
 
         for i in f_org:
             if max(i.end, i.start) > dict_plot['max_scale']: dict_plot['max_scale'] = max(i.end, i.start)
@@ -355,6 +355,7 @@ class ChelataseOrg(Org):
         for i in f_org:  # Нормируем положения в генах
             loc = ((i.start + i.end) / 2) / dict_plot['max_scale']
             locs.append(loc)
+            fshs.append(loc)
             dict_plot[i.name] = [{'len': (i.end - i.start) / dict_plot['max_scale'],
                                   'start': i.start / dict_plot['max_scale'], 'end': i.end / dict_plot['max_scale'],
                                   'loc': loc, 'label': i.prm.chel_gene, 'strand': i.strand, 'type': "gene"}]
@@ -374,13 +375,12 @@ class ChelataseOrg(Org):
         for i in locs:
             right = i
             if right - shift_tabs - left > min_dist and left != 0 and left != max(locs):
-                tabs[(right + left) / 2 - shift_tabs - (right - left) / 4] = calculate_label(
-                    (right - left) * dict_plot['max_scale'])
-                shift_tabs += (right - left) / 2
-                last_tabs = (right + left) / 2 - shift_tabs - (right - left) / 4
+                tabs[(right + left) / 2] = calculate_label((right - left) * dict_plot['max_scale'])
+                #last_tabs = (right + left) / 2 - shift_tabs - (right - left) / 4
 
-            if right - left < min_gen_len and right != 0 and abs(right - left) != 0:
-                shift_genes = 6  # right-left
+            if right - left < min_gen_len and left != 0 and abs(right - left) != 0 and right in fshs and right != max(
+                    locs):
+                shift_genes = 6
                 new_locs[right] = right - shift_tabs + shift_genes
                 left = right - shift_tabs + shift_genes
             else:
@@ -479,7 +479,7 @@ class ChelataseOrg(Org):
             else:
                 feature_34 = 'NO'
 
-            return 'Chlorophyll biosynthesis - {} \n Vitamin B12 biosynthesis {}'.format(
+            return 'Chlorophyll biosynthesis - {}   |   Vitamin B12 biosynthesis {}'.format(
                 feature_12, feature_34)
 
         return get_prediction(feature_12, feature_34)
