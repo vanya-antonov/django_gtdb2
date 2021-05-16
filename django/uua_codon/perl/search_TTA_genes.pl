@@ -9,7 +9,7 @@ use Getopt::Long;
 use Bio::SeqIO;
 use DBI;
 
-my $VERSION = '1.05';
+my $VERSION = '1.06';
 
 ###
 # Default Options
@@ -20,6 +20,7 @@ my $AUTO;
 my $WOFS;
 my $HEADER;
 my $ECHO;
+my $SKIP_FS;
 my $EVALUE = 1e-10; # BLAST option
 my $PROT_DB = '/home/alessandro/BLASTp/db/Streptomyces.seq_prot.faa'; # DB for aligment by BLASTp
 
@@ -39,6 +40,7 @@ GetOptions(
 	'wofs'            => \$WOFS,
 	'header'          => \$HEADER,
 	'echo'            => \$ECHO,
+	'skip_fs'         => \$SKIP_FS,
 	'evalue=f'        => \$EVALUE,
 	'threads=i'       => \$THREADS,
 	'prot_db=s'       => \$PROT_DB,
@@ -56,9 +58,12 @@ close GBF;
 die "\x1b[31mERROR\x1b[0m: Invalid GenBank file format" unless /^LOCUS\s+/;
 
 # Read DataBase configuration
-my $db_cfg = 'db.cfg';
-die "\x1b[31mERROR\x1b[0m: Can't open $db_cfg file" unless -s $db_cfg;
-our $dbh; do "./$db_cfg";
+our $dbh;
+unless( $SKIP_FS ){
+	my $db_cfg = 'db.cfg';
+	die "\x1b[31mERROR\x1b[0m: Can't open $db_cfg file" unless -s $db_cfg;
+	do "./$db_cfg";
+}
 
 if( defined $AUTO ){
 	(my $fl = $infile) =~s/\.[^\.]+$//;
@@ -78,7 +83,7 @@ $SAVE_FAA_SEQS && open FFAA, ">$SAVE_FAA_SEQS";
 
 my( $WOFS_TSV, $WOFS_FNA, $WOFS_FAA );
 
-if( defined $WOFS ){
+if( defined( $WOFS ) && ! defined( $SKIP_FS ) ){
 	(my $fl = $infile) =~s/\.[^\.]+$//;
 
 	$WOFS_TSV = "$fl.without_fs.tsv";
@@ -148,8 +153,18 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		my $end   = $feat_obj->location->end;
 		my $len   = $end - $start;
 
+		my $strand = $feat_obj->location->strand || 0;
+		my $ts;
+		if( $strand > 0 ){
+			$ts = 'p';
+		}elsif( $strand < 0 ){
+			$ts = 'm';
+		}else{
+			$ts = 'n';
+		}
+
 		# Sequence Identifier
-		my $gene_id = "$acc_id:$start.$len";
+		my $gene_id = "$acc_id:$ts$start.$len";
 
 		next if exists $dt{ $gene_id };
 
@@ -197,7 +212,7 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 			$dt{ $gene_id }{'faa'} = uc(join '', $feat_obj->get_tag_values('translation'));
 
 			# Aligment by BLASTp and search FS-ortholog and Clasters
-			( $yes_cof, $cof_id ) = &BLAST_algn( $dbh, $PROT_DB, $EVALUE, $THREADS, $dt{ $gene_id }{'faa'} );
+			( $yes_cof, $cof_id ) = &BLAST_algn( $dbh, $PROT_DB, $EVALUE, $THREADS, $dt{ $gene_id }{'faa'} ) unless $SKIP_FS;
 			if( $yes_cof ){
 				++$num_TTA_genes_in_cofs;
 				push @{ $dt{ $gene_id }{'cofs'} }, $cof_id;
@@ -205,8 +220,9 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		}
 
 		# Search corresponding FS for TTA-genes: |start...{FS-coord}...end|
-		my( $num, $fs_ids ) = $dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS num, GROUP_CONCAT(DISTINCT id SEPARATOR ';')  FROM fshifts
-WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end } );
+		my( $num, $fs_ids ) = $SKIP_FS ? (undef, undef) :
+								$dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS num, GROUP_CONCAT(DISTINCT id SEPARATOR ';') 
+FROM fshifts WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end } );
 
 		if( $num ){
 			$num_fs_and_TTA_genes += $num;
@@ -217,8 +233,7 @@ WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end } );
 		}else{ # without FS
 			push @{ $dt{ $gene_id }{'wofs'} }, $cof_id if $yes_cof;
 
-			if( $WOFS ){
-				my $strand = $feat_obj->location->strand;
+			if( defined( $WOFS ) && ! defined( $SKIP_FS ) ){
 
 				# from a line like: /product="VWA domain-containing protein"
 				my $descr = $feat_obj->has_tag('product') ? join(';', $feat_obj->get_tag_values('product')) : '';
@@ -243,18 +258,21 @@ WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end } );
 		&save_fasta('FFAA', 'faa', $_, \%dt ) for sort{ $dt{$a}{'start'} <=> $dt{$b}{'start'} } keys %dt;
 	}
 
-	my( $num_fs_genes ) = $dbh->selectrow_array( qq{ SELECT COUNT(*) AS num_fs FROM fshifts WHERE seq_id LIKE "$acc_id" GROUP BY seq_id } );
+	my( $num_fs_genes ) = $SKIP_FS ? undef :
+					$dbh->selectrow_array( qq{ SELECT COUNT(*) AS num_fs FROM fshifts WHERE seq_id LIKE "$acc_id" GROUP BY seq_id } );
 
-	my( $num_cofs ) = $dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT cof_id) AS num_cofs FROM fshifts
+	my( $num_cofs ) = $SKIP_FS ? undef :
+					$dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT cof_id) AS num_cofs FROM fshifts
 WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 
-	my( $num_fs_genes_in_cofs ) = $dbh->selectrow_array( qq{ SELECT COUNT(cof_id) AS num_fs_cofs FROM fshifts
+	my( $num_fs_genes_in_cofs ) = $SKIP_FS ? undef :
+					$dbh->selectrow_array( qq{ SELECT COUNT(cof_id) AS num_fs_cofs FROM fshifts
 WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 
 # 1
 	$taxon ||= $species_string;
 # 2
-	my( $org_id ) = $dbh->selectrow_array( qq{ SELECT org_id FROM seqs WHERE id LIKE "$acc_id"} );
+	my( $org_id ) = $SKIP_FS ? undef : $dbh->selectrow_array( qq{ SELECT org_id FROM seqs WHERE id LIKE "$acc_id"} );
 	$all{ $taxon }{'IDs'}{ $org_id } = undef if $org_id;
 # 3
 	$all{ $taxon }{'ORG_NAME'} = $organism;
@@ -291,7 +309,7 @@ print "\n# Elapsed time: ".(time - $START_TIME)." sec\n" if $ECHO;
 
 unless( scalar( keys %all )){
 
-	if( $WOFS ){
+	if( defined( $WOFS ) && ! defined( $SKIP_FS ) ){
 		close WOFSTSV;
 		close WOFSFNA;
 		close WOFSFAA;
@@ -343,7 +361,6 @@ for my $taxon ( sort keys %all ){
 					join(';', @{ $all{ $taxon }{'ACC_IDs'} } ),
 					join(';', map{"$_=$all{ $taxon }{'COF_IDs'}{$_}"} sort{ $a <=> $b } keys %{ $all{ $taxon }{'COF_IDs'} } ),
 					join(';', map{"$_=". join(',', @{ $all{ $taxon }{'FS_IDs'}{$_} }) } sort{ $a <=> $b } keys %{ $all{ $taxon }{'FS_IDs'} } ),
-#					join(';', map{"$_=$all{ $taxon }{'WOFS_IDs'}{$_}"} sort{ $a <=> $b } keys %{ $all{ $taxon }{'WOFS_IDs'} } ),
 					join(';', map{"$_=". join(',', @{ $all{ $taxon }{'WOFS_IDs'}{$_} }) } sort{ $a <=> $b } keys %{ $all{ $taxon }{'WOFS_IDs'} } ),
 				);
 
@@ -428,15 +445,16 @@ OPTIONS:
     --auto                       --  autocomplete options: --output, --save_fna_seqs, --save_faa_seqs
     --wofs                       --  save the collection of TTA-genes and their sequences without FrameShift
     --evalue                     --  E-value BLAST option. Default 1e-10
-    --threads                    --  num_threads BLAST option. Default 0.9*CPUs | 1
+    --threads                    --  num_threads BLAST option. Default (0.9*CPUs | 1)
     --prot_db                    --  protein DB for aligment by BLASTp. Default internal Streptomyces.seq_prot.faa DB
+    --skip_fs                    --  skip FrameShift search
 
 OUTPUT TABLE FORMAT:
   1.TAXON                        --  NCBI taxon ID of organism
   2.ORG_ID                       --  internal organism ID
   3.ORG_NAME                     --  organism name
   4.NUM_TTA_GENES                --  total number of genes with TTA codon (TTA-genes)
-  5.NUM_FS_GENES                 --  total number of FS-genes
+  5.NUM_FS_GENES                 --  total number of FS-genes. Empty for --skip_fs mode
   6.NUM_FS_and_TTA_GENES         --  intersection of FS-genes with TTA-genes
   7.NUM_COFS                     --  total number of clusters that include FS-genes
   8.NUM_FS_GENES_in_COFS         --  total number of FS-genes in clusters
@@ -447,7 +465,10 @@ OUTPUT TABLE FORMAT:
  13.FS_IDs                       --  List of Frameshift ID(;s) with TTA-genes
  14.WOFS_IDs                     --  List of Cluster_ID=number_gene(;s) without FS-genes
 
-NOTES:
+  Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
+         NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for --skip_fs option
+
+NOTES (without --skip_fs option):
   1. a configuration DB file 'db.cfg' is required.
   2. BLAST program is required.
 
