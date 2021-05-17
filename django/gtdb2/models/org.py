@@ -494,12 +494,12 @@ def _get_species_genus_phylum_kingdom(record):
         return None, None, None, None
 
     kingdom = taxa_l[0]
-    if kingdom not in ['Bacteria', 'Archaea', 'Eukaryota']:
+    if kingdom not in ['Bacteria', 'Archaea', 'Eukaryota', 'Viruses']:
         logging.warning("Unknown kingdom '%s'" % kingdom)
         return None, None, None, None
 
     species = record.annotations['organism']
-    if taxa_l[-1] in species:
+    if taxa_l[-1] in species or kingdom == 'Viruses':
         genus = taxa_l[-1]
     elif taxa_l[-2] in species:
         genus = taxa_l[-2]
@@ -508,10 +508,10 @@ def _get_species_genus_phylum_kingdom(record):
                         (species, taxa_l))
         genus = None
 
-    if genus is not None and ' ' in genus:
-        # Genus must be a single word!
-        logging.warning("Wrong genus '%s' for species name '%s'" % (genus, species))
-        genus = None
+    #if genus is not None and ' ' in genus:
+    #    # Genus must be a single word!
+    #    logging.warning("Wrong genus '%s' for species name '%s'" % (genus, species))
+    #    genus = None
 
     phylum = taxa_l[1]
     return species, genus, phylum, kingdom

@@ -20,6 +20,6 @@ class Command(AbstractCommand):
         user = gtdb.get_or_create_default_user()
 
         org = Org.get_or_create_from_gbk(user, gbk_fn)
-        self.print_success("Successfully created org '%s' with id '%s'" %
-                           (org.name, org.id))
+        self.stdout.write("Successfully created org '%s' with id '%s'" %
+            (org.name, org.id))
 
