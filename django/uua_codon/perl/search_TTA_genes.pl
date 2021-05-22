@@ -9,13 +9,15 @@ use Getopt::Long;
 use Bio::SeqIO;
 use DBI;
 
-my $VERSION = '1.06';
+my $VERSION = '1.07';
 
 ###
 # Default Options
 my $OUTPUT;
-my $SAVE_FNA_SEQS;
-my $SAVE_FAA_SEQS;
+my $SAVE_FNA;
+my $SAVE_FAA;
+my $SAVE_TTA_FNA;
+my $SAVE_TTA_FAA;
 my $AUTO;
 my $WOFS;
 my $HEADER;
@@ -33,22 +35,24 @@ my $THREADS = int(0.9*$CPUs + 1/2) || 1;
 ###
 # Parse input data
 GetOptions(
-	'output=s'        => \$OUTPUT,
-	'save_fna_seqs=s' => \$SAVE_FNA_SEQS,
-	'save_faa_seqs=s' => \$SAVE_FAA_SEQS,
-	'auto'            => \$AUTO,
-	'wofs'            => \$WOFS,
-	'header'          => \$HEADER,
-	'echo'            => \$ECHO,
-	'skip_fs'         => \$SKIP_FS,
-	'evalue=f'        => \$EVALUE,
-	'threads=i'       => \$THREADS,
-	'prot_db=s'       => \$PROT_DB,
+	'output=s'       => \$OUTPUT,
+	'save_fna=s'     => \$SAVE_FNA,	# TODO
+	'save_faa=s'     => \$SAVE_FAA,	# TODO
+	'save_tta_fna=s' => \$SAVE_TTA_FNA,
+	'save_tta_faa=s' => \$SAVE_TTA_FAA,
+	'auto'           => \$AUTO,
+	'wofs'           => \$WOFS,
+	'header'         => \$HEADER,
+	'echo'           => \$ECHO,
+	'skip_fs'        => \$SKIP_FS,
+	'evalue=f'       => \$EVALUE,
+	'threads=i'      => \$THREADS,
+	'prot_db=s'      => \$PROT_DB,
 ) or die &usage();
 
 $THREADS = $CPUs if $THREADS > $CPUs;
 
-my $infile = $ARGV[0] || die &usage(); # 'NZ_CP023977.1.gbk';
+my $infile = $ARGV[0] || die &usage(); # NC_010572.1.gbk
 
 # Check GenBank format
 open GBF, $infile or die &usage();
@@ -68,9 +72,9 @@ unless( $SKIP_FS ){
 if( defined $AUTO ){
 	(my $fl = $infile) =~s/\.[^\.]+$//;
 
-	$OUTPUT ||= "$fl.tsv";
-	$SAVE_FNA_SEQS ||= "$fl.fna";
-	$SAVE_FAA_SEQS ||= "$fl.faa";
+	$OUTPUT ||= "$fl.TTA.tsv";
+	$SAVE_TTA_FNA ||= "$fl.TTA.fna";
+	$SAVE_TTA_FAA ||= "$fl.TTA.faa";
 }
 
 $OUTPUT = undef if $OUTPUT && $OUTPUT =~/^stdout$/i;
@@ -78,8 +82,10 @@ $OUTPUT = undef if $OUTPUT && $OUTPUT =~/^stdout$/i;
 ###
 my $START_TIME = time;
 
-$SAVE_FNA_SEQS && open FFNA, ">$SAVE_FNA_SEQS";
-$SAVE_FAA_SEQS && open FFAA, ">$SAVE_FAA_SEQS";
+$SAVE_FNA && open FFNA, ">$SAVE_FNA";
+$SAVE_FAA && open FFAA, ">$SAVE_FAA";
+$SAVE_TTA_FNA && open TTAFNA, ">$SAVE_TTA_FNA";
+$SAVE_TTA_FAA && open TTAFAA, ">$SAVE_TTA_FAA";
 
 my( $WOFS_TSV, $WOFS_FNA, $WOFS_FAA );
 
@@ -114,7 +120,7 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		s/\s+/ /g;
 	}
 
-	my %dt;
+	my( %gg, %dt );
 	my( $organism, $taxon, $num_fs_and_TTA_genes, $num_TTA_genes_in_cofs, $num_fs_and_TTA_genes_in_cofs );
 
 	for my $feat_obj ($seq_obj->get_SeqFeatures) {
@@ -166,7 +172,8 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		# Sequence Identifier
 		my $gene_id = "$acc_id:$ts$start.$len";
 
-		next if exists $dt{ $gene_id };
+		next if exists $gg{ $gene_id };
+		$gg{ $gene_id } = undef;
 
 		# Get Nucleotide sequence (CDS)
 		my $fna_seq = lc $feat_obj->spliced_seq->seq; # e.g. 'ATTATTTTCGCT...'
@@ -248,14 +255,14 @@ FROM fshifts WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end }
 
 	}
 
-	if( $SAVE_FNA_SEQS ){
+	if( $SAVE_TTA_FNA ){
 		# Save nucleotide sequence
-		&save_fasta('FFNA', 'fna', $_, \%dt ) for sort{ $dt{$a}{'start'} <=> $dt{$b}{'start'} } keys %dt;
+		&save_fasta('TTAFNA', 'fna', $_, \%dt ) for sort{ $dt{$a}{'start'} <=> $dt{$b}{'start'} } keys %dt;
 	}
 
-	if( $SAVE_FAA_SEQS ){
+	if( $SAVE_TTA_FAA ){
 		# Save protein (AA) sequence
-		&save_fasta('FFAA', 'faa', $_, \%dt ) for sort{ $dt{$a}{'start'} <=> $dt{$b}{'start'} } keys %dt;
+		&save_fasta('TTAFAA', 'faa', $_, \%dt ) for sort{ $dt{$a}{'start'} <=> $dt{$b}{'start'} } keys %dt;
 	}
 
 	my( $num_fs_genes ) = $SKIP_FS ? undef :
@@ -277,32 +284,35 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 # 3
 	$all{ $taxon }{'ORG_NAME'} = $organism;
 # 4
-	$all{ $taxon }{'NUM_TTA_GENES'} += scalar( keys %dt );
+	$all{ $taxon }{'NUM_GENES'} += scalar( keys %gg );
 # 5
-	$all{ $taxon }{'NUM_FS_GENES'} += $num_fs_genes || 0;
+	$all{ $taxon }{'NUM_TTA_GENES'} += scalar( keys %dt );
 # 6
-	$all{ $taxon }{'NUM_FS_and_TTA_GENES'} += $num_fs_and_TTA_genes || 0;
+	$all{ $taxon }{'NUM_FS_GENES'} += $num_fs_genes || 0;
 # 7
-	$all{ $taxon }{'NUM_COFS'} += $num_cofs || 0;
+	$all{ $taxon }{'NUM_FS_and_TTA_GENES'} += $num_fs_and_TTA_genes || 0;
 # 8
-	$all{ $taxon }{'NUM_FS_GENES_in_COFS'} += $num_fs_genes_in_cofs || 0;
+	$all{ $taxon }{'NUM_COFS'} += $num_cofs || 0;
 # 9
-	$all{ $taxon }{'NUM_TTA_GENES_in_COFS'} += $num_TTA_genes_in_cofs || 0;
+	$all{ $taxon }{'NUM_FS_GENES_in_COFS'} += $num_fs_genes_in_cofs || 0;
 # 10
-	$all{ $taxon }{'NUM_FS_and_TTA_GENES_in_COFS'} += $num_fs_and_TTA_genes_in_cofs || 0;
+	$all{ $taxon }{'NUM_TTA_GENES_in_COFS'} += $num_TTA_genes_in_cofs || 0;
 # 11
-		push @{ $all{ $taxon }{'ACC_IDs'} }, $acc_id;
+	$all{ $taxon }{'NUM_FS_and_TTA_GENES_in_COFS'} += $num_fs_and_TTA_genes_in_cofs || 0;
+# 12
+	push @{ $all{ $taxon }{'ACC_IDs'} }, $acc_id;
 
 	for my $gene_id ( keys %dt ){
-# 12
-		++$all{ $taxon }{'COF_IDs'}{$_} for @{ $dt{ $gene_id }{'cofs'} };
 # 13
-		push @{ $all{ $taxon }{'FS_IDs'}{$_} }, $gene_id for @{ $dt{ $gene_id }{'fs_ids'} };
+		++$all{ $taxon }{'COF_IDs'}{$_} for @{ $dt{ $gene_id }{'cofs'} };
 # 14
-#		++$all{ $taxon }{'WOFS_IDs'}{$_} for @{ $dt{ $gene_id }{'wofs'} };
+		push @{ $all{ $taxon }{'FS_IDs'}{$_} }, $gene_id for @{ $dt{ $gene_id }{'fs_ids'} };
+# 15
 		push @{ $all{ $taxon }{'WOFS_IDs'}{$_} }, $gene_id for @{ $dt{ $gene_id }{'wofs'} };
 	}
 
+# 16
+	push @{ $all{ $taxon }{'GENE_IDs'} }, $_ for sort keys %gg;
 }
 
 print "\n# Elapsed time: ".(time - $START_TIME)." sec\n" if $ECHO;
@@ -319,14 +329,24 @@ unless( scalar( keys %all )){
 		`rm $WOFS_FAA` if -z $WOFS_FAA;
 	}
 
-	if( $SAVE_FNA_SEQS ){
+	if( $SAVE_FNA ){
 		close FFNA;
-		`rm $SAVE_FNA_SEQS` if -z $SAVE_FNA_SEQS;
+		`rm $SAVE_FNA` if -z $SAVE_FNA;
 	}
 
-	if( $SAVE_FAA_SEQS ){
+	if( $SAVE_FAA ){
 		close FFAA;
-		`rm $SAVE_FAA_SEQS` if -z $SAVE_FAA_SEQS;
+		`rm $SAVE_FAA` if -z $SAVE_FAA;
+	}
+
+	if( $SAVE_TTA_FNA ){
+		close TTAFNA;
+		`rm $SAVE_TTA_FNA` if -z $SAVE_TTA_FNA;
+	}
+
+	if( $SAVE_TTA_FAA ){
+		close TTAFAA;
+		`rm $SAVE_TTA_FAA` if -z $SAVE_TTA_FAA;
 	}
 
 	exit;
@@ -335,6 +355,7 @@ unless( scalar( keys %all )){
 my @hh = ( qw{
 	ORG_ID
 	ORG_NAME
+	NUM_GENES
 	NUM_TTA_GENES
 	NUM_FS_GENES
 	NUM_FS_and_TTA_GENES
@@ -344,7 +365,7 @@ my @hh = ( qw{
 	NUM_FS_and_TTA_GENES_in_COFS
 } );
 
-my $head_out = join "\t", 'TAXON', @hh, qw(ACC_IDs COF_IDs FS_IDs WOFS_IDs);
+my $head_out = join "\t", 'TAXON', @hh, qw(ACC_IDs COF_IDs FS_IDs WOFS_IDs GENE_IDs);
 
 # Save collection of TTA-genes
 if( $OUTPUT ){
@@ -362,6 +383,7 @@ for my $taxon ( sort keys %all ){
 					join(';', map{"$_=$all{ $taxon }{'COF_IDs'}{$_}"} sort{ $a <=> $b } keys %{ $all{ $taxon }{'COF_IDs'} } ),
 					join(';', map{"$_=". join(',', @{ $all{ $taxon }{'FS_IDs'}{$_} }) } sort{ $a <=> $b } keys %{ $all{ $taxon }{'FS_IDs'} } ),
 					join(';', map{"$_=". join(',', @{ $all{ $taxon }{'WOFS_IDs'}{$_} }) } sort{ $a <=> $b } keys %{ $all{ $taxon }{'WOFS_IDs'} } ),
+					join(';', @{ $all{ $taxon }{'GENE_IDs'} } ),
 				);
 
 	if( $OUTPUT ){
@@ -379,8 +401,7 @@ sub save_fasta {
 	my( $fh, $stype, $head, $dt ) = @_;
 	return unless exists $dt->{ $head }{ $stype };
 
-	my @h;
-	push @h, ">$head";
+	my @h = (">$head");
 	push @h, "gene=$dt->{ $head }{'genes'}"       if $dt->{ $head }{'genes'};
 	push @h, "protein=$dt->{ $head }{'proteins'}" if $dt->{ $head }{'proteins'};
 
@@ -431,18 +452,20 @@ EXAMPLE:
 
     $script NC_010572.1.gbk -auto
 or same
-    $script NC_010572.1.gbk -save_fna_seq NC_010572.1.fna -save_faa_seq NC_010572.1.faa -output NC_010572.1.tsv
+    $script NC_010572.1.gbk -save_tta_fna NC_010572.1.TTA.fna -save_tta_faa NC_010572.1.TTA.faa -output NC_010572.1.TTA.tsv
 
 HERE:
     <file.gbk>   -- input GenBank file only
 
 OPTIONS:
     --output  <file.tsv|stdout>  --  output table. Default STDOUT output
-    --save_fna_seqs  <file.fna>  --  save nt sequences of CDS(s) with TTA
-    --save_faa_seqs  <file.faa>  --  save sequences of all protein(s) with TTA (Leu)
+    --save_tta_fna  <file.fna>   --  save nt sequences of CDS(s) with TTA
+    --save_tta_faa  <file.faa>   --  save sequences of all protein(s) with TTA (Leu)
+    --save_fna  <file.fna>       --  save nt sequences of CDS(s). TODO
+    --save_faa  <file.faa>       --  save sequences of all protein(s). TODO
     --header                     --  output header of table
     --echo                       --  output echo messages
-    --auto                       --  autocomplete options: --output, --save_fna_seqs, --save_faa_seqs
+    --auto                       --  autocomplete options: --output, --save_tta_fna, --save_tta_faa
     --wofs                       --  save the collection of TTA-genes and their sequences without FrameShift
     --evalue                     --  E-value BLAST option. Default 1e-10
     --threads                    --  num_threads BLAST option. Default (0.9*CPUs | 1)
@@ -453,17 +476,22 @@ OUTPUT TABLE FORMAT:
   1.TAXON                        --  NCBI taxon ID of organism
   2.ORG_ID                       --  internal organism ID
   3.ORG_NAME                     --  organism name
-  4.NUM_TTA_GENES                --  total number of genes with TTA codon (TTA-genes)
-  5.NUM_FS_GENES                 --  total number of FS-genes. Empty for --skip_fs mode
-  6.NUM_FS_and_TTA_GENES         --  intersection of FS-genes with TTA-genes
-  7.NUM_COFS                     --  total number of clusters that include FS-genes
-  8.NUM_FS_GENES_in_COFS         --  total number of FS-genes in clusters
-  9.NUM_TTA_GENES_in_COFS        --  total number of TTA-genes that are 'similar' to FS-genes from ALL clusters
- 10.NUM_FS_and_TTA_GENES_in_COFS --  intersection of FS-genes with TTA-genes in clusters
- 11.ACC_IDs                      --  Accession ID(;s) of locus/genomic sequence(s)
- 12.COF_IDs                      --  List of Cluster_ID=number_gene(;s) with TTA codon
- 13.FS_IDs                       --  List of Frameshift ID(;s) with TTA-genes
- 14.WOFS_IDs                     --  List of Cluster_ID=number_gene(;s) without FS-genes
+  4.NUM_GENES                    --  total number of CDS genes for organism
+  5.NUM_TTA_GENES                --  total number of genes with TTA codon (TTA-genes)
+  6.NUM_FS_GENES                 --  total number of FS-genes. Empty for --skip_fs mode
+  7.NUM_FS_and_TTA_GENES         --  intersection of FS-genes with TTA-genes
+  8.NUM_COFS                     --  total number of clusters that include FS-genes
+  9.NUM_FS_GENES_in_COFS         --  total number of FS-genes in clusters
+ 10.NUM_TTA_GENES_in_COFS        --  total number of TTA-genes that are 'similar' to FS-genes from ALL clusters
+ 11.NUM_FS_and_TTA_GENES_in_COFS --  intersection of FS-genes with TTA-genes in clusters
+ 12.ACC_IDs                      --  Accession ID(;s) of locus/genomic sequence(s), e.g. NC_003155.5;NC_004719.1;...
+ 13.COF_IDs                      --  List of Cluster_ID=number_gene(;s) with TTA codon, e.g. 1000515=3;1000517=1;...
+ 14.FS_IDs                       --  List of Frameshift-TTA-gene ID(;s). Format: <fs_id>=<gene_id1,gene_id2,...>,
+                                       e.g. 74297=NC_003155.5:p25699.4695,NC_003155.5:m28699.1078;...
+ 15.WOFS_IDs                     --  List of Cluster ID(;s) without FS-genes. Format: <cluster_id>=<gene_id1,gene_id2,...>,
+                                       e.g.: 1000568=NC_010572.1:m66749.1145,NC_010572.1:p8478036.1145;...
+ 16.GENE_IDs                     --  List of CDS gene ID(;s). Format: <acc_id>:<strand><start>.<length>,
+                                       e.g.: NC_010572.1:m66749.1145;NC_010572.1:p8478036.1145;...
 
   Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
          NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for --skip_fs option
@@ -474,4 +502,3 @@ NOTES (without --skip_fs option):
 
 ";
 }
-
