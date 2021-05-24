@@ -81,6 +81,12 @@ class OrgModelTests(GtdbTestCase):
         org.delete()
         self.assertFalse(os.path.isdir(org_dir))
 
+    def test_org_create_virus_from_gbk(self):
+        gbk_fn = self.get_full_path_to_test_file('virus_phiHau3.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+        self.assertTrue('virus_host' in org.prm)
+        self.assertTrue(org.prm.virus_host == 'Streptomyces coelicolor A3(2)')
+
     def test_org_create_genetack_fshifts(self):
         gbk_fn = self.get_full_path_to_test_file('S_griseus.two_contigs.gbk')
         org = Org.create_from_gbk(self.user, gbk_fn)

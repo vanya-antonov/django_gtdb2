@@ -44,6 +44,7 @@ class Org(AbstractUnit):
         'taxonomy': {'is_list': True, 'sort_attr': 'num'},
         'transl_table': {'type_fun': int, 'is_list': True,
                          'sort_attr': 'num', 'reverse': True},
+        'virus_host': {'value_attr': 'value'},
     }.items()))
 
     # The '%'s will be substituted with the value of 'dir_name' prm
@@ -182,6 +183,9 @@ class Org(AbstractUnit):
         self._make_param_rrna_16s()
 
         self._make_param_blastdb()
+
+        if self.kingdom == 'Viruses':
+            self._make_param_virus_host(record)
 
     def create_annotation(self):
         """Uses some parts of the GenBank annotation to create new features
@@ -356,6 +360,29 @@ class Org(AbstractUnit):
         full_path = self.get_full_path_to_subdir(subdir)
         file_path = os.path.join(full_path, record.id)
         SeqIO.write(record, file_path, fmt)
+
+    def _make_param_virus_host(self, record):
+        """For viral genome extract info about its host
+        (e.g. /host="Streptomyces coelicolor A3(2)").
+        """
+        f_source = None
+        for f in record.features:
+            if f.type == 'source':
+                f_source = f
+                break
+
+        if f_source == None:
+            logging.warning("Can't find host for virus!")
+            return
+
+        host_str = None
+        if 'host' in f_source.qualifiers.keys():
+            host_str = f_source.qualifiers['host'][0]
+        if host_str is None and 'lab_host' in f_source.qualifiers:
+            host_str = ''.join(f_source.qualifiers['lab_host'])
+
+        if host_str is not None:
+            self.set_param('virus_host', value=host_str)
 
     def _make_param_xref(self, record):
         "Creates the 'xref' params from the given SeqRecord."

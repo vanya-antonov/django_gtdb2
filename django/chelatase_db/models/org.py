@@ -19,7 +19,7 @@ from gtdb2.models.org import Org
 
 
 # from chelatase_db.models import ChelataseFeat
-from dna_features_viewer import GraphicFeature, GraphicRecord
+#from dna_features_viewer import GraphicFeature, GraphicRecord
 # from gtdb2.models import Org
 # from gtdb2.models import Seq
 # from gtdb2.models import Fshift
