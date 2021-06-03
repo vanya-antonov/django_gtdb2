@@ -9,7 +9,7 @@ use Getopt::Long;
 use Bio::SeqIO;
 use DBI;
 
-my $VERSION = '1.07';
+my $VERSION = '1.08';
 
 ###
 # Default Options
@@ -120,7 +120,8 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		s/\s+/ /g;
 	}
 
-	my( %gg, %dt );
+	my %gg; # for all CDS-genes
+	my %dt; # for TTA-genes only
 	my( $organism, $taxon, $num_fs_and_TTA_genes, $num_TTA_genes_in_cofs, $num_fs_and_TTA_genes_in_cofs );
 
 	for my $feat_obj ($seq_obj->get_SeqFeatures) {
@@ -162,18 +163,27 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		my $strand = $feat_obj->location->strand || 0;
 		my $ts;
 		if( $strand > 0 ){
+			$strand = 1;
 			$ts = 'p';
 		}elsif( $strand < 0 ){
+			$strand = -1;
 			$ts = 'm';
 		}else{
 			$ts = 'n';
 		}
 
-		# Sequence Identifier
+		# Gene Identifier for FNA/FAA sequence
 		my $gene_id = "$acc_id:$ts$start.$len";
 
 		next if exists $gg{ $gene_id };
 		$gg{ $gene_id } = undef;
+
+		# DB search corresponding FS for gene (acc_id) and a specific strand: |start...{FS-coord}...end|
+		my( $numFS, $fs_ids ) = $SKIP_FS ? (undef, undef) :
+								$dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS numFS, GROUP_CONCAT(DISTINCT id SEPARATOR ';') AS fs_ids
+FROM fshifts WHERE seq_id LIKE "$acc_id" AND strand = $strand AND $start <= coord AND coord <= $end } );
+
+		$gg{ $gene_id } = $fs_ids if $numFS;
 
 		# Get Nucleotide sequence (CDS)
 		my $fna_seq = lc $feat_obj->spliced_seq->seq; # e.g. 'ATTATTTTCGCT...'
@@ -189,6 +199,8 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 			push @TTAs, $s;
 		}
 		next unless @TTAs; # gene/transcript without TTA-codons
+
+### TTA-codon(s) exists
 
 		if( $feat_obj->has_tag('protein_id') ){
 			# e.g. 'WP_100112605.1', from a line like /protein_id="WP_100112605.1"
@@ -226,13 +238,8 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 			}
 		}
 
-		# Search corresponding FS for TTA-genes: |start...{FS-coord}...end|
-		my( $num, $fs_ids ) = $SKIP_FS ? (undef, undef) :
-								$dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS num, GROUP_CONCAT(DISTINCT id SEPARATOR ';') 
-FROM fshifts WHERE seq_id LIKE "$acc_id" AND $start <= coord AND coord <= $end } );
-
-		if( $num ){
-			$num_fs_and_TTA_genes += $num;
+		if( $numFS ){ # corresponding FS for TTA-genes
+			$num_fs_and_TTA_genes += $numFS;
 			++$num_fs_and_TTA_genes_in_cofs if $yes_cof;
 
 			push @{ $dt{ $gene_id }{'fs_ids'} }, split(';', $fs_ids );
@@ -303,16 +310,29 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 	push @{ $all{ $taxon }{'ACC_IDs'} }, $acc_id;
 
 	for my $gene_id ( keys %dt ){
-# 13
+
+# 13: for List of Cluster_ID=number_gene(;s) with TTA codon, e.g. 1000515=3;1000517=1;...
 		++$all{ $taxon }{'COF_IDs'}{$_} for @{ $dt{ $gene_id }{'cofs'} };
-# 14
-		push @{ $all{ $taxon }{'FS_IDs'}{$_} }, $gene_id for @{ $dt{ $gene_id }{'fs_ids'} };
-# 15
-		push @{ $all{ $taxon }{'WOFS_IDs'}{$_} }, $gene_id for @{ $dt{ $gene_id }{'wofs'} };
+# 14: for List of Frameshift-TTA-gene ID(;s). Format: <fs_id>=<gene_id1,gene_id2,...>,
+		push @{ $all{ $taxon }{'FS_IDs'}{$_} }, "$gene_id.3" for @{ $dt{ $gene_id }{'fs_ids'} };
+# 15: for List of Cluster ID(;s) without FS-genes. Format: <cluster_id>=<gene_id1,gene_id2,...>,
+		push @{ $all{ $taxon }{'WOFS_IDs'}{$_} }, "$gene_id.1" for @{ $dt{ $gene_id }{'wofs'} };
+
 	}
 
-# 16
-	push @{ $all{ $taxon }{'GENE_IDs'} }, $_ for sort keys %gg;
+# 16: for List of all CDS gene ID(;s). Format: <acc_id>:<strand><start>.<length>.<tag>
+	for( sort keys %gg ){
+		my $gtag = 0;
+		if( exists $dt{$_} ){
+			$gtag = 1; # tag_{TTA} = 1
+			$gtag += 2 if exists $dt{$_}{'fs_ids'}; # tag_{TTA+FS} = 3
+
+		}elsif( defined $gg{$_} ){ # tag_{FS} = 2;
+			$gtag = 2;
+		}
+		push @{ $all{ $taxon }{'GENE_IDs'} }, "$_.$gtag";
+	}
+
 }
 
 print "\n# Elapsed time: ".(time - $START_TIME)." sec\n" if $ECHO;
@@ -401,7 +421,10 @@ sub save_fasta {
 	my( $fh, $stype, $head, $dt ) = @_;
 	return unless exists $dt->{ $head }{ $stype };
 
-	my @h = (">$head");
+	my $gtag = 1; # tag_{TTA} = 1
+	$gtag += 2 if exists $dt->{$_}{'fs_ids'}; # tag_{TTA+FS} = 3
+
+	my @h = (">$head.$gtag");	# gtag: 0=ordinary, 1=TTA, 2=FS, 3=TTA+FS
 	push @h, "gene=$dt->{ $head }{'genes'}"       if $dt->{ $head }{'genes'};
 	push @h, "protein=$dt->{ $head }{'proteins'}" if $dt->{ $head }{'proteins'};
 
@@ -487,11 +510,11 @@ OUTPUT TABLE FORMAT:
  12.ACC_IDs                      --  Accession ID(;s) of locus/genomic sequence(s), e.g. NC_003155.5;NC_004719.1;...
  13.COF_IDs                      --  List of Cluster_ID=number_gene(;s) with TTA codon, e.g. 1000515=3;1000517=1;...
  14.FS_IDs                       --  List of Frameshift-TTA-gene ID(;s). Format: <fs_id>=<gene_id1,gene_id2,...>,
-                                       e.g. 74297=NC_003155.5:p25699.4695,NC_003155.5:m28699.1078;...
+                                       e.g. 74297=NC_003155.5:p25699.4695.3,NC_003155.5:m28699.1078.3;...
  15.WOFS_IDs                     --  List of Cluster ID(;s) without FS-genes. Format: <cluster_id>=<gene_id1,gene_id2,...>,
-                                       e.g.: 1000568=NC_010572.1:m66749.1145,NC_010572.1:p8478036.1145;...
- 16.GENE_IDs                     --  List of CDS gene ID(;s). Format: <acc_id>:<strand><start>.<length>,
-                                       e.g.: NC_010572.1:m66749.1145;NC_010572.1:p8478036.1145;...
+                                       e.g.: 1000568=NC_010572.1:m66749.1145.1,NC_010572.1:p8478036.1145.1;...
+ 16.GENE_IDs                     --  List of all CDS gene ID(;s). Format: <acc_id>:<strand><start>.<length>.<tag>,
+                                       e.g.: NC_003155.5:m869.1085.0;NC_010572.1:m66749.1145.1;NC_010572.1:p8478036.1145.1;...
 
   Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
          NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for --skip_fs option
