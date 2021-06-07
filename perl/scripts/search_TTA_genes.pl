@@ -8,8 +8,9 @@ use File::Spec;
 use Getopt::Long;
 use Bio::SeqIO;
 use DBI;
+use JSON;
 
-my $VERSION = '1.08';
+my $VERSION = '1.12';
 
 ###
 # Default Options
@@ -24,7 +25,8 @@ my $HEADER;
 my $ECHO;
 my $SKIP_FS;
 my $EVALUE = 1e-10; # BLAST option
-my $PROT_DB = '/home/alessandro/BLASTp/db/Streptomyces.seq_prot.faa'; # DB for aligment by BLASTp
+my $CFG_DB = '/home/alessandro/src/D/django_gtdb2/django/mysite/local_settings.json';
+my $PROT_DB; # DB for aligment by BLASTp
 
 # Number of CPUs (for BLAST option)
 (my $CPUs = `cat /proc/cpuinfo | grep ^processor | wc -l`) =~s/\D+//g;
@@ -48,6 +50,7 @@ GetOptions(
 	'evalue=f'       => \$EVALUE,
 	'threads=i'      => \$THREADS,
 	'prot_db=s'      => \$PROT_DB,
+	'cfg_db=s'       => \$CFG_DB,
 ) or die &usage();
 
 $THREADS = $CPUs if $THREADS > $CPUs;
@@ -61,12 +64,15 @@ close GBF;
 
 die "\x1b[31mERROR\x1b[0m: Invalid GenBank file format" unless /^LOCUS\s+/;
 
-# Read DataBase configuration
-our $dbh;
+my( $dbh, $gtdb_dir );
 unless( $SKIP_FS ){
-	my $db_cfg = 'db.cfg';
-	die "\x1b[31mERROR\x1b[0m: Can't open $db_cfg file" unless -s $db_cfg;
-	do "./$db_cfg";
+	# Read DataBase configurations
+	( $dbh, $gtdb_dir ) = &read_configDB( $CFG_DB );
+
+	if( defined $gtdb_dir ){ # DB for aligment by BLASTp
+		$gtdb_dir =~s/\/+$//;
+		$PROT_DB ||= "$gtdb_dir/BLASTp/db/Streptomyces.seq_prot.faa";
+	}
 }
 
 if( defined $AUTO ){
@@ -458,6 +464,38 @@ my( $gene_id, $fs_id, $pident, $alen, $mismatches, $gaps, $qstart, $qend, $sstar
 }
 
 
+sub read_configDB {
+	my( $settings ) = @_;
+
+	# Read DataBase configuration
+	my $json_set = do {
+		open( my $json_fh, $settings )
+			or die "\x1b[31mERROR\x1b[0m: Can't open $settings file: $!";
+
+		local $/;
+		<$json_fh>;
+	};
+
+	my $ref = decode_json( $json_set );
+	die "\x1b[31mERROR\x1b[0m: No DB settings exist: $!"
+		if !exists( $ref->{'DATABASES'} ) or !exists( $ref->{'DATABASES'}{'default'} );
+
+	my $db_name  = $ref->{'DATABASES'}{'default'}{'NAME'} || 'gtdb2'; # 'gtdb2_cof'
+	my $user     = $ref->{'DATABASES'}{'default'}{'USER'};
+	my $password = $ref->{'DATABASES'}{'default'}{'PASSWORD'};
+	my $host     = $ref->{'DATABASES'}{'default'}{'HOST'} || 'localhost';
+	my $engine   = $ref->{'DATABASES'}{'default'}{'ENGINE'} || 'DBI:mysql:database'; # "django.db.backends.mysql"
+	my $port     = $ref->{'DATABASES'}{'default'}{'PORT'} || 3306;
+
+	my $dbh = DBI->connect("DBI:mysql:database=$db_name;host=$host;port=$port", $user, $password,
+						{ RaiseError => 0, PrintError => 1, AutoCommit => 1} );
+
+	my $gtdb_dir = $ref->{'GTDB_DIR'}[0]; # "/home/gtdb/data/gtdb2/"
+
+	return( $dbh, $gtdb_dir );
+}
+
+
 sub usage
 {
 	my( $msg ) = @_;
@@ -481,18 +519,19 @@ HERE:
     <file.gbk>   -- input GenBank file only
 
 OPTIONS:
-    --output  <file.tsv|stdout>  --  output table. Default STDOUT output
+    --output  <file.tsv|stdout>  --  output table. STDOUT output by default
     --save_tta_fna  <file.fna>   --  save nt sequences of CDS(s) with TTA
     --save_tta_faa  <file.faa>   --  save sequences of all protein(s) with TTA (Leu)
-    --save_fna  <file.fna>       --  save nt sequences of CDS(s). TODO
+    --save_fna  <file.fna>       --  save nt sequences of all CDS(s). TODO
     --save_faa  <file.faa>       --  save sequences of all protein(s). TODO
     --header                     --  output header of table
     --echo                       --  output echo messages
     --auto                       --  autocomplete options: --output, --save_tta_fna, --save_tta_faa
     --wofs                       --  save the collection of TTA-genes and their sequences without FrameShift
-    --evalue                     --  E-value BLAST option. Default 1e-10
-    --threads                    --  num_threads BLAST option. Default (0.9*CPUs | 1)
-    --prot_db                    --  protein DB for aligment by BLASTp. Default internal Streptomyces.seq_prot.faa DB
+    --evalue                     --  E-value BLAST option. By default, 1e-10
+    --threads                    --  num_threads BLAST option. By default, (0.9*CPUs | 1)
+    --cfg_db                     --  DB configuration file. By default, this is 'django_gtdb2/django/mysite/local_settings.json'
+    --prot_db                    --  protein DB for aligment by BLASTp. Internal 'Streptomyces.seq_prot.faa' DB by default
     --skip_fs                    --  skip FrameShift search
 
 OUTPUT TABLE FORMAT:
@@ -520,7 +559,7 @@ OUTPUT TABLE FORMAT:
          NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for --skip_fs option
 
 NOTES (without --skip_fs option):
-  1. a configuration DB file 'db.cfg' is required.
+  1. a configuration DB file 'django_gtdb2/django/mysite/local_settings.json' (or specified by --cfg_db) is required.
   2. BLAST program is required.
 
 ";
