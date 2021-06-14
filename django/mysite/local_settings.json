@@ -5,23 +5,33 @@
 	"DATABASES": {
 		"default": {
 			"ENGINE": "django.db.backends.mysql",
+			"DBI": "DBI:mysql:database",
 			"NAME": "gtdb2",
 			"USER": "genetack",
 			"PASSWORD": "secret",
 			"HOST": "127.0.0.1",
-			"PORT": 3306
+			"PORT": 3306,
+			"GTDB_DIR": "/home/gtdb/data/gtdb2"
+		},
+		"gtdb2_cof": {
+			"ENGINE": "django.db.backends.mysql",
+			"DBI": "DBI:mysql:database",
+			"NAME": "gtdb2_cof",
+			"USER": "genetack",
+			"PASSWORD": "secret",
+			"HOST": "127.0.0.1",
+			"PORT": 3306,
+			"GTDB_DIR": "/home/gtdb/data/gtdb2"
 		},
 		"gtdb1": {
 			"ENGINE": "django.db.backends.mysql",
+			"DBI": "DBI:mysql:database",
 			"NAME": "genetack",
 			"USER": "ivan",
 			"PASSWORD": "123",
 			"HOST": "10.0.1.254",
-			"PORT": 3306
+			"PORT": 3306,
+			"GTDB_DIR": "/home/gtdb/data/gtdb1"
 		}
-	},
-	"GTDB_DIR": [
-		"/home/gtdb/data/gtdb2",
-		"/mnt/storage2/ivan/data/chelatase_db"
-	]
+	}
 }

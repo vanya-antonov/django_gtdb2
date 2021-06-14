@@ -10,7 +10,7 @@ use Bio::SeqIO;
 use DBI;
 use JSON;
 
-my $VERSION = '1.12';
+my $VERSION = '1.14';
 
 ###
 # Default Options
@@ -26,6 +26,7 @@ my $ECHO;
 my $SKIP_FS;
 my $EVALUE = 1e-10; # BLAST option
 my $CFG_DB = '/home/alessandro/src/D/django_gtdb2/django/mysite/local_settings.json';
+my $SESSION = 'gtdb2_cof';
 my $PROT_DB; # DB for aligment by BLASTp
 
 # Number of CPUs (for BLAST option)
@@ -51,6 +52,7 @@ GetOptions(
 	'threads=i'      => \$THREADS,
 	'prot_db=s'      => \$PROT_DB,
 	'cfg_db=s'       => \$CFG_DB,
+	'session=s'      => \$SESSION,
 ) or die &usage();
 
 $THREADS = $CPUs if $THREADS > $CPUs;
@@ -67,7 +69,7 @@ die "\x1b[31mERROR\x1b[0m: Invalid GenBank file format" unless /^LOCUS\s+/;
 my( $dbh, $gtdb_dir );
 unless( $SKIP_FS ){
 	# Read DataBase configurations
-	( $dbh, $gtdb_dir ) = &read_configDB( $CFG_DB );
+	( $dbh, $gtdb_dir ) = &read_configDB( $SESSION, $CFG_DB );
 
 	if( defined $gtdb_dir ){ # DB for aligment by BLASTp
 		$gtdb_dir =~s/\/+$//;
@@ -465,12 +467,12 @@ my( $gene_id, $fs_id, $pident, $alen, $mismatches, $gaps, $qstart, $qend, $sstar
 
 
 sub read_configDB {
-	my( $settings ) = @_;
+	my( $session, $cfgs ) = @_;
 
 	# Read DataBase configuration
 	my $json_set = do {
-		open( my $json_fh, $settings )
-			or die "\x1b[31mERROR\x1b[0m: Can't open $settings file: $!";
+		open( my $json_fh, $cfgs )
+			or die "\x1b[31mERROR\x1b[0m: Can't open $cfgs file: $!";
 
 		local $/;
 		<$json_fh>;
@@ -478,19 +480,19 @@ sub read_configDB {
 
 	my $ref = decode_json( $json_set );
 	die "\x1b[31mERROR\x1b[0m: No DB settings exist: $!"
-		if !exists( $ref->{'DATABASES'} ) or !exists( $ref->{'DATABASES'}{'default'} );
+		if !exists( $ref->{'DATABASES'} ) or !exists( $ref->{'DATABASES'}{ $session } );
 
-	my $db_name  = $ref->{'DATABASES'}{'default'}{'NAME'} || 'gtdb2'; # 'gtdb2_cof'
-	my $user     = $ref->{'DATABASES'}{'default'}{'USER'};
-	my $password = $ref->{'DATABASES'}{'default'}{'PASSWORD'};
-	my $host     = $ref->{'DATABASES'}{'default'}{'HOST'} || 'localhost';
-	my $engine   = $ref->{'DATABASES'}{'default'}{'ENGINE'} || 'DBI:mysql:database'; # "django.db.backends.mysql"
-	my $port     = $ref->{'DATABASES'}{'default'}{'PORT'} || 3306;
+	my $db_name  = $ref->{'DATABASES'}{ $session }{'NAME'}   || 'gtdb2'; # 'gtdb2_cof'
+	my $user     = $ref->{'DATABASES'}{ $session }{'USER'};
+	my $password = $ref->{'DATABASES'}{ $session }{'PASSWORD'};
+	my $host     = $ref->{'DATABASES'}{ $session }{'HOST'}   || 'localhost';
+	my $engine   = $ref->{'DATABASES'}{ $session }{'DBI'} || 'DBI:mysql:database';
+	my $port     = $ref->{'DATABASES'}{ $session }{'PORT'}   || 3306;
 
-	my $dbh = DBI->connect("DBI:mysql:database=$db_name;host=$host;port=$port", $user, $password,
+	my $dbh = DBI->connect("$engine=$db_name;host=$host;port=$port", $user, $password,
 						{ RaiseError => 0, PrintError => 1, AutoCommit => 1} );
 
-	my $gtdb_dir = $ref->{'GTDB_DIR'}[0]; # "/home/gtdb/data/gtdb2/"
+	my $gtdb_dir = $ref->{'DATABASES'}{ $session }{'GTDB_DIR'}; # "/home/gtdb/data/gtdb2/"
 
 	return( $dbh, $gtdb_dir );
 }
@@ -530,8 +532,9 @@ OPTIONS:
     --wofs                       --  save the collection of TTA-genes and their sequences without FrameShift
     --evalue                     --  E-value BLAST option. By default, 1e-10
     --threads                    --  num_threads BLAST option. By default, (0.9*CPUs | 1)
-    --cfg_db                     --  DB configuration file. By default, this is 'django_gtdb2/django/mysite/local_settings.json'
-    --prot_db                    --  protein DB for aligment by BLASTp. Internal 'Streptomyces.seq_prot.faa' DB by default
+    --cfg_db                     --  DB configuration file. By default, 'django_gtdb2/django/mysite/local_settings.json'
+    --session                    --  session name/key in the DB configuration file. By default, 'gtdb2_cof'
+    --prot_db                    --  protein DB for aligment by BLASTp. By default, 'Streptomyces.seq_prot.faa'
     --skip_fs                    --  skip FrameShift search
 
 OUTPUT TABLE FORMAT:
