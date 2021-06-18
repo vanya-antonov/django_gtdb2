@@ -7,7 +7,7 @@ import shutil
 
 from Bio import SeqIO
 
-from gtdb2.models import Fshift
+from gtdb2.models import Fshift, Feat
 from gtdb2.models.org import Org, OrgParam
 from gtdb2.tests import GtdbTestCase
 
@@ -86,6 +86,24 @@ class OrgModelTests(GtdbTestCase):
         org = Org.create_from_gbk(self.user, gbk_fn)
         self.assertTrue('virus_host' in org.prm)
         self.assertTrue(org.prm.virus_host == 'Streptomyces coelicolor A3(2)')
+
+    def test_get_or_create_feat_from_locus_tag(self):
+        gbk_fn = self.get_full_path_to_test_file('N_mexicana.gbk')
+        org = Org.create_from_gbk(self.user, gbk_fn)
+
+        feat = org.get_or_create_feat_from_locus_tag("NM1_RS02585", 'CDS')
+        self.assertTrue(feat.name == "NM1_RS02585")
+        self.assertTrue(feat.descr == "DoxX family protein")
+
+        # It should not create new feat after another call
+        count_before = Feat.objects.count()
+        org.get_or_create_feat_from_locus_tag("NM1_RS02585", 'CDS')
+        count_after = Feat.objects.count()
+        self.assertTrue(count_before == count_after)
+
+        # For unknown feat it should return None
+        unknown_feat = org.get_or_create_feat_from_locus_tag("blah-blah", 'CDS')
+        self.assertTrue(unknown_feat is None)
 
     def test_org_create_genetack_fshifts(self):
         gbk_fn = self.get_full_path_to_test_file('S_griseus.two_contigs.gbk')

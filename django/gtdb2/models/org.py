@@ -167,6 +167,31 @@ class Org(AbstractUnit):
         seq_path = os.path.join(dir_path, ext_id)
         return SeqIO.read(seq_path, dir2fmt[seq_dir])
 
+    def get_or_create_feat_from_locus_tag(self, locus_tag, f_type):
+        """Create new feat in DB based on its ID from gbk file like
+        '/locus_tag="NM1_RS02585"'.
+        """
+        gbk_feat = None
+        for gbk_fn in self.get_all_seq_ids(seq_dir='seq_gbk', fullpath=True):
+            record = SeqIO.read(gbk_fn, "genbank")
+            for f in record.features:
+                if(f.type == f_type and 'locus_tag' in f.qualifiers and
+                    f.qualifiers['locus_tag'][0] == locus_tag):
+                    gbk_feat = f
+                    break
+
+            if gbk_feat is not None:
+                seq = gtdb2.models.Seq.get_or_create_from_ext_id(
+                    self.user, self, record.id)
+                feat = gtdb2.models.Feat.get_or_create_from_SeqFeature(
+                    self.user, seq, gbk_feat)
+                return feat
+
+        if gbk_feat is None:
+            logging.warning("Could not find feat with locus_tag='%s'" % locus_tag)
+
+        return None
+
     def create_all_params(self):
         "Generates/updates the majority of params."
         self._make_param_short_name()

@@ -41,7 +41,6 @@ class Command(AbstractCommand):
         for obj_id in get_all_ids(options['input_ids']):
             obj = cls.objects.get(pk=obj_id)
             method_args = options['method_args']
-            pprint(method_args)
             logging.info(
                 'Calling methond "%s" on object with id "%s" (%s) and args "%s"' %
                 (options['method_name'], obj_id, obj, method_args))
