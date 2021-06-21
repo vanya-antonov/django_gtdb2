@@ -1,13 +1,7 @@
 # Copyright 2018 by Ivan Antonov. All rights reserved.
 
-import os
 from pprint import pprint
-import subprocess
 
-#from django.conf import settings
-
-#from chelatase_db.lib.bio import run_blastp_seq_vs_file
-#from chelatase_db.lib.config import PATHWAY_GENES_FAA, read_pathway_gene_info
 from gtdb2.models.feat import Feat
 
 
