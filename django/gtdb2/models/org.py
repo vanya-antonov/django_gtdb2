@@ -37,6 +37,8 @@ class Org(AbstractUnit):
     PRM_INFO = dict(list(AbstractUnit.PRM_INFO.items()) + list({
         'blastdb_nucl_all': {},
         'dir_name': {},
+        'num_annotated_genes': {'value_attr': 'num', 'type_fun': int},
+        'num_fshifts': {'value_attr': 'num', 'type_fun': int},
         'num_seqs': {'value_attr': 'num', 'type_fun': int},
         'seq_rrna_16s': {'value_attr': 'data'},
         'short_name': {},
