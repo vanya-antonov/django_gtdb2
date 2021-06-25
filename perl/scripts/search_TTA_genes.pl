@@ -10,7 +10,7 @@ use Bio::SeqIO;
 use DBI;
 use JSON;
 
-my $VERSION = '1.14';
+my $VERSION = '1.15';
 
 ###
 # Default Options
@@ -186,12 +186,20 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 		next if exists $gg{ $gene_id };
 		$gg{ $gene_id } = undef;
 
+		if( $feat_obj->has_tag('locus_tag') ){
+			$gg{ $gene_id }{'locus_tag'} = join ',', $feat_obj->get_tag_values('locus_tag');
+
+		}elsif( $feat_obj->has_tag('gene') ){
+			# e.g. 'NDP', from a line like '/gene="NDP"'
+			$gg{ $gene_id }{'locus_tag'} = join ',', $feat_obj->get_tag_values('gene'); # gene name(s) for FNA/FAA
+		}
+
 		# DB search corresponding FS for gene (acc_id) and a specific strand: |start...{FS-coord}...end|
 		my( $numFS, $fs_ids ) = $SKIP_FS ? (undef, undef) :
 								$dbh->selectrow_array( qq{ SELECT COUNT(DISTINCT id) AS numFS, GROUP_CONCAT(DISTINCT id SEPARATOR ';') AS fs_ids
 FROM fshifts WHERE seq_id LIKE "$acc_id" AND strand = $strand AND $start <= coord AND coord <= $end } );
 
-		$gg{ $gene_id } = $fs_ids if $numFS;
+		$gg{ $gene_id }{'FS'} = $fs_ids if $numFS;
 
 		# Get Nucleotide sequence (CDS)
 		my $fna_seq = lc $feat_obj->spliced_seq->seq; # e.g. 'ATTATTTTCGCT...'
@@ -215,13 +223,7 @@ FROM fshifts WHERE seq_id LIKE "$acc_id" AND strand = $strand AND $start <= coor
 			$dt{ $gene_id }{'proteins'} = join ',', $feat_obj->get_tag_values('protein_id'); # protein_id(s) for FNA/FAA
 		}
 
-		if( $feat_obj->has_tag('gene') ){
-			# e.g. 'NDP', from a line like '/gene="NDP"'
-			$dt{ $gene_id }{'genes'} = join ',', $feat_obj->get_tag_values('gene'); # gene name(s) for FNA/FAA
-
-		}elsif( $feat_obj->has_tag('locus_tag') ){
-			$dt{ $gene_id }{'genes'} = join ',', $feat_obj->get_tag_values('locus_tag');
-		}
+		$dt{ $gene_id }{'genes'} = $gg{ $gene_id }{'locus_tag'} if exists $gg{ $gene_id }{'locus_tag'};
 
 		# Save Gene Location
 		$dt{ $gene_id }{'start'} = $start;
@@ -335,10 +337,12 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 			$gtag = 1; # tag_{TTA} = 1
 			$gtag += 2 if exists $dt{$_}{'fs_ids'}; # tag_{TTA+FS} = 3
 
-		}elsif( defined $gg{$_} ){ # tag_{FS} = 2;
+		}elsif( exists $gg{$_}{'FS'} ){ # tag_{FS} = 2;
 			$gtag = 2;
 		}
-		push @{ $all{ $taxon }{'GENE_IDs'} }, "$_.$gtag";
+		my $id = "$_.$gtag";
+		$id .= ":$gg{$_}{'locus_tag'}" if exists $gg{$_}{'locus_tag'};
+		push @{ $all{ $taxon }{'GENE_IDs'} }, $id;
 	}
 
 }
@@ -486,13 +490,14 @@ sub read_configDB {
 	my $user     = $ref->{'DATABASES'}{ $session }{'USER'};
 	my $password = $ref->{'DATABASES'}{ $session }{'PASSWORD'};
 	my $host     = $ref->{'DATABASES'}{ $session }{'HOST'}   || 'localhost';
-	my $engine   = $ref->{'DATABASES'}{ $session }{'DBI'} || 'DBI:mysql:database';
+	my $engine   = $ref->{'DATABASES'}{ $session }{'DBI'}    || 'DBI:mysql:database';
 	my $port     = $ref->{'DATABASES'}{ $session }{'PORT'}   || 3306;
 
 	my $dbh = DBI->connect("$engine=$db_name;host=$host;port=$port", $user, $password,
 						{ RaiseError => 0, PrintError => 1, AutoCommit => 1} );
 
-	my $gtdb_dir = $ref->{'DATABASES'}{ $session }{'GTDB_DIR'}; # "/home/gtdb/data/gtdb2/"
+	my $gtdb_dir = $ref->{'DATABASES'}{ $session }{'GTDB_DIR'}; # "/home/gtdb/data/gtdb2"
+	$gtdb_dir =~s/\/+$//;
 
 	return( $dbh, $gtdb_dir );
 }
@@ -506,6 +511,8 @@ sub usage
 	my $script = "\x1b[32m" . File::Spec->splitpath($0) . "\x1b[0m";
 	return"$msg
 $script version $VERSION
+DESCRIPTION:
+    Search TTA codons in sequences of <file.gbk>
 
 USAGE:
     $script <file.gbk> [OPTIONS]
@@ -533,7 +540,7 @@ OPTIONS:
     --evalue                     --  E-value BLAST option. By default, 1e-10
     --threads                    --  num_threads BLAST option. By default, (0.9*CPUs | 1)
     --cfg_db                     --  DB configuration file. By default, 'django_gtdb2/django/mysite/local_settings.json'
-    --session                    --  session name/key in the DB configuration file. By default, 'gtdb2_cof'
+    --session                    --  session name/key in the DB configuration file. By default, 'gtdb2'
     --prot_db                    --  protein DB for aligment by BLASTp. By default, 'Streptomyces.seq_prot.faa'
     --skip_fs                    --  skip FrameShift search
 
@@ -555,10 +562,11 @@ OUTPUT TABLE FORMAT:
                                        e.g. 74297=NC_003155.5:p25699.4695.3,NC_003155.5:m28699.1078.3;...
  15.WOFS_IDs                     --  List of Cluster ID(;s) without FS-genes. Format: <cluster_id>=<gene_id1,gene_id2,...>,
                                        e.g.: 1000568=NC_010572.1:m66749.1145.1,NC_010572.1:p8478036.1145.1;...
- 16.GENE_IDs                     --  List of all CDS gene ID(;s). Format: <acc_id>:<strand><start>.<length>.<tag>,
-                                       e.g.: NC_003155.5:m869.1085.0;NC_010572.1:m66749.1145.1;NC_010572.1:p8478036.1145.1;...
+ 16.GENE_IDs                     --  List of all CDS gene ID(;s). Format: <acc_id>:<strand><start>.<length>.<gtag>:<locus_tag|gene>,
+                                       e.g.: NC_004719.1:p86514.581.0:SAVERM_RS00425;NC_004719.1:p87433.2051.0:SAVERM_RS00430;...
 
-  Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
+ <gtag> is 1 for TTA-gene, 2 --> FS-gene, 3 --> (TTA + FS), 0 --> ordinary.
+ Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
          NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for --skip_fs option
 
 NOTES (without --skip_fs option):
