@@ -10,7 +10,7 @@ use Bio::SeqIO;
 use DBI;
 use JSON;
 
-my $VERSION = '1.15';
+my $VERSION = '1.17';
 
 ###
 # Default Options
@@ -26,8 +26,9 @@ my $ECHO;
 my $SKIP_FS;
 my $EVALUE = 1e-10; # BLAST option
 my $CFG_DB = '/home/alessandro/src/D/django_gtdb2/django/mysite/local_settings.json';
-my $SESSION = 'gtdb2_cof';
+my $SESSION = 'default'; # 'gtdb2_cof'
 my $PROT_DB; # DB for aligment by BLASTp
+my $TAXONOMY;
 
 # Number of CPUs (for BLAST option)
 (my $CPUs = `cat /proc/cpuinfo | grep ^processor | wc -l`) =~s/\D+//g;
@@ -53,6 +54,7 @@ GetOptions(
 	'prot_db=s'      => \$PROT_DB,
 	'cfg_db=s'       => \$CFG_DB,
 	'session=s'      => \$SESSION,
+	'taxonomy=s'     => \$TAXONOMY,
 ) or die &usage();
 
 $THREADS = $CPUs if $THREADS > $CPUs;
@@ -139,12 +141,18 @@ while( my $seq_obj = $seqio_obj->next_seq ){
 
 			# from a line like /organism="Streptomyces griseus subsp. griseus NBRC 13350"
 			if( $feat_obj->has_tag('organism') ){
-				for( $feat_obj->get_tag_values('organism') ){
+
+				my @lineage = $feat_obj->get_tag_values('organism');
+				$organism = shift @lineage;
+				for( $organism ){
 					s/^\s+|\s+$//g;
 					s/\s+/ /g;
-					$organism = $_;
-					last;
 				}
+
+				if( defined $AUTO ){
+					$TAXONOMY ||= shift @lineage;
+				}
+
 			}
 
 			if( $feat_obj->has_tag('db_xref') ){
@@ -402,9 +410,18 @@ my $head_out = join "\t", 'TAXON', @hh, qw(ACC_IDs COF_IDs FS_IDs WOFS_IDs GENE_
 # Save collection of TTA-genes
 if( $OUTPUT ){
 	open OFILE, ">$OUTPUT";
-	print OFILE "$head_out\n" if $HEADER;
+	if( $HEADER ){
+		print OFILE "# $0\n";
+		print OFILE "# TAXONOMY=$TAXONOMY\n" if $TAXONOMY;
+		print OFILE "$head_out\n";
+	}
+
 }else{
-	print "$head_out\n" if $HEADER;
+	if( $HEADER ){
+		print "# $0\n";
+		print "# TAXONOMY=$TAXONOMY\n" if $TAXONOMY;
+		print "$head_out\n";
+	}
 }
 
 for my $taxon ( sort keys %all ){
@@ -535,7 +552,7 @@ OPTIONS:
     --save_faa  <file.faa>       --  save sequences of all protein(s). TODO
     --header                     --  output header of table
     --echo                       --  output echo messages
-    --auto                       --  autocomplete options: --output, --save_tta_fna, --save_tta_faa
+    --auto                       --  autocomplete options: -output, -save_tta_fna, -save_tta_faa, -taxonomy
     --wofs                       --  save the collection of TTA-genes and their sequences without FrameShift
     --evalue                     --  E-value BLAST option. By default, 1e-10
     --threads                    --  num_threads BLAST option. By default, (0.9*CPUs | 1)
@@ -543,6 +560,7 @@ OPTIONS:
     --session                    --  session name/key in the DB configuration file. By default, 'gtdb2'
     --prot_db                    --  protein DB for aligment by BLASTp. By default, 'Streptomyces.seq_prot.faa'
     --skip_fs                    --  skip FrameShift search
+    --taxonomy                   --  Bacteria, Virus|Phage, etc.
 
 OUTPUT TABLE FORMAT:
   1.TAXON                        --  NCBI taxon ID of organism
@@ -566,6 +584,7 @@ OUTPUT TABLE FORMAT:
                                        e.g.: NC_004719.1:p86514.581.0:SAVERM_RS00425;NC_004719.1:p87433.2051.0:SAVERM_RS00430;...
 
  <gtag> is 1 for TTA-gene, 2 --> FS-gene, 3 --> (TTA + FS), 0 --> ordinary.
+
  Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
          NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for --skip_fs option
 
