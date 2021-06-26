@@ -38,7 +38,7 @@ my $inHd = "TAXON	ORG_ID	ORG_NAME	NUM_GENES	NUM_TTA_GENES	NUM_FS_GENES	NUM_FS_an
 
 if( $TAXONOMY =~/^(?:Virus|Phage)/i ){
 	$infile ||= 'statistic_Streptomyces_phages_TTA-vs-FS_genes.tsv';
-	$inHd .= "GENOME_LEN	HOST_ID(gtdb2)	HOST_NAME	FS_and_TTA_LIST";
+	$inHd .= "GENOME_LEN	HOST_ID\\(gtdb2\\)	HOST_NAME	FS_and_TTA_LIST";
 	$TAXONOMY = 'Viruses';
 
 	( $GENOME_LEN, $HOST_ID_gtdb2, $HOST_NAME, $FS_and_TTA_LIST ) = (0 .. 3);
@@ -71,17 +71,17 @@ while(<INFILE>){
 	if( /^#/ ){
 		if( /TAXONOMY=(\S+)/i ){
 			my $m = $1;
-			die &usage("\x1b[31mERROR\x1b[0m: taxonomies don't match '$m' != '$TAXONOMY'") if $TAXONOMY =~/^$m$/i;
+			die &usage("\x1b[31mERROR\x1b[0m: taxonomies don't match '$m' != '$TAXONOMY'") if $TAXONOMY !~/^$m$/i;
 		}
 		next;
 	}
 
 	if( /^TAXON/ ){
-		if(/^$inHd/){
+		if( /^$inHd/ ){
 			$no = 0;
 			next;
 		}
-		die &usage("\x1b[31mERROR\x1b[0m: wrong format of input.");
+		die &usage("\x1b[31mERROR\x1b[0m: wrong format of input!");
 	}
 
 	next if $no;
@@ -143,7 +143,7 @@ TAXON	ORG_ID	ORG_NAME	NUM_GENES	NUM_TTA_GENES	NUM_FS_GENES	NUM_FS_and_TTA_GENES	
 close INFILE;
 $dbh->disconnect();
 
-die &usage("\x1b[31mERROR\x1b[0m: wrong format of input.") if $no;
+die &usage("\x1b[31mERROR\x1b[0m: wrong format or empty input.") if $no;
 
 exit;
 
