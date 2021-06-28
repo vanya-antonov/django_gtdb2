@@ -11,6 +11,6 @@ class TtaFeat(Feat):
 
     # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
     PRM_INFO = dict(list(Feat.PRM_INFO.items()) + list({
-        'tta__start_coord_tta': {'value_attr': 'num', 'type_fun': int},
+        'tta__start_coord_tta': {'is_list': True, 'value_attr': 'num', 'type_fun': int},
     }.items()))
 
