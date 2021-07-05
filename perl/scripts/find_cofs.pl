@@ -86,8 +86,8 @@ SELECT cof_id AS id FROM fshifts UNION SELECT parent_id AS id FROM cof_params ) 
 	{
 		$all_fs_ids = ah2a('QID', $bu->exec_SQL_ar('SELECT DISTINCT q_fs_id AS qid FROM cof_hits'));
 
-#		warn "Removing COFs....";
-#		$gtdb->delete_cof($_->{COF_ID}) foreach @{$gtdb->{bu}->exec_SQL_ar('select id from cofs')};
+		warn "Removing COFs....";
+		$gtdb->delete_cof($_->{COF_ID}) for @{$gtdb->{bu}->exec_SQL_ar('SELECT id FROM cofs')};
 	}
 	elsif( -e $opts{subset} ) # for file FS_ONLY.txt
 	{

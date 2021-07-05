@@ -6,9 +6,11 @@ use warnings;
 use File::Spec;
 use Getopt::Long;
 use DBI;
-use JSON;
 
-my $VERSION = '1.02';
+# Custom libraries
+use MyLibGT::DBapp qw( :all );
+
+my $VERSION = '1.04';
 
 ###
 # Default Options
@@ -26,7 +28,7 @@ GetOptions(
 
 $TAXONOMY || die &usage("\x1b[31mERROR\x1b[0m: empty TAXONOMY.");
 
-my $infile = $ARGV[0];
+my $infile = $ARGV[0];	# statistic_Streptomyces_phages_TTA-vs-FS_genes.tsv
 
 # idexies of @misc
 my( $NUM_COFS, $NUM_FS_GENES_in_COFS, $NUM_TTA_GENES_in_COFS, $NUM_FS_and_TTA_GENES_in_COFS, 
@@ -55,9 +57,9 @@ if( $TAXONOMY =~/^(?:Virus|Phage)/i ){
 }
 
 # Read DataBase configurations
-my( $dbh, $gtdb_dir ) = &read_configDB( $SESSION, $CFG_DB );
+my( $dbh, $gtdb_dir ) = read_configDB( $SESSION, $CFG_DB );
 
-my $save_db = &SaveDB;
+my $save_db = SaveDB;
 
 my $i = 0;
 my $no = 1;
@@ -159,55 +161,6 @@ sub save_DB_info {
 	}else{
 		$dbh->do( qq{ INSERT org_params SET $qu } ) or warn $dbh->errstr;
 	}
-}
-
-
-# Read DataBase configuration
-sub read_configDB {
-	my( $session, $cfgs ) = @_;
-
-	my $json_set = do {
-		open( my $json_fh, $cfgs )
-			or &usage("\x1b[31mERROR\x1b[0m: Can't open $cfgs file. $!");
-
-		local $/;
-		<$json_fh>;
-	};
-
-	my $ref = decode_json( $json_set );
-	&usage("\x1b[31mERROR\x1b[0m: No DB settings exist. $!")
-		if !exists( $ref->{'DATABASES'} ) or !exists( $ref->{'DATABASES'}{ $session } );
-
-	my $db_name  = $ref->{'DATABASES'}{ $session }{'NAME'}   || 'gtdb2'; # 'gtdb2_cof'
-	my $user     = $ref->{'DATABASES'}{ $session }{'USER'};
-	my $password = $ref->{'DATABASES'}{ $session }{'PASSWORD'};
-	my $host     = $ref->{'DATABASES'}{ $session }{'HOST'}   || 'localhost';
-	my $engine   = $ref->{'DATABASES'}{ $session }{'DBI'}    || 'DBI:mysql:database';
-	my $port     = $ref->{'DATABASES'}{ $session }{'PORT'}   || 3306;
-
-	my $dbh = DBI->connect("$engine=$db_name;host=$host;port=$port", $user, $password,
-						{ RaiseError => 0, PrintError => 1, AutoCommit => 1} );
-
-	my $gtdb_dir = $ref->{'DATABASES'}{ $session }{'GTDB_DIR'}; # "/home/gtdb/data/gtdb2/"
-	$gtdb_dir =~s/\/+$//;
-
-	return( $dbh, $gtdb_dir );
-}
-
-
-sub SaveDB {
-	my $save_db = 1;	# 1=save into DB
-
-	while( 1 ){
-		last unless $save_db;
-
-		print"Do You want save/update info DB (\x1b[31;1m y\x1b[0m or \x1b[32;1m n\x1b[0m )? ";
-		$_ = <STDIN>;
-		last if /^y(?:es)?/i;
-		$save_db = 0 if /^no?/i;
-	}
-
-	$save_db;
 }
 
 

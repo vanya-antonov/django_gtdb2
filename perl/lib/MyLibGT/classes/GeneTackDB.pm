@@ -123,11 +123,13 @@ sub delete_cof
 #	system("rm -rvf $cof_dir") if -d $cof_dir;
 
 	$self->{bu}->exec_SQL_nr('UPDATE fshifts SET cof_id=NULL WHERE cof_id=?', $cof_id );
-	$self->{bu}->exec_SQL_nr('DELETE FROM cofs WHERE id=?', $cof_id );
-#	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="dir" AND parent_id=?', $cof_id );
+	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="dir" AND parent_id=?', $cof_id );
 	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="num_fs" AND parent_id=?', $cof_id );
 	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="num_plus_fs" AND parent_id=?', $cof_id );
 	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="num_minus_fs" AND parent_id=?', $cof_id );
+
+	# Should be the last!!!
+	$self->{bu}->exec_SQL_nr('DELETE FROM cofs WHERE id=?', $cof_id );
 }
 
 

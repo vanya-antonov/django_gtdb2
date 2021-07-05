@@ -8,7 +8,9 @@ use File::Spec;
 use Getopt::Long;
 use Bio::SeqIO;
 use DBI;
-use JSON;
+
+# Custom libraries
+use MyLibGT::DBapp qw( :all );
 
 my $VERSION = '1.04';
 
@@ -42,7 +44,7 @@ close GBF;
 die "\x1b[31mERROR\x1b[0m: Invalid GenBank file format" unless /^LOCUS\s+/;
 
 # Read DataBase configurations
-my( $dbh, $gtdb_dir ) = &read_configDB( $SESSION, $CFG_DB );
+my( $dbh, $gtdb_dir ) = read_configDB( $SESSION, $CFG_DB );
 
 if( defined $AUTO ){
 	(my $fl = $infile) =~s/\.[^\.]+$//;
@@ -192,39 +194,6 @@ for my $taxon ( sort keys %all ){
 }
 
 exit;
-
-
-# Read DataBase configuration
-sub read_configDB {
-	my( $session, $cfgs ) = @_;
-
-	my $json_set = do {
-		open( my $json_fh, $cfgs )
-			or &usage("\x1b[31mERROR\x1b[0m: Can't open $cfgs file. $!");
-
-		local $/;
-		<$json_fh>;
-	};
-
-	my $ref = decode_json( $json_set );
-	&usage("\x1b[31mERROR\x1b[0m: No DB settings exist. $!")
-		if !exists( $ref->{'DATABASES'} ) or !exists( $ref->{'DATABASES'}{ $session } );
-
-	my $db_name  = $ref->{'DATABASES'}{ $session }{'NAME'}   || 'gtdb2'; # 'gtdb2_cof'
-	my $user     = $ref->{'DATABASES'}{ $session }{'USER'};
-	my $password = $ref->{'DATABASES'}{ $session }{'PASSWORD'};
-	my $host     = $ref->{'DATABASES'}{ $session }{'HOST'}   || 'localhost';
-	my $engine   = $ref->{'DATABASES'}{ $session }{'DBI'}    || 'DBI:mysql:database';
-	my $port     = $ref->{'DATABASES'}{ $session }{'PORT'}   || 3306;
-
-	my $dbh = DBI->connect("$engine=$db_name;host=$host;port=$port", $user, $password,
-						{ RaiseError => 0, PrintError => 1, AutoCommit => 1} );
-
-	my $gtdb_dir = $ref->{'DATABASES'}{ $session }{'GTDB_DIR'}; # "/home/gtdb/data/gtdb2/"
-	$gtdb_dir =~s/\/+$//;
-
-	return( $dbh, $gtdb_dir );
-}
 
 
 sub usage
