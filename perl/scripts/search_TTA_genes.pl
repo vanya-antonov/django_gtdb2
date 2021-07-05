@@ -58,14 +58,14 @@ GetOptions(
 	'cfg_db=s'       => \$CFG_DB,
 	'session=s'      => \$SESSION,
 	'taxonomy=s'     => \$TAXONOMY,
-) or die &usage();
+) or &usage();
 
 $THREADS = $CPUs if $THREADS > $CPUs;
 
-my $infile = $ARGV[0] || die &usage(); # NC_010572.1.gbk
+my $infile = $ARGV[0] || &usage('GenBank file not specified for processing!'); # NC_010572.1.gbk
 
 # Check GenBank format
-open GBF, $infile or die &usage();
+open GBF, $infile or &usage("Can't open GenBank file!");
 $_ = <GBF>;
 close GBF;
 
@@ -119,7 +119,7 @@ my $seqio_obj = Bio::SeqIO->new(
 	-format => 'genbank'
 	);
 
-my %all;
+my %all;	# for ALL genes/locuses
 
 while( my $seq_obj = $seqio_obj->next_seq ){
 
@@ -335,10 +335,13 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 # 13: for List of Cluster_ID=number_gene(;s) with TTA codon, e.g. 1000515=3;1000517=1;...
 		++$all{ $taxon }{'COF_IDs'}{$_} for @{ $dt{ $gene_id }{'cofs'} };
 # 14: for List of Frameshift-TTA-gene ID(;s). Format: <fs_id>=<gene_id1,gene_id2,...>,
-		push @{ $all{ $taxon }{'FS_IDs'}{$_} }, "$gene_id.3" for @{ $dt{ $gene_id }{'fs_ids'} };
+		if( exists $dt{ $gene_id }{'fs_ids'} ){
+			push @{ $all{ $taxon }{'FS_IDs'}{$_} }, "$gene_id.3" for @{ $dt{ $gene_id }{'fs_ids'} };
+		}
 # 15: for List of Cluster ID(;s) without FS-genes. Format: <cluster_id>=<gene_id1,gene_id2,...>,
-		push @{ $all{ $taxon }{'WOFS_IDs'}{$_} }, "$gene_id.1" for @{ $dt{ $gene_id }{'wofs'} };
-
+		if( exists $dt{ $gene_id }{'wofs'} ){
+			push @{ $all{ $taxon }{'WOFS_IDs'}{$_} }, "$gene_id.1" for @{ $dt{ $gene_id }{'wofs'} };
+		}
 	}
 
 # 16: for List of all CDS gene ID(;s). Format: <acc_id>:<strand><start>.<length>.<tag>
@@ -346,7 +349,7 @@ WHERE cof_id IS NOT NULL AND seq_id LIKE "$acc_id" GROUP BY seq_id } );
 		my $gtag = 0;
 		if( exists $dt{$_} ){
 			$gtag = 1; # tag_{TTA} = 1
-			$gtag += 2 if exists $dt{$_}{'fs_ids'}; # tag_{TTA+FS} = 3
+			$gtag += 2 if exists( $dt{$_}{'fs_ids'} ) && $dt{$_}{'fs_ids'}; # tag_{TTA+FS} = 3
 
 		}elsif( exists $gg{$_}{'FS'} ){ # tag_{FS} = 2;
 			$gtag = 2;
@@ -493,10 +496,12 @@ my( $gene_id, $fs_id, $pident, $alen, $mismatches, $gaps, $qstart, $qend, $sstar
 sub usage
 {
 	my( $msg ) = @_;
-	$msg .= $msg ? "\n" : '';
 
+	$msg = $msg ? "\x1b[31mERROR\x1b[0m: $msg\n" : '';
 	my $script = "\x1b[32m" . File::Spec->splitpath($0) . "\x1b[0m";
-	return"$msg
+
+
+	my $text = "$msg
 $script version $VERSION
 DESCRIPTION:
     Search TTA codons in sequences of <file.gbk>
@@ -563,4 +568,12 @@ NOTES (without --skip_fs option):
   2. BLAST program is required.
 
 ";
+
+	use Term::Pager;
+
+	my $t = Term::Pager->new( rows => 25, cols => 80 );
+	$t->add_text( $text );
+	$t->more();
+
+	die $!;
 }
