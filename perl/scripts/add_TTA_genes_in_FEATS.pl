@@ -54,19 +54,27 @@ TAXON	ORG_ID	ORG_NAME	NUM_GENES	NUM_TTA_GENES	NUM_FS_GENES	NUM_FS_and_TTA_GENES	
 	my %ag;	# for all genes
 	for my $g ( split ';', $GENE_IDs ){	# NZ_AHBF01000001.1:p95458.461.0:ON12_RS00405;NZ_AHBF01000001.1:p99943.1112.0:ON12_RS00420;...
 		my( $acc, $location, $locus_tag ) = split ':', $g;
-		$location =~s/\.\d$//;
-		$ag{"$acc:$location"} = $locus_tag;
+		my $gid = "$acc:$location";
+
+		my( $acc, $strand, $sloc, $eloc, $gtag, $f_TTA ) = parse_gid( $gid );
+		next unless $f_TTA;	# discard non-TTA genes/locuses
+
+		$ag{ $gid } = $locus_tag;
 	}
 
 	next unless $save_db;
 
-	my %lls;	# for all locuses
-
-	# Add TTA_FS-genes
-	&create_TTA_records( $ORG_ID, $FS_IDs, 'FS_ID', $dbh, $DJANGO, \%ag, \%lls );
+	# Add TTA with FS-genes
+	&create_TTA_records( $ORG_ID, $FS_IDs, 'FS_ID', $dbh, $DJANGO, \%ag );
 
 	# Add TTA without FS-genes
-	&create_TTA_records( $ORG_ID, $WOFS_IDs, 'CLUSTER', $dbh, $DJANGO, \%ag, \%lls );
+	&create_TTA_records( $ORG_ID, $WOFS_IDs, 'CLUSTER', $dbh, $DJANGO, \%ag );
+
+	# Add the rest
+	if( scalar( keys %ag ) ){
+		my $rest = '0=' . join(',', keys %ag );
+		&create_TTA_records( $ORG_ID, $rest, '', $dbh, $DJANGO, \%ag );
+	}
 
 }
 close INFILE;
@@ -75,29 +83,28 @@ exit;
 
 
 sub create_TTA_records {
-	my( $ORG_ID, $data_ids, $data_msg, $dbh, $DJANGO, $ag, $lls ) = @_;
+	my( $ORG_ID, $data_ids, $data_msg, $dbh, $DJANGO, $ag ) = @_;
 
 	for my $d ( split ';', $data_ids ){	# 13441=NZ_AHBF01000125.1:p110537.1148.3,NZ_AHBF01000125.1:p109080.1901.3;13538=NZ_AHBF01000147.1:p11590.1100.3;...
 		my( $msg_id, $gene_ids ) = split '=', $d; # 13441=NZ_AHBF01000125.1:p110537.1148.3,NZ_AHBF01000125.1:p109080.1901.3
 
 		for my $gid ( split ',', $gene_ids ){ # NZ_AHBF01000125.1:p110537.1148.3,NZ_AHBF01000125.1:p109080.1901.3
 
-			(my $tid = $gid) =~s/\.\d$//;	# temporary id
+			next unless exists $ag->{ $gid };
 
-			next unless exists $ag->{ $tid };
-			my $locus = $ag->{ $tid };
-			next if exists $lls->{ $locus };
+			my $locus = $ag->{ $gid };
+			delete $ag->{ $gid };	# so as not to process again later
+
+			my( $acc, $strand, $sloc, $eloc, $gtag, $f_TTA ) = parse_gid( $gid );	# in --> NZ_AHBF01000125.1:p110537.1148.3
+			next unless $f_TTA;	# non-TTA-gene
 
 			# Создание для локуса(gene) записей в таблицах seqs, feats, feat_params
 			`python3 $DJANGO/manage.py  run_method_on_object  get_or_create_feat_from_locus_tag  Org $ORG_ID  $locus  CDS`;
-			$lls->{ $locus } = undef;
-
-			my( $acc, $strand, $sloc, $eloc, $gtag, $f_TTA ) = parse_gid( $gid );	# in --> NZ_AHBF01000125.1:p110537.1148.3
 
 			my $TTAs = &search_TTA_codons( $dbh, $locus, $strand, $sloc, $eloc );
-			next unless $TTAs;
+			next unless $TTAs;	# not found TTA
 
-			&save_DB_info( $dbh, $locus, 'tta__start_coord_tta', $TTAs, qq{data="$data_msg=$msg_id"} );
+			&save_DB_info( $dbh, $locus, 'tta__start_coord_tta', $TTAs, ( $data_msg ? qq{data="$data_msg=$msg_id"} : qq{data=NULL} ) );
 		}
 	}
 
@@ -126,11 +133,7 @@ sub search_TTA_codons {
 		next if $s % 3; # Take only ORF TTA coordinate
 
 		# Adjust TTA-point to absolute position
-		if( $strand > 0 ){
-			push @TTAs, $sloc + $s - 2; # - 1
-		}else{
-			push @TTAs, $eloc - $s; # + 1
-		}
+		push @TTAs, ($strand > 0) ? $sloc + $s - 1 : $eloc - $s - 1;
 	}
 
 	return \@TTAs;
