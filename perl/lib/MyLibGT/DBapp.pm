@@ -32,7 +32,7 @@ sub parse_gid {
 	my( $gid ) = @_;
 
 	my( $acc, $location ) = split ':', $gid;	# NC_003155.5:p9004239.817.1
-	my( $strand, $sloc, $sz, $gtag ) = $location=~/(p|m)(\d+)\.(\d+)\.(\d+)$/i;
+	my( $strand, $sloc, $sz, $gtag ) = $location=~/(p|m)(\d+)\.([\d\-]+)\.(\d+)$/i;
 	my $eloc = $sloc + $sz;
 	$strand = ($strand=~/p/i) ? +1 : -1;
 	my $f_TTA = ($gtag & 0b01 ) ? 1 : 0; # TTA-gene

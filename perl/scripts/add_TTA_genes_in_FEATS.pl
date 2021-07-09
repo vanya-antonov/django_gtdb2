@@ -53,8 +53,7 @@ TAXON	ORG_ID	ORG_NAME	NUM_GENES	NUM_TTA_GENES	NUM_FS_GENES	NUM_FS_and_TTA_GENES	
 
 	my %ag;	# for all genes
 	for my $g ( split ';', $GENE_IDs ){	# NZ_AHBF01000001.1:p95458.461.0:ON12_RS00405;NZ_AHBF01000001.1:p99943.1112.0:ON12_RS00420;...
-		my( $acc, $location, $locus_tag ) = split ':', $g;
-		my $gid = "$acc:$location";
+		my( $gid, $locus_tag ) = $g=~/^(.*?):([^:]+)$/;
 
 		my( $acc, $strand, $sloc, $eloc, $gtag, $f_TTA ) = parse_gid( $gid );
 		next unless $f_TTA;	# discard non-TTA genes/locuses

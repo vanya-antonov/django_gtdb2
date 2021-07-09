@@ -8,7 +8,6 @@ use File::Spec;
 use Getopt::Long;
 use Bio::SeqIO;
 use DBI;
-# use JSON;
 
 # Custom libraries
 use MyLibGT::DBapp qw( :all );

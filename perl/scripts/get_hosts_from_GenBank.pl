@@ -34,10 +34,10 @@ GetOptions(
 	'echo'       => \$ECHO,
 ) or die &usage();
 
-my $infile = $ARGV[0] || die &usage(); # 'NZ_CP023977.1.gbk';
+my $infile = $ARGV[0] || die &usage('GenBank file not specified for processing!'); # 'NZ_CP023977.1.gbk';
 
 # Check GenBank format
-open GBF, $infile or die &usage();
+open GBF, $infile or die &usage("Can't open GenBank file!");
 $_ = <GBF>;
 close GBF;
 
@@ -199,9 +199,10 @@ exit;
 sub usage
 {
 	my( $msg ) = @_;
-	$msg .= $msg ? "\n" : '';
+	$msg = $msg ? "\x1b[31mERROR\x1b[0m: $msg\n" : '';
 
 	my $script = "\x1b[32m" . File::Spec->splitpath($0) . "\x1b[0m";
+
 	return"$msg
 $script version $VERSION
 
