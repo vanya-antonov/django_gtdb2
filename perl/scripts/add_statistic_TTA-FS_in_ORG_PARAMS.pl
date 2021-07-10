@@ -171,7 +171,7 @@ sub usage {
 	my $script = "\x1b[32m" . File::Spec->splitpath($0) . "\x1b[0m";
 	return"$msg
 $script version $VERSION
-    Fills or updates 'org_params' table of 'GTDB2' database (default) with statistics
+    Fills and/or updates 'org_params' table of 'GTDB2' database (default) with statistics
     from the <statistic.tsv> file
 
 USAGE:

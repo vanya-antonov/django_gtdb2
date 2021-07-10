@@ -199,7 +199,7 @@ EXAMPLE:
     ./$script  statistic_TTA-vs-FS_genes.tsv
 
 HERE:
-    <statistic.tsv>  --  By default, 'statistic_TTA-vs-FS_genes.tsv',
+    <statistic.tsv>  --  By default, 'statistic_TTA-vs-FS_genes.tsv'.
 
 OPTIONS:
     --cfg_db         --  DB configuration file. By default, 'django_gtdb2/django/mysite/local_settings.json'
