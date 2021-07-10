@@ -46,7 +46,7 @@ Example:
 
 :star: **acc_id** is Accession ID of sequence, e.g. NC_003155.5
 
-:star: **strand** is **p** (positive) for **+**, or **n** (negative) for **-** strand.
+:star: **strand** is **p** (positive) for **(+)**, or **n** (negative) for **(-)** strand.
 
 :star: **start** is 1-based start location of the CDS-gene (*sloc*).
 
