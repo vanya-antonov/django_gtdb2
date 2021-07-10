@@ -1,3 +1,39 @@
-# search_TTA_genes.pl
-Search TTA codons in sequences of file.gbk
+## search_TTA_genes.pl
+Search TTA codons in sequences of file.gbk.
+Creates a file with statistics: **statistic\_TTA-vs-FS_genes.tsv** or stdout output.
+
+### OUTPUT TABLE FORMAT:
+
+| column | name                  | description                                        | example |
+|:------:|:----------------------|:---------------------------------------------------|:--------|
+| 1      | TAXON                 | NCBI taxon ID of organism                          | 227882  |
+| 2      | ORG\_ID               | internal organism ID                               | 167     |
+| 3      | ORG_NAME              | organism name                                      | Streptomyces avermitilis MA-4680 = NBRC 14893 |
+| 4      | NUM_GENES             | total number of CDS genes for organism             | 8025    |
+| 5      | NUM_TTA_GENES         | total number of genes with TTA codon (TTA-genes)   | 274     |
+| 6      | NUM_FS_GENES          | total number of FS-genes. Empty for --skip_fs mode | 1188    |
+| 7      | NUM_FS_and_TTA_GENES  | intersection of FS-genes with TTA-genes            | 29      |
+| 8      | NUM_COFS              | total number of clusters that include FS-genes     | 293     |
+| 9      | NUM_FS_GENES_in_COFS  | total number of FS-genes in clusters               | 300     |
+| 10     | NUM_TTA_GENES_in_COFS | total number of TTA-genes that are _similar_ to FS-genes from ALL clusters | 124 |
+| 11     | NUM_FS_and_TTA_GENES_in_COFS | intersection of FS-genes with TTA-genes in clusters | 11 |
+| 12     | ACC_IDs               | Accession ID(;s) of locus/genomic sequence(s)      | NC\_003155.5;NC\_004719.1 |
+| 13     | COF_IDs               | List of Cluster_ID=number genes with TTA codon     | 1004907=3;1004909=1;... |
+| 14     | FS_IDs                | List of **FS-TTA-gene_ID=gid1,gid2,...**           | 74297=NC\_003155.5:p25699.4695.3,NC\_003155.5:m28699.1078.3;... |
+| 15     | WOFS\_IDs             | List of <Cluster_ID=gid1,gid2,...> without FS-genes | 1004907=NC\_003155.5:m5172533.817.1,NC_003155.5:p9004239.817.1;... |
+| 16     | GENE\_IDs             | List of all CDS genes as **gid:locus_tag**         | NC_003155.5:m1002287.1724.0:SAVERM_RS04685... |
+
+
+:star: **gid** is **<acc_id>:<strand><start>.<length>.<gtag>:<locus_tag|gene>**
+
+:star: **<gtag>** is 1 for TTA-gene, 2 - FS-gene, 3 - (TTA+FS)-gene, 0 - ordinary gene.
+
+:star: Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
+NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for \-\-skip_fs option
+
+
+
+## add_TTA_genes_in_FEATS.pl
+Fills and/or updates **feats**, and **feat_params** tables of **GTDB2** database (default)
+with statistics from *statistic\_TTA-vs-FS_genes.tsv* file
 
