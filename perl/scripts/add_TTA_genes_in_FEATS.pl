@@ -49,7 +49,13 @@ TAXON	ORG_ID	ORG_NAME	NUM_GENES	NUM_TTA_GENES	NUM_FS_GENES	NUM_FS_and_TTA_GENES	
 		$NUM_COFS, $NUM_FS_GENES_in_COFS, $NUM_TTA_GENES_in_COFS, $NUM_FS_and_TTA_GENES_in_COFS,
 		$ACC_IDs, $COF_IDs, $FS_IDs, $WOFS_IDs, $GENE_IDs ) = split /\t/;
 
-	print ++$i, ") Prepare $ORG_ID - $ORG_NAME\n";
+	if( $ORG_ID ){
+		print "\t", ++$i, ") Prepare $ORG_ID - \x1b[1m$ORG_NAME\x1b[0m\n";
+
+	}else{
+		warn "\x1b[5;31mATTENTION\x1b[0m: ORG_ID ($ORG_NAME) is empty ID!	SKIPPED\n";
+		next;
+	}
 
 	my %ag;	# for all genes
 	for my $g ( split ';', $GENE_IDs ){	# NZ_AHBF01000001.1:p95458.461.0:ON12_RS00405;NZ_AHBF01000001.1:p99943.1112.0:ON12_RS00420;...
@@ -119,14 +125,14 @@ sub search_TTA_codons {
 		return;
 	}
 
-	# Get Nucleotide sequence (CDS)
+	# Get Nucleotide sequence (CDS) from DB
 	# e.g. 'attattttcgct...'
-	my $fna_seq = lc( $dbh->selectrow_array( qq{ SELECT data FROM feat_params WHERE name='seq_nt' AND parent_id=$parent_id LIMIT 1 } ) );
+	my $fna_seq = $dbh->selectrow_array( qq{ SELECT data FROM feat_params WHERE name='seq_nt' AND parent_id=$parent_id LIMIT 1 } );
 
 	# Search TTA codons
 	my @TTAs; # points of TTA_codons
 	pos $fna_seq = 0;
-	while( $fna_seq=~/tta/g ){
+	while( $fna_seq=~/tta/gi ){
 		my $s = $-[0]; # start point of TTA
 
 		next if $s % 3; # Take only ORF TTA coordinate
@@ -190,10 +196,10 @@ USAGE:
     $script [statistic.tsv] [OPTIONS]
 
 EXAMPLE:
-    ./$script statistics_NUM_FS_and_TTA_GENES.results.tsv
+    ./$script  statistic_TTA-vs-FS_genes.tsv
 
 HERE:
-    <statistic.tsv>  --  By default, 'statistics_NUM_FS_and_TTA_GENES.results.tsv',
+    <statistic.tsv>  --  By default, 'statistic_TTA-vs-FS_genes.tsv',
 
 OPTIONS:
     --cfg_db         --  DB configuration file. By default, 'django_gtdb2/django/mysite/local_settings.json'
