@@ -82,7 +82,7 @@ Example:
 ```
 
 ## add_statistic_TTA-FS_in_ORG_PARAMS.pl
-Fills and/or updates 'org_params' table of 'GTDB2' database (default) with statistics
+Fills and/or updates **org_params** table of **GTDB2** database (default) with statistics
 from the *statistic.tsv* file
 
 ### USAGE
