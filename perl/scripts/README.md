@@ -1,6 +1,23 @@
 ## search_TTA_genes.pl
 Search TTA codons in sequences of file.gbk.
-Creates a file with statistics: **statistic_TTA-vs-FS_genes.tsv** or stdout output.
+Creates a file (table) with statistics: **statistic_TTA-vs-FS_genes.tsv** or stdout output.
+
+### USAGE
+
+./search_TTA_genes.pl <file.gbk> [OPTIONS]
+
+Here: *file.gbk* - input GenBank file only
+
+Example:
+```bash
+./search_TTA_genes.pl NC_010572.1.gbk -auto -output=stdout
+
+./search_TTA_genes.pl NC_010572.1.gbk -auto
+
+# or same
+
+./search_TTA_genes.pl NC_010572.1.gbk -save_tta_fna NC_010572.1.TTA.fna -save_tta_faa NC_010572.1.TTA.faa -output NC_010572.1.TTA.tsv
+```
 
 ### OUTPUT TABLE FORMAT:
 
@@ -28,7 +45,7 @@ Creates a file with statistics: **statistic_TTA-vs-FS_genes.tsv** or stdout outp
 
 :star: **acc_id** is Accession ID of sequence, e.g. NC_003155.5
 
-:star: **strand** is **p** (positive) for **+**, or **n** (negative) for **-**
+:star: **strand** is **p** (positive) for **+**, or **n** (negative) for **-** strand
 
 :star: **start** is 1-based start location of the CDS-gene (*sloc*)
 
@@ -38,8 +55,12 @@ Creates a file with statistics: **statistic_TTA-vs-FS_genes.tsv** or stdout outp
 
 :star: **locus_tag** is name of LOCUS for the gene, e.g. SAVERM_RS04685
 
-Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
+:exclamation: Fields ( ORG_ID, NUM_FS_GENES, NUM_FS_and_TTA_GENES, NUM_COFS, NUM_FS_GENES_in_COFS,
 NUM_TTA_GENES_in_COFS, NUM_FS_and_TTA_GENES_in_COFS, COF_IDs, FS_IDs, WOFS_IDs ) are (empty | 0) for *--skip_fs* option.
+
+#### NOTES (without --skip_fs option):
+1. a configuration DB file 'django_gtdb2/django/mysite/local_settings.json' (or specified by *--cfg_db*) is required.
+2. BLAST program is required.
 
 
 
