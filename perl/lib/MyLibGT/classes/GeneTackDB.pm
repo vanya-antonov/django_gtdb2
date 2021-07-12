@@ -59,8 +59,6 @@ sub create_new_cof
 	my( $fs_arr, %opts ) = @_;
 
 	my $cof_id = $self->{bu}->exec_SQL_ar('SELECT IFNULL(MAX(id)+1,1000000) AS next_id FROM cofs')->[0]{NEXT_ID};
-#	my $cof_dir = "$self->{dir}/cofs/$cof_id";
-#	`mkdir -p $cof_dir`;
 
 	$self->{bu}->exec_SQL_nr('INSERT INTO cofs(id, user_id, c_date) VALUES(?,?,NOW())', $cof_id, $opts{user_id} );
 
@@ -77,12 +75,6 @@ sub create_new_cof
 		$self->{bu}->exec_SQL_nr('INSERT INTO cof_params(name, num, parent_id) VALUES("num_fs",?,?)', $num_fs, $cof_id );
 	}
 
-#	if( $self->{bu}->exec_SQL_ar('SELECT COUNT(1) AS N FROM cof_params WHERE name="dir" AND parent_id=?', $cof_id)->[0]{N} ){
-#		$self->{bu}->exec_SQL_nr('UPDATE cof_params SET value=? WHERE name="dir" AND parent_id=?', $cof_dir, $cof_id );
-#	}else{
-#		$self->{bu}->exec_SQL_nr('INSERT INTO cof_params(name, value, parent_id) VALUES("dir",?,?)', $cof_dir, $cof_id );
-#	}
-
 	my $num_plus_fs = $self->{bu}->exec_SQL_ar('SELECT COUNT(DISTINCT id) AS N FROM fshifts WHERE len>0 AND cof_id=?', $cof_id)->[0]{N} || 0;
 
 	if( $self->{bu}->exec_SQL_ar('SELECT COUNT(1) AS N FROM cof_params WHERE name="num_plus_fs" AND parent_id=?', $cof_id)->[0]{N} ){
@@ -91,7 +83,6 @@ sub create_new_cof
 		$self->{bu}->exec_SQL_nr('INSERT INTO cof_params(name, num, parent_id) VALUES("num_plus_fs",?,?)', $num_plus_fs, $cof_id );
 	}
 
-#	my $num_minus_fs = $self->{bu}->exec_SQL_ar('SELECT COUNT(DISTINCT id) AS N FROM fshifts WHERE len<0 AND cof_id=?', $cof_id)->[0]{N} || 0;
 	my $num_minus_fs = $num_fs - $num_plus_fs;
 
 	if( $self->{bu}->exec_SQL_ar('SELECT COUNT(1) AS N FROM cof_params WHERE name="num_minus_fs" AND parent_id=?', $cof_id)->[0]{N} ){
@@ -119,14 +110,10 @@ sub delete_cof
 	my( $cof_id ) = @_;
 	return unless $cof_id;
 
-#	my $cof_dir = $self->{bu}->exec_SQL_ar('SELECT value AS dir FROM cof_params WHERE name="dir" AND parent_id=? LIMIT 1', $cof_id )->[0]{DIR};
-#	system("rm -rvf $cof_dir") if -d $cof_dir;
-
 	$self->{bu}->exec_SQL_nr('UPDATE fshifts SET cof_id=NULL WHERE cof_id=?', $cof_id );
-	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="dir" AND parent_id=?', $cof_id );
-	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="num_fs" AND parent_id=?', $cof_id );
-	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="num_plus_fs" AND parent_id=?', $cof_id );
-	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE name="num_minus_fs" AND parent_id=?', $cof_id );
+	$self->{bu}->exec_SQL_nr('UPDATE feats SET cof_id=NULL WHERE cof_id=?', $cof_id );
+
+	$self->{bu}->exec_SQL_nr('DELETE FROM cof_params WHERE parent_id=?', $cof_id );
 
 	# Should be the last!!!
 	$self->{bu}->exec_SQL_nr('DELETE FROM cofs WHERE id=?', $cof_id );

@@ -10,14 +10,16 @@ use DBI;
 # Custom libraries
 use MyLibGT::DBapp qw( :all );
 
-my $VERSION = '1.04';
+my $VERSION = '1.05';
 
 ###
 # Default Options
-my $INFILE = 'statistic_TTA-vs-FS_genes.tsv';
-my $DJANGO = '/home/alessandro/src/D/django_gtdb2/django';
-my $CFG_DB = "$DJANGO/mysite/local_settings.json";
+my $INFILE  = 'statistic_TTA-vs-FS_genes.tsv';
+my $DJANGO  = '/home/alessandro/src/D/django_gtdb2/django';
+my $CFG_DB  = "$DJANGO/mysite/local_settings.json";
 my $SESSION = 'default'; # 'gtdb2_cof'
+my $RECALC;
+my $HELP;
 
 ###
 # Parse input data
@@ -25,7 +27,15 @@ GetOptions(
 	'infile=s'   => \$INFILE,
 	'cfg_db=s'   => \$CFG_DB,
 	'session=s'  => \$SESSION,
-) or die &usage();
+	'recalc'     => \$RECALC,
+	'help'       => \$HELP,
+) or &usage();
+
+&usage() if $HELP;
+
+my $infile = $ARGV[0] || $INFILE || &usage('GenBank file not specified for processing!');
+
+print "\nInput records will be read from file: \x1b[1m $infile \x1b[0m\n";
 
 my $EMSG = "\x1b[31mERROR\x1b[0m";
 
@@ -35,7 +45,7 @@ my( $dbh, $gtdb_dir ) = read_configDB( $SESSION, $CFG_DB );
 my $save_db = SaveDB;
 
 my $i;
-open INFILE, $INFILE or die "Can't found $INFILE: $!\n";
+open INFILE, $infile or &usage("Can't found $infile: $!");
 while(<INFILE>){
 	s/^\s+|\s+$//g;
 	next if /^$/ || /^#/;
@@ -70,15 +80,15 @@ TAXON	ORG_ID	ORG_NAME	NUM_GENES	NUM_TTA_GENES	NUM_FS_GENES	NUM_FS_and_TTA_GENES	
 	next unless $save_db;
 
 	# Add TTA with FS-genes
-	&create_TTA_records( $ORG_ID, $FS_IDs, 'FS_ID', $dbh, $DJANGO, \%ag );
+	&create_TTA_records( $RECALC, $ORG_ID, $FS_IDs, 'FS_ID', $dbh, $DJANGO, \%ag );
 
 	# Add TTA without FS-genes
-	&create_TTA_records( $ORG_ID, $WOFS_IDs, 'CLUSTER', $dbh, $DJANGO, \%ag );
+	&create_TTA_records( $RECALC, $ORG_ID, $WOFS_IDs, 'CLUSTER', $dbh, $DJANGO, \%ag );
 
 	# Add the rest
 	if( scalar( keys %ag ) ){
 		my $rest = '0=' . join(',', keys %ag );
-		&create_TTA_records( $ORG_ID, $rest, '', $dbh, $DJANGO, \%ag );
+		&create_TTA_records( $RECALC, $ORG_ID, $rest, '', $dbh, $DJANGO, \%ag );
 	}
 
 }
@@ -88,7 +98,7 @@ exit;
 
 
 sub create_TTA_records {
-	my( $ORG_ID, $data_ids, $data_msg, $dbh, $DJANGO, $ag ) = @_;
+	my( $RECALC, $ORG_ID, $data_ids, $data_msg, $dbh, $DJANGO, $ag ) = @_;
 
 	for my $d ( split ';', $data_ids ){	# 13441=NZ_AHBF01000125.1:p110537.1148.3,NZ_AHBF01000125.1:p109080.1901.3;13538=NZ_AHBF01000147.1:p11590.1100.3;...
 		my( $msg_id, $gene_ids ) = split '=', $d; # 13441=NZ_AHBF01000125.1:p110537.1148.3,NZ_AHBF01000125.1:p109080.1901.3
@@ -103,31 +113,44 @@ sub create_TTA_records {
 			my( $acc, $strand, $sloc, $eloc, $gtag, $f_TTA ) = parse_gid( $gid );	# in --> NZ_AHBF01000125.1:p110537.1148.3
 			next unless $f_TTA;	# non-TTA-gene
 
-			# Создание для локуса(gene) записей в таблицах seqs, feats, feat_params
-			`python3 $DJANGO/manage.py  run_method_on_object  get_or_create_feat_from_locus_tag  Org $ORG_ID  $locus  CDS`;
+			my $locus_id = &get_locus_id( $dbh, $locus );
 
-			my $TTAs = &search_TTA_codons( $dbh, $locus, $strand, $sloc, $eloc );
+			if( ! defined( $locus_id ) or $RECALC ){
+				# Создание для локуса(gene) записей в таблицах seqs, feats, feat_params
+				`python3 $DJANGO/manage.py  run_method_on_object  get_or_create_feat_from_locus_tag  Org $ORG_ID  $locus  CDS`;
+
+				$locus_id = &get_locus_id( $dbh, $locus );
+				next unless defined $locus_id;
+			}
+
+			my $TTAs = &search_TTA_codons( $dbh, $locus_id, $strand, $sloc, $eloc );
 			next unless $TTAs;	# not found TTA
 
-			&save_DB_info( $dbh, $locus, 'tta__start_coord_tta', $TTAs, ( $data_msg ? qq{data="$data_msg=$msg_id"} : qq{data=NULL} ) );
+			&save_DB_info( $dbh, $locus_id, 'tta__start_coord_tta', $TTAs, $data_msg, $msg_id );
 		}
 	}
 
 }
 
 
-sub search_TTA_codons {
-	my( $dbh, $locus, $strand, $sloc, $eloc ) = @_;
+sub get_locus_id {
+	my( $dbh, $locus ) = @_;
 
 	my( $parent_id ) = $dbh->selectrow_array( qq{ SELECT id FROM feats WHERE name="$locus" LIMIT 1 } );
 	unless( $parent_id ){
 		warn "ATTENTION: '$locus' is not in the GTDB2!	\x1b[31mDISCARDED\x1b[0m.";
-		return;
 	}
+
+	return $parent_id;
+}
+
+
+sub search_TTA_codons {
+	my( $dbh, $locus_id, $strand, $sloc, $eloc ) = @_;
 
 	# Get Nucleotide sequence (CDS) from DB
 	# e.g. 'attattttcgct...'
-	my $fna_seq = $dbh->selectrow_array( qq{ SELECT data FROM feat_params WHERE name='seq_nt' AND parent_id=$parent_id LIMIT 1 } );
+	my $fna_seq = $dbh->selectrow_array( qq{ SELECT data FROM feat_params WHERE name='seq_nt' AND parent_id=$locus_id LIMIT 1 } );
 
 	# Search TTA codons
 	my @TTAs; # points of TTA_codons
@@ -146,26 +169,27 @@ sub search_TTA_codons {
 
 
 sub save_DB_info {
-	my( $dbh, $locus, $tag, $TTA_COORDs, @qq ) = @_;
+	my( $dbh, $locus_id, $tag, $TTA_COORDs, $data_msg, $msg_id ) = @_;
 
-	my( $parent_id ) = $dbh->selectrow_array( qq{ SELECT id FROM feats WHERE name="$locus" LIMIT 1 } );
-	unless( $parent_id ){
-		warn "ATTENTION: '$locus' is not in the GTDB2!	\x1b[31mDISCARDED\x1b[0m.";
-		return;
+	if( $msg_id && ($data_msg eq 'CLUSTER')){
+		$dbh->do( qq{ UPDATE feats SET cof_id=$msg_id WHERE id=$locus_id } ) or warn $dbh->errstr;
+		$data_msg = undef;
 	}
 
 	# Collect ALL id of locus
 	my @ids;
-	my $sth_id = $dbh->prepare( qq{ SELECT id FROM feat_params WHERE name="$tag" AND parent_id=$parent_id ORDER BY id } );
+	my $sth_id = $dbh->prepare( qq{ SELECT id FROM feat_params WHERE name="$tag" AND parent_id=$locus_id ORDER BY id } );
 	$sth_id->execute;
 	while( my( $id ) = $sth_id->fetchrow_array ) {
 		push @ids, $id;
 	}
 	my $done = $sth_id->finish();
 
+	my @qq = ( qq{name="$tag"}, qq{parent_id=$locus_id}, ( $data_msg ? qq{data="$data_msg=$msg_id"} : qq{data=NULL} ) );
+
 	for my $tta_coord ( sort {$a <=> $b} @$TTA_COORDs ){
 
-		my $qu = join ', ', qq{name="$tag"}, qq{parent_id=$parent_id}, qq{num=$tta_coord}, @qq;
+		my $qu = join ', ', qq{num=$tta_coord}, @qq;
 
 		if( ~~@ids ){
 			my $id = shift @ids;
@@ -187,7 +211,8 @@ sub usage {
 	$msg .= $msg ? "\n" : '';
 
 	my $script = "\x1b[32m" . File::Spec->splitpath($0) . "\x1b[0m";
-	return"$msg
+
+	my $text = "$msg
 $script version $VERSION
     Fills or updates 'feats', and 'feat_params' tables of 'GTDB2' database (default)
     with statistics from the <statistic.tsv> file
@@ -197,13 +222,21 @@ USAGE:
 
 EXAMPLE:
     ./$script  statistic_TTA-vs-FS_genes.tsv
+or
+    ./$script  -infile=statistic_TTA-vs-FS_genes.tsv
 
 HERE:
     <statistic.tsv>  --  By default, 'statistic_TTA-vs-FS_genes.tsv'.
 
 OPTIONS:
+    --infile         --  Input <statistic.tsv>
     --cfg_db         --  DB configuration file. By default, 'django_gtdb2/django/mysite/local_settings.json'
-    --session        --  session name/key in the DB configuration file. By default, 'default', i.e. 'gtdb2'
+    --session        --  Session name/key in the DB configuration file. By default, 'default', i.e. 'gtdb2'
+    --recalc         --  Recalculate input entries (from <statistic.tsv>)
+    --help
 ";
+
+	die $text;
+
 }
 
