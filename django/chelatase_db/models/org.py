@@ -333,8 +333,8 @@ class ChelataseOrg(Org):
         def get_color(gene):
             if 'fsh' in gene: return "#f60a01"
 
-            if 'chl' in gene:
-            #   if str(gene).startswith('bch') or str(gene).startswith('chl'):
+         #   if 'chl' in gene:
+            if str(gene).startswith('bch') or str(gene).startswith('chl'):
                 return '#93d14f'  # '#ffcccc'
             
             else:
