@@ -31,8 +31,9 @@ class GtdbTestCase(TestCase):
         "Deletes tmp dir."
         # Make sure that we delete tmp folder and not the real GTDB_DIR
         if '__gtdb.' in settings.GTDB_DIR:
-            shutil.rmtree(settings.GTDB_DIR)
-            logging.debug("Tmp folder '%s' has been removed." %
+            if os.path.exists(settings.GTDB_DIR):
+                shutil.rmtree(settings.GTDB_DIR)
+                logging.debug("Tmp folder '%s' has been removed." %
                           settings.GTDB_DIR)
         else:
             logging.warning("GTDB_DIR is NOT a tmp folder '%s' in testing!" %

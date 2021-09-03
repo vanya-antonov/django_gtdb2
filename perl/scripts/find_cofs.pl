@@ -76,9 +76,9 @@ sub run
 	# remove FOREIGN KEY
 	$bu->exec_SQL_nr('ALTER TABLE cof_params DROP FOREIGN KEY cof_params_ibfk_1') if $chk;
 
-	# remove ORPHAN (Zombie) cof_id(s) from 'cofs' table if exist, of course
+	# remove ORPHAN (Zombie) cof_id(s) from 'cofs' and 'cof_params' tables if exist, of course
 	$gtdb->delete_cof( $_->{ID} ) for @{ $bu->exec_SQL_ar('SELECT a.id FROM cofs AS a LEFT JOIN(
-SELECT cof_id AS id FROM fshifts UNION SELECT parent_id AS id FROM cof_params ) AS b USING(id) WHERE b.id IS NULL') };
+SELECT cof_id AS id FROM fshifts UNION SELECT cof_id AS id FROM feats ) AS b USING(id) WHERE b.id IS NULL') };
 
 	my $all_fs_ids = [];
 	my %fs_only    = ();
@@ -86,8 +86,8 @@ SELECT cof_id AS id FROM fshifts UNION SELECT parent_id AS id FROM cof_params ) 
 	{
 		$all_fs_ids = ah2a('QID', $bu->exec_SQL_ar('SELECT DISTINCT q_fs_id AS qid FROM cof_hits'));
 
-#		warn "Removing COFs....";
-#		$gtdb->delete_cof($_->{COF_ID}) foreach @{$gtdb->{bu}->exec_SQL_ar('select id from cofs')};
+		warn "Removing COFs....";
+		$gtdb->delete_cof($_->{COF_ID}) for @{$gtdb->{bu}->exec_SQL_ar('SELECT id FROM cofs')};
 	}
 	elsif( -e $opts{subset} ) # for file FS_ONLY.txt
 	{
@@ -111,15 +111,14 @@ SELECT cof_id AS id FROM fshifts UNION SELECT parent_id AS id FROM cof_params ) 
 	$bu->commit;
 
 	# Check for Index existence
-	$chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
-			WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME='fshifts' AND COLUMN_NAME=?], 'cof_id')->[0]{N};
+	for my $k ('fshifts=cof_id', 'feats=cof_id', 'cof_params=parent_id'){
+		my( $table, $column ) = split /=/, $k;
 
-	$bu->exec_SQL_nr('ALTER TABLE fshifts ADD CONSTRAINT FOREIGN KEY (cof_id) REFERENCES cofs(id)') unless $chk;
+		my $chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
+				WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME="$table" AND COLUMN_NAME=?], $column )->[0]{N};
 
-	$chk = $bu->exec_SQL_ar( qq[SELECT COUNT(CONSTRAINT_NAME) AS N FROM information_schema.KEY_COLUMN_USAGE
-			WHERE CONSTRAINT_SCHEMA="$db_name" AND TABLE_NAME='cof_params' AND COLUMN_NAME=?], 'parent_id')->[0]{N};
-
-	$bu->exec_SQL_nr('ALTER TABLE cof_params ADD CONSTRAINT FOREIGN KEY (parent_id) REFERENCES cofs(id)') unless $chk;
+		$bu->exec_SQL_nr( qq[ALTER TABLE $table ADD CONSTRAINT FOREIGN KEY ($column) REFERENCES cofs(id)] ) unless $chk;
+	}
 
 	$bu->commit;
 }

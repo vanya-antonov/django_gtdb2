@@ -11,12 +11,16 @@
 		</ol>
 	</nav>
 
-  <h3>External IDs</h3>
+  <h3>Org Info</h3>
 	<table class="table table-sm col-4">
     <tbody>
+			<tr>
+				<th scope="row">Org dir</th>
+				<td>{{ object.get_full_path_to_subdir }}</td>
+			</tr>
       {% for xref in object.prm_dict.xref %}
         <tr>
-          <th scope="row">{{ xref.db_name }}</td>
+          <th scope="row">{{ xref.db_name }}</th>
           <td>{{ xref.ext_id }}</td>
 					<!-- FOR DEBUGING -->
           <!-- <td>{{ xref|pprint }}</td> -->
@@ -76,5 +80,6 @@
 	</table>
 
   <p>transl_table = {{ object.transl_table }}</p>
+  <p>virus_host = {{ object.prm_dict.virus_host }}</p>
 
 {% endblock content %}

@@ -37,6 +37,8 @@ class Org(AbstractUnit):
     PRM_INFO = dict(list(AbstractUnit.PRM_INFO.items()) + list({
         'blastdb_nucl_all': {},
         'dir_name': {},
+        'num_annotated_genes': {'value_attr': 'num', 'type_fun': int},
+        'num_fshifts': {'value_attr': 'num', 'type_fun': int},
         'num_seqs': {'value_attr': 'num', 'type_fun': int},
         'seq_rrna_16s': {'value_attr': 'data'},
         'short_name': {},
@@ -44,6 +46,7 @@ class Org(AbstractUnit):
         'taxonomy': {'is_list': True, 'sort_attr': 'num'},
         'transl_table': {'type_fun': int, 'is_list': True,
                          'sort_attr': 'num', 'reverse': True},
+        'virus_host': {'value_attr': 'value'},
     }.items()))
 
     # The '%'s will be substituted with the value of 'dir_name' prm
@@ -166,6 +169,31 @@ class Org(AbstractUnit):
         seq_path = os.path.join(dir_path, ext_id)
         return SeqIO.read(seq_path, dir2fmt[seq_dir])
 
+    def get_or_create_feat_from_locus_tag(self, locus_tag, f_type):
+        """Create new feat in DB based on its ID from gbk file like
+        '/locus_tag="NM1_RS02585"'.
+        """
+        gbk_feat = None
+        for gbk_fn in self.get_all_seq_ids(seq_dir='seq_gbk', fullpath=True):
+            record = SeqIO.read(gbk_fn, "genbank")
+            for f in record.features:
+                if(f.type == f_type and 'locus_tag' in f.qualifiers and
+                    f.qualifiers['locus_tag'][0] == locus_tag):
+                    gbk_feat = f
+                    break
+
+            if gbk_feat is not None:
+                seq = gtdb2.models.Seq.get_or_create_from_ext_id(
+                    self.user, self, record.id)
+                feat = gtdb2.models.Feat.get_or_create_from_SeqFeature(
+                    self.user, seq, gbk_feat)
+                return feat
+
+        if gbk_feat is None:
+            logging.warning("Could not find feat with locus_tag='%s'" % locus_tag)
+
+        return None
+
     def create_all_params(self):
         "Generates/updates the majority of params."
         self._make_param_short_name()
@@ -182,6 +210,9 @@ class Org(AbstractUnit):
         self._make_param_rrna_16s()
 
         self._make_param_blastdb()
+
+        if self.kingdom == 'Viruses':
+            self._make_param_virus_host(record)
 
     def create_annotation(self):
         """Uses some parts of the GenBank annotation to create new features
@@ -357,6 +388,29 @@ class Org(AbstractUnit):
         file_path = os.path.join(full_path, record.id)
         SeqIO.write(record, file_path, fmt)
 
+    def _make_param_virus_host(self, record):
+        """For viral genome extract info about its host
+        (e.g. /host="Streptomyces coelicolor A3(2)").
+        """
+        f_source = None
+        for f in record.features:
+            if f.type == 'source':
+                f_source = f
+                break
+
+        if f_source == None:
+            logging.warning("Can't find host for virus!")
+            return
+
+        host_str = None
+        if 'host' in f_source.qualifiers.keys():
+            host_str = f_source.qualifiers['host'][0]
+        if host_str is None and 'lab_host' in f_source.qualifiers:
+            host_str = ''.join(f_source.qualifiers['lab_host'])
+
+        if host_str is not None:
+            self.set_param('virus_host', value=host_str)
+
     def _make_param_xref(self, record):
         "Creates the 'xref' params from the given SeqRecord."
         all_xrefs = record.dbxrefs
@@ -494,12 +548,12 @@ def _get_species_genus_phylum_kingdom(record):
         return None, None, None, None
 
     kingdom = taxa_l[0]
-    if kingdom not in ['Bacteria', 'Archaea', 'Eukaryota']:
+    if kingdom not in ['Bacteria', 'Archaea', 'Eukaryota', 'Viruses']:
         logging.warning("Unknown kingdom '%s'" % kingdom)
         return None, None, None, None
 
     species = record.annotations['organism']
-    if taxa_l[-1] in species:
+    if taxa_l[-1] in species or kingdom == 'Viruses':
         genus = taxa_l[-1]
     elif taxa_l[-2] in species:
         genus = taxa_l[-2]
@@ -508,10 +562,10 @@ def _get_species_genus_phylum_kingdom(record):
                         (species, taxa_l))
         genus = None
 
-    if genus is not None and ' ' in genus:
-        # Genus must be a single word!
-        logging.warning("Wrong genus '%s' for species name '%s'" % (genus, species))
-        genus = None
+    #if genus is not None and ' ' in genus:
+    #    # Genus must be a single word!
+    #    logging.warning("Wrong genus '%s' for species name '%s'" % (genus, species))
+    #    genus = None
 
     phylum = taxa_l[1]
     return species, genus, phylum, kingdom

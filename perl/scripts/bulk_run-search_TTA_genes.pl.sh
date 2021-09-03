@@ -5,6 +5,7 @@
 # source ~/.bash_aliases
 
 ofile=statistic_TTA-vs-FS_genes.tsv
+TAXONOMY=Bacteria
 
 [ -s $ofile ] && mv $ofile ${ofile}~
 
@@ -14,6 +15,7 @@ for gbff_file in `ls -1 ALL_genomes/*.gbff`
 do
 	echo Run: $gbff_file
 
-	./search_TTA_genes.pl $gbff_file --auto --threads=15 -output=stdout $header >> $ofile
+#	./search_TTA_genes.pl $gbff_file --auto --threads=15 -cfg_db local_settings.json -output=stdout $header >> $ofile
+	./search_TTA_genes.pl $gbff_file -auto -threads=15 -taxonomy=$TAXONOMY -output=stdout $header >> $ofile
 	header=''
 done

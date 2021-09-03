@@ -1,0 +1,30 @@
+{% extends "gtdb2/base.html" %}
+{% block content %}
+	<h1>Hello, TTA-codon!</h1>
+
+	<table class="table table-sm table-striped table-bordered">
+		<thead>
+			<tr>
+				<th scope="col">Id</th>
+				<th scope="col">Name</th>
+				<th scope="col">Phylum</th>
+				<th scope="col">Kingdom</th>
+			</tr>
+		</thead>
+    <tbody>
+      {% for org in object_list %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>
+            <a href="org/{{ org.id }}">
+              {{ org.name }}
+            </a>
+          </td>
+          <td>{{ org.phylum }}</td>
+          <td>{{ org.kingdom }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+	</table>
+
+{% endblock content %}

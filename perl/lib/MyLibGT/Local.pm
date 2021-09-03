@@ -37,8 +37,15 @@ our %DB_ACCOUNTS = (
 		db_pass  => "secret",
 		dbh_attr => \%DFLT_DBH_ATTR,
 	},
+	gtdb2 => {
+		dbi_str  => "dbi:mysql:gtdb2:localhost",
+		db_name  => "gtdb2",
+		db_user  => "genetack",
+		db_pass  => "secret",
+		dbh_attr => \%DFLT_DBH_ATTR,
+	},
 );
-$DB_ACCOUNTS{default} = $DB_ACCOUNTS{gtdb2_cof};
+$DB_ACCOUNTS{default} = $DB_ACCOUNTS{gtdb2};
 
 BEGIN
 {

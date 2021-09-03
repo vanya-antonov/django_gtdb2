@@ -28,6 +28,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'tta_codon.apps.TtaCodonConfig',
     'chelatase_db.apps.ChelataseDbConfig',
     'gtdb1.apps.Gtdb1Config',
     'gtdb2.apps.Gtdb2Config',
