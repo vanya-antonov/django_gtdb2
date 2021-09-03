@@ -17,9 +17,9 @@ from chelatase_db.models.seq import ChelataseSeq
 from gtdb2.lib.bio import get_overlapping_feats_from_list
 from gtdb2.models.org import Org
 
-
+#
 # from chelatase_db.models import ChelataseFeat
-#from dna_features_viewer import GraphicFeature, GraphicRecord
+# from dna_features_viewer import GraphicFeature, GraphicRecord
 # from gtdb2.models import Org
 # from gtdb2.models import Seq
 # from gtdb2.models import Fshift
@@ -314,6 +314,14 @@ class ChelataseOrg(Org):
 
     @property
     def plot_gen_diagram(self):
+
+        from chelatase_db.models import ChelataseFeat
+        from dna_features_viewer import GraphicFeature, GraphicRecord
+        from gtdb2.models import Org
+        from gtdb2.models import Seq
+        from gtdb2.models import Fshift
+
+
         id_org = self.id
 
         def calculate_label(x):
