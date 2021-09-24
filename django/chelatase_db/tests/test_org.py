@@ -152,6 +152,23 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(len(chl_genes['chlD_bchD']), 1)
         self.assertEqual(len(chl_genes['chlH_bchH']), 0)
 
+    def test_org_create_from_gbk_witout_fs(self):
+        """Make sure that fs-chlD gene is NOT created, because
+        this bacteria already has full-length chlD gene and
+        frameshifting is not needed (it was a bug to create
+        fs-chlD gene).
+        """
+
+        # Number of fshifts before we create the new org
+        num_fs_before = ChelataseFshift.objects.count()
+
+        gbk_fn = self.get_full_path_to_test_file('R_sulfidophilum.gbk')
+        org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
+
+        # We should not create a new frameshift for this org
+        num_fs_after = ChelataseFshift.objects.count()
+        self.assertEqual(num_fs_before, num_fs_after)
+
     def test_org_make_params_kegg(self):
         # M. fervens org should be created together with the COF
         mf_org = ChelataseOrg.objects.filter(
