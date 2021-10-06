@@ -507,7 +507,7 @@ class ChelataseOrg(Org):
                 feature_12, feature_34)
 
         if output2text: return get_prediction(feature_12, feature_34)
-        else: feature_12, feature_34
+        else: return feature_12, feature_34
 
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
