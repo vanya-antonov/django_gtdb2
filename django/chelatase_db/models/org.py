@@ -40,7 +40,9 @@ class ChelataseOrg(Org):
         'chel_num_chld': {'value_attr': 'num', 'type_fun': int},
         'chel_genotype_genes': {},
         'kegg_org_code': {},
-    }.items()))
+        'chel_synthesis_chl': bool,
+        'chel_synthesis_b12': bool,
+        }.items()))
 
     @property
     def chld_feat_set(self):
