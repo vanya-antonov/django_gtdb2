@@ -186,3 +186,12 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         ms_org._make_params_kegg()
         self.assertEqual(ms_org.prm.kegg_org_code, 'mfs')
 
+    def test_synthesis_classification(self):
+        # P_aeruginosa org should have classfication params
+        gbk_fn = self.get_full_path_to_test_file('P_aeruginosa.gbk')
+        org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
+
+        self.assertEqual(org.prm.chel_synthesis_chl, 0)
+        self.assertEqual(org.prm.chel_synthesis_b12, 1)
+
+

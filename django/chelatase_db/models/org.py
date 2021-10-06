@@ -106,6 +106,7 @@ class ChelataseOrg(Org):
         self._make_params_chel_statistics()
         self._make_genotype_str()
         self._make_params_kegg()
+        self._make_params_synthesize_classification() # TODO проверить на корректность
 
     def create_annotation(self):
         """Creates feats homologous to the cholorophyll and B12
@@ -166,6 +167,16 @@ class ChelataseOrg(Org):
          - chel_num_M - total number of M chelatase subunits (cobT/chlD/bchD).
         """
         self.set_param('chel_num_chld', num=self.chld_feat_set.count())
+
+    def _make_params_synthesize_classification(self):
+        """Computes biochemistry path :
+         - chel_synthesis_chl - bool type if org synthesizes Chlorophyll
+         - chel_synthesis_b12 - bool type if org synthesizes b12.
+        """
+        Chlorophyll_bool, B12_bool = self.get_prediction_text(output2text=False)
+
+        self.set_param('chel_synthesis_chl', num=Chlorophyll_bool)
+        self.set_param('chel_synthesis_b12', num=B12_bool)
 
     def _make_genotype_str(self):
         """Creates the 'chel_genotype_genes' param like '1xcobN, 1xfs-chlD'.
@@ -453,7 +464,7 @@ class ChelataseOrg(Org):
 
         return svg_pic.getvalue()
 
-    def get_prediction_text(self):
+    def get_prediction_text(self, output2text=True):
         id_org = self.id
         Magnesium = ['chlH_bchH', 'chlD_bchD', 'chlI_bchI']
         Chlorophyll = ['bchE', 'chlB_bchB', 'chlG_bchG', 'chlL_bchL', 'chlM_bchM', 'chlN_bchN']
@@ -495,7 +506,8 @@ class ChelataseOrg(Org):
             return 'Chlorophyll biosynthesis - {}   |   Vitamin B12 biosynthesis {}'.format(
                 feature_12, feature_34)
 
-        return get_prediction(feature_12, feature_34)
+        if output2text: return get_prediction(feature_12, feature_34)
+        else: feature_12, feature_34
 
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
