@@ -40,8 +40,8 @@ class ChelataseOrg(Org):
         'chel_num_chld': {'value_attr': 'num', 'type_fun': int},
         'chel_genotype_genes': {},
         'kegg_org_code': {},
-        'chel_synthesis_chl': bool,
-        'chel_synthesis_b12': bool,
+        'chel_synthesis_chl': int,
+        'chel_synthesis_b12': int,
         }.items()))
 
     @property
