@@ -52,6 +52,8 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         mf_chli = mf_chld.parent
         self.assertEqual(mf_chli.prm.chel_subunit, 'S')
 
+
+
     def test_org_get_or_create_feats_from_cof_by_tblastn_2(self):
         """Test creation of fshifts located on the minus strand."""
         # Create chld COF with 1 fshift only
@@ -80,6 +82,17 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         # Make sure the parent CDS was created as well
         self.assertTrue(feat.parent is not None)
         self.assertEqual(feat.parent.prm.chel_subunit, 'S')
+
+
+    def test_synthesis_classification_empty(self):
+
+        gbk_fn = self.get_full_path_to_test_file('P_aeruginosa.gbk')
+        org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)   
+        
+
+        pprint(org.prm)
+        
+
 
     def test_org_create_from_gbk(self):
         """Creates chlD and other pathway feats by tBLASTn."""
