@@ -465,7 +465,7 @@ class ChelataseOrg(Org):
 
         return svg_pic.getvalue()
 
-    def get_prediction_text(self, output2text=True):
+    def get_prediction_text(self, output2text=True, from_db=True):
 
         """
         return:
@@ -478,31 +478,35 @@ class ChelataseOrg(Org):
         Chlorophyll = ['bchE', 'chlB_bchB', 'chlG_bchG', 'chlL_bchL', 'chlM_bchM', 'chlN_bchN']
         # Cobalt = ['cobN', 'cobT', 'cobS']
         Vitamin_B12 = ['cobD_cobC', 'cobO', 'cobP_cobU', 'cobQ', 'cobV_cobS', 'cysG_cobA']
-
         Vitamin_B12_genes, Chlorophyll_genes, all_genes_in_org = [], [], []
 
         c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)
         f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
 
-        for i in f_org:
-            if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
-                if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
-                    Chlorophyll_genes.append(i.prm.chel_gene_group)
-                elif i.prm.chel_pathway == "B12" and i.prm.chel_gene_group in Vitamin_B12:
-                    Vitamin_B12_genes.append(i.prm.chel_gene_group)
+        if from_db:
+            feature_12 = c_org.prm['chel_synthesis_chl']
+            feature_34 = c_org.prm['chel_synthesis_b12']
 
-                all_genes_in_org.append(i.prm.chel_gene_group)
+        else:
+            for i in f_org:
+                if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
+                    if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
+                        Chlorophyll_genes.append(i.prm.chel_gene_group)
+                    elif i.prm.chel_pathway == "B12" and i.prm.chel_gene_group in Vitamin_B12:
+                        Vitamin_B12_genes.append(i.prm.chel_gene_group)
 
-        feature_1_chlH = len([gen for gen in all_genes_in_org if 'chlH' in gen]) >= 1
-        feature_2_Chlorophyll = len(Chlorophyll_genes) / len(Chlorophyll) >= 0.5
-        feature_3_cobN = len([gen for gen in all_genes_in_org if 'cobN' in gen]) >= 1
-        feature_4_B12 = len(Vitamin_B12_genes) / len(Vitamin_B12) >= 0.5
+                    all_genes_in_org.append(i.prm.chel_gene_group)
 
-        feature_12 = feature_1_chlH * feature_2_Chlorophyll
-        feature_34 = feature_3_cobN * feature_4_B12
+            feature_1_chlH = len([gen for gen in all_genes_in_org if 'chlH' in gen]) >= 1
+            feature_2_Chlorophyll = len(Chlorophyll_genes) / len(Chlorophyll) >= 0.5
+            feature_3_cobN = len([gen for gen in all_genes_in_org if 'cobN' in gen]) >= 1
+            feature_4_B12 = len(Vitamin_B12_genes) / len(Vitamin_B12) >= 0.5
 
-        if  'Archaea' in c_org.prm['taxonomy']:
-            feature_12 *=0  # Archaea is not able to synthesize Chlorophyll
+            feature_12 = feature_1_chlH * feature_2_Chlorophyll
+            feature_34 = feature_3_cobN * feature_4_B12
+
+            if  'Archaea' in c_org.prm['taxonomy']:
+                feature_12 *=0  # Archaea is not able to synthesize Chlorophyll
 
 
 
