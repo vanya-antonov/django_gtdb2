@@ -336,7 +336,6 @@ class ChelataseOrg(Org):
         from gtdb2.models import Seq
         from gtdb2.models import Fshift
 
-
         id_org = self.id
 
         def calculate_label(x):
@@ -467,15 +466,22 @@ class ChelataseOrg(Org):
         return svg_pic.getvalue()
 
     def get_prediction_text(self, output2text=True):
+
+        """
+        return:
+            Tru/False - org ability to synthesize Chlorophyll (feature_12)
+            True/False - org ability to synthesize B12  (feature_34)
+        """
+
         id_org = self.id
-        Magnesium = ['chlH_bchH', 'chlD_bchD', 'chlI_bchI']
+        # Magnesium = ['chlH_bchH', 'chlD_bchD', 'chlI_bchI']
         Chlorophyll = ['bchE', 'chlB_bchB', 'chlG_bchG', 'chlL_bchL', 'chlM_bchM', 'chlN_bchN']
-        Cobalt = ['cobN', 'cobT', 'cobS']
+        # Cobalt = ['cobN', 'cobT', 'cobS']
         Vitamin_B12 = ['cobD_cobC', 'cobO', 'cobP_cobU', 'cobQ', 'cobV_cobS', 'cysG_cobA']
 
         Vitamin_B12_genes, Chlorophyll_genes, all_genes_in_org = [], [], []
 
-        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)  # Берем Delftia acidovorans
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)
         f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
 
         for i in f_org:
@@ -495,18 +501,23 @@ class ChelataseOrg(Org):
         feature_12 = feature_1_chlH * feature_2_Chlorophyll
         feature_34 = feature_3_cobN * feature_4_B12
 
-        def get_prediction(feature_12, feature_34):
-            if feature_12:
-                feature_12 = "YES"
+        if  'Archaea' in c_org.prm['taxonomy']:
+            feature_12 *=0  # Archaea is not able to synthesize Chlorophyll
+
+
+
+        def get_prediction(feature_chl, feature_b12):
+            if feature_chl:
+                feature_chl = "YES"
             else:
-                feature_12 = 'NO'
-            if feature_34:
-                feature_34 = "YES"
+                feature_chl = 'NO'
+            if feature_b12:
+                feature_b12 = "YES"
             else:
-                feature_34 = 'NO'
+                feature_b12 = 'NO'
 
             return 'Chlorophyll biosynthesis - {}   |   Vitamin B12 biosynthesis {}'.format(
-                feature_12, feature_34)
+                feature_chl, feature_b12)
 
         if output2text: return get_prediction(feature_12, feature_34)
         else: return feature_12, feature_34
