@@ -175,7 +175,7 @@ class ChelataseOrg(Org):
          - chel_synthesis_chl - bool type if org synthesizes Chlorophyll
          - chel_synthesis_b12 - bool type if org synthesizes b12.
         """
-        Chlorophyll_bool, B12_bool = self.get_prediction_text(output2text=False)
+        Chlorophyll_bool, B12_bool = self.get_prediction_text(output2text=False, from_db=False)
 
         self.set_param('chel_synthesis_chl', num=Chlorophyll_bool)
         self.set_param('chel_synthesis_b12', num=B12_bool)
@@ -469,7 +469,7 @@ class ChelataseOrg(Org):
 
         """
         return:
-            Tru/False - org ability to synthesize Chlorophyll (feature_12)
+            True/False - org ability to synthesize Chlorophyll (feature_12)
             True/False - org ability to synthesize B12  (feature_34)
         """
 
