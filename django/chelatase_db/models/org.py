@@ -539,7 +539,7 @@ class ChelataseOrg(Org):
         num_chlD = c_org.prm['num_chlD']
         num_chlI = c_org.prm['num_chlI']
 
-        if num_fs_chlD == 0:  # there is no shifts
+        if num_fs_chlD == 0:  # there are no shifts
             if num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI > 0:  # M_Co_chel_and_M_Mg_chel
                 url = 'chelTable1.png'
             elif num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI == 0:
@@ -550,7 +550,7 @@ class ChelataseOrg(Org):
                 return 'chelTable2.png'
             elif num_cobN > 0 and num_chlD > 0 and num_chlI > 0 and num_cobT * num_cobS * num_chlH == 0:
                 url = 'chelTable3.png'  # Co_chelatase
-        else:
+        else: # there are shifts
             if num_cobN > 0 and num_chlD > 0 and num_cobT * num_cobS * num_chlH * num_chlI == 0:
                 url = 'chelTable5.png' # Co_chelatase / SM_Co_chel (FS)
             else:
