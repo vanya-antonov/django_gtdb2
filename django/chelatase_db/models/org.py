@@ -481,13 +481,14 @@ class ChelataseOrg(Org):
         Vitamin_B12_genes, Chlorophyll_genes, all_genes_in_org = [], [], []
 
         c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)
-        f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
+
 
         if from_db:
             feature_12 = c_org.prm['chel_synthesis_chl']
             feature_34 = c_org.prm['chel_synthesis_b12']
 
         else:
+            f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
             for i in f_org:
                 if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
                     if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
@@ -508,8 +509,6 @@ class ChelataseOrg(Org):
             if  'Archaea' in c_org.prm['taxonomy']:
                 feature_12 *=0  # Archaea is not able to synthesize Chlorophyll
 
-
-
         def get_prediction(feature_chl, feature_b12):
             if feature_chl:
                 feature_chl = "YES"
@@ -525,6 +524,39 @@ class ChelataseOrg(Org):
 
         if output2text: return get_prediction(feature_12, feature_34)
         else: return feature_12, feature_34
+
+
+    def classify_org(self, url = ''):
+
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=self.id)
+
+        num_fs_chlD = c_org.prm['num_fs_chlD']
+        num_cobN = c_org.prm['num_cobN']
+        num_cobT = c_org.prm['num_cobT']
+        num_cobS = c_org.prm['num_cobS']
+
+        num_chlH = c_org.prm['num_chlH']
+        num_chlD = c_org.prm['num_chlD']
+        num_chlI = c_org.prm['num_chlI']
+
+        if num_fs_chlD == 0:  # there is no shifts
+            if num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI > 0:  # M_Co_chel_and_M_Mg_chel
+                url = 'chelTable1.png'
+            elif num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI == 0:
+                url = 'chelTable0.png'  # 'COchel.png' # M_Co_chel
+            elif num_cobN * num_cobT * num_cobS == 0 and num_chlH * num_chlD * num_chlI > 0:
+                url = 'MGchel.png'  # 'chelTable0.png' # Mg_chelatase
+            elif num_chlH * num_chlD * num_chlI > 0 and num_cobN > 0 and num_cobT * num_cobS == 0:
+                return 'chelTable2.png'
+            elif num_cobN > 0 and num_chlD > 0 and num_chlI > 0 and num_cobT * num_cobS * num_chlH == 0:
+                url = 'chelTable3.png'  # Co_chelatase
+        else:
+            if num_cobN > 0 and num_chlD > 0 and num_cobT * num_cobS * num_chlH * num_chlI == 0:
+                url = 'chelTable5.png' # Co_chelatase / SM_Co_chel (FS)
+            else:
+                url = ''  # other / unknown
+
+        return url
 
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
