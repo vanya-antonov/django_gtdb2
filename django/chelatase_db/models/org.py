@@ -44,6 +44,49 @@ class ChelataseOrg(Org):
         'chel_synthesis_b12': {'value_attr' : 'num', 'type_fun' : bool},
         }.items()))
 
+    # Image location: https://github.com/vanya-antonov/django_gtdb2/tree/master/frontend/src/assets/images
+    CHLD_FUNCTIONS = {
+        'M_Mg': {
+            'image': 'chelTable0.png',
+            'title': 'Medium subunit of Mg-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Mg-chelatase'
+        },
+        'M_Mg_but_not_Co': {
+            'image': 'chelTable1.png',
+            'title': 'Medium subunit of Mg-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Mg-chelatase while ' +
+                     'Co-chelatase is encoded by a separate set of genes'
+        },
+        'M_Mg_and_M_Co': {
+            'image': 'chelTable2.png',
+            'title': 'Medium subunit of Mg- and Co-chelatase',
+            'descr': 'chlD gene encodes both the Medium subunit of Mg-chelatase ' +
+                     'and the Medium subunit of Co-chelatase'
+        },
+        'M_Co': {
+            'image': 'chelTable3.png',
+            'title': 'Medium subunit of Co-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Co-chelatase'
+        },
+        'M_and_S_Co_fs': {
+            'image': 'chelTable4.png',
+            'title': 'Medium and Small subunits of Co-chelatase',
+            'descr': 'Frameshifted chlD gene encodes both Medium and Small ' +
+                     'subunits of Co-chelatase (without frameshifting Small ' +
+                     'subunit is produced while frameshifting allows synthesis ' +
+                     'of the full-length Medium subunit)'
+        },
+        'M_and_S_Co': {
+            'image': 'chelTable5.png',
+            'title': 'Medium and Small subunits of Co-chelatase',
+            'descr': 'chlD gene encodes both Medium and Small ' +
+                     'subunits of Co-chelatase (without frameshifting Large ' +
+                     'subunit is synthesized while frameshifting changes the ' +
+                     'reading frame and Small subunit is produced due to out-of-frame ' +
+                     'prepature stop codon)'
+        }
+    }
+
     @property
     def chld_feat_set(self):
         """Returns a QuerySet of ChelataseFeat objects corresponding to
@@ -526,8 +569,9 @@ class ChelataseOrg(Org):
         else: return feature_12, feature_34
 
 
-    def classify_org(self, url = ''):
-
+    def classify_org(self):
+        """Returns possible function of the chlD gene in the current org
+        """
         c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=self.id)
 
         num_fs_chlD = c_org.prm['num_fs_chlD']
@@ -541,23 +585,23 @@ class ChelataseOrg(Org):
 
         if num_fs_chlD == 0:  # there is no shifts
             if num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI > 0:  # M_Co_chel_and_M_Mg_chel
-                url = 'chelTable1.png'
+                return self.CHLD_FUNCTIONS['M_Mg_but_not_Co']
             elif num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI == 0:
-                url = 'chelTable0.png'  # 'COchel.png' # M_Co_chel
+                return self.CHLD_FUNCTIONS['M_Mg'] # 'COchel.png' # M_Co_chel
             elif num_cobN * num_cobT * num_cobS == 0 and num_chlH * num_chlD * num_chlI > 0:
-                url = 'MGchel.png'  # 'chelTable0.png' # Mg_chelatase
-            elif num_chlH * num_chlD * num_chlI > 0 and num_cobN > 0 and num_cobT * num_cobS == 0:
-                return 'chelTable2.png'
+                return self.CHLD_FUNCTIONS['M_Co']
+            # TODO: find this case!
+            #elif num_chlH * num_chlD * num_chlI > 0 and num_cobN > 0 and num_cobT * num_cobS == 0:
+            #    return 'chelTable2.png'
             elif num_cobN > 0 and num_chlD > 0 and num_chlI > 0 and num_cobT * num_cobS * num_chlH == 0:
-                url = 'chelTable3.png'  # Co_chelatase
+                return self.CHLD_FUNCTIONS['M_Co']
         else:
             if num_cobN > 0 and num_chlD > 0 and num_cobT * num_cobS * num_chlH * num_chlI == 0:
-                url = 'chelTable5.png' # Co_chelatase / SM_Co_chel (FS)
+                return self.CHLD_FUNCTIONS['M_and_S_Co_fs']
             else:
-                url = ''  # other / unknown
+                return {}  # other / unknown
 
-        return url
-
+        return {}
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
     """For a given pair of tBLASTn hits create the parent feature that
