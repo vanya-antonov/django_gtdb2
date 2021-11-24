@@ -594,13 +594,8 @@ class ChelataseOrg(Org):
             #elif num_chlH * num_chlD * num_chlI > 0 and num_cobN > 0 and num_cobT * num_cobS == 0:
             #    return 'chelTable2.png'
             elif num_cobN > 0 and num_chlD > 0 and num_chlI > 0 and num_cobT * num_cobS * num_chlH == 0:
-<<<<<<< HEAD
                 return self.CHLD_FUNCTIONS['M_Co']
         else:
-=======
-                url = 'chelTable3.png'  # Co_chelatase
-        else: # there are shifts
->>>>>>> 95bce1f3cef9e3a4fca47459664fdcdffa5f98f7
             if num_cobN > 0 and num_chlD > 0 and num_cobT * num_cobS * num_chlH * num_chlI == 0:
                 return self.CHLD_FUNCTIONS['M_and_S_Co_fs']
             else:
