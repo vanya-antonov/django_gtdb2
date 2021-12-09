@@ -78,6 +78,16 @@
                  </h3></v-expansion-panel-header>
             <v-expansion-panel-content>
             <span v-html="organism.get_prediction_text" />
+
+            <v-col>
+            <v-img
+                position="center"
+                :height="700"
+                contain
+                :src="require('@/assets/images/' + organism.classify_org)"   //"organism.classify_org"
+            />
+            </v-col>
+
             </v-expansion-panel-content>
             </v-expansion-panel>
 

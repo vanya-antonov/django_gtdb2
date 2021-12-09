@@ -44,6 +44,49 @@ class ChelataseOrg(Org):
         'chel_synthesis_b12': {'value_attr' : 'num', 'type_fun' : bool},
         }.items()))
 
+    # Image location: https://github.com/vanya-antonov/django_gtdb2/tree/master/frontend/src/assets/images
+    CHLD_FUNCTIONS = {
+        'M_Mg': {
+            'image': 'chelTable0.png',
+            'title': 'Medium subunit of Mg-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Mg-chelatase'
+        },
+        'M_Mg_but_not_Co': {
+            'image': 'chelTable1.png',
+            'title': 'Medium subunit of Mg-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Mg-chelatase while ' +
+                     'Co-chelatase is encoded by a separate set of genes'
+        },
+        'M_Mg_and_M_Co': {
+            'image': 'chelTable2.png',
+            'title': 'Medium subunit of Mg- and Co-chelatase',
+            'descr': 'chlD gene encodes both the Medium subunit of Mg-chelatase ' +
+                     'and the Medium subunit of Co-chelatase'
+        },
+        'M_Co': {
+            'image': 'chelTable3.png',
+            'title': 'Medium subunit of Co-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Co-chelatase'
+        },
+        'M_and_S_Co_fs': {
+            'image': 'chelTable4.png',
+            'title': 'Medium and Small subunits of Co-chelatase',
+            'descr': 'Frameshifted chlD gene encodes both Medium and Small ' +
+                     'subunits of Co-chelatase (without frameshifting Small ' +
+                     'subunit is produced while frameshifting allows synthesis ' +
+                     'of the full-length Medium subunit)'
+        },
+        'M_and_S_Co': {
+            'image': 'chelTable5.png',
+            'title': 'Medium and Small subunits of Co-chelatase',
+            'descr': 'chlD gene encodes both Medium and Small ' +
+                     'subunits of Co-chelatase (without frameshifting Large ' +
+                     'subunit is synthesized while frameshifting changes the ' +
+                     'reading frame and Small subunit is produced due to out-of-frame ' +
+                     'prepature stop codon)'
+        }
+    }
+
     @property
     def chld_feat_set(self):
         """Returns a QuerySet of ChelataseFeat objects corresponding to
@@ -481,13 +524,14 @@ class ChelataseOrg(Org):
         Vitamin_B12_genes, Chlorophyll_genes, all_genes_in_org = [], [], []
 
         c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)
-        f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
+
 
         if from_db:
             feature_12 = c_org.prm['chel_synthesis_chl']
             feature_34 = c_org.prm['chel_synthesis_b12']
 
         else:
+            f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
             for i in f_org:
                 if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
                     if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
@@ -508,8 +552,6 @@ class ChelataseOrg(Org):
             if  'Archaea' in c_org.prm['taxonomy']:
                 feature_12 *=0  # Archaea is not able to synthesize Chlorophyll
 
-
-
         def get_prediction(feature_chl, feature_b12):
             if feature_chl:
                 feature_chl = "YES"
@@ -526,6 +568,40 @@ class ChelataseOrg(Org):
         if output2text: return get_prediction(feature_12, feature_34)
         else: return feature_12, feature_34
 
+
+    def classify_org(self):
+        """Returns possible function of the chlD gene in the current org
+        """
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=self.id)
+
+        num_fs_chlD = c_org.prm['num_fs_chlD']
+        num_cobN = c_org.prm['num_cobN']
+        num_cobT = c_org.prm['num_cobT']
+        num_cobS = c_org.prm['num_cobS']
+
+        num_chlH = c_org.prm['num_chlH']
+        num_chlD = c_org.prm['num_chlD']
+        num_chlI = c_org.prm['num_chlI']
+
+        if num_fs_chlD == 0:  # there are no shifts
+            if num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI > 0:  # M_Co_chel_and_M_Mg_chel
+                return self.CHLD_FUNCTIONS['M_Mg_but_not_Co']
+            elif num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI == 0:
+                return self.CHLD_FUNCTIONS['M_Mg'] # 'COchel.png' # M_Co_chel
+            elif num_cobN * num_cobT * num_cobS == 0 and num_chlH * num_chlD * num_chlI > 0:
+                return self.CHLD_FUNCTIONS['M_Co']
+            # TODO: find this case!
+            #elif num_chlH * num_chlD * num_chlI > 0 and num_cobN > 0 and num_cobT * num_cobS == 0:
+            #    return 'chelTable2.png'
+            elif num_cobN > 0 and num_chlD > 0 and num_chlI > 0 and num_cobT * num_cobS * num_chlH == 0:
+                return self.CHLD_FUNCTIONS['M_Co']
+        else:
+            if num_cobN > 0 and num_chlD > 0 and num_cobT * num_cobS * num_chlH * num_chlI == 0:
+                return self.CHLD_FUNCTIONS['M_and_S_Co_fs']
+            else:
+                return {}  # other / unknown
+
+        return {}
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
     """For a given pair of tBLASTn hits create the parent feature that
