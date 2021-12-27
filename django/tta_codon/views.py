@@ -24,6 +24,21 @@ class TtaCofListView(ListView):
         param_set__name='num_orgs',
         param_set__num__gt=2)
 
+class TtaCofDetailView(DetailView):
+    model = TtaCof
+    template_name = "tta_codon/cof_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        cof = self.object
+        cof_units = []
+
+
+        context["cof_units"] = cof_units
+
+        return context
+
 
 # Create your views here.
 def index(request):

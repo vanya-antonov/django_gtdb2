@@ -17,7 +17,7 @@
       {% for cof in object_list %}
         <tr>
           <td>{{ forloop.counter }}</td>
-          <td>{{ cof.id }}</td>
+          <td><a href="{% url 'tta-cof-detail' cof.id %}">{{ cof.id }}</a></td>
           <td>{{ cof.name }}</td>
           <td>{{ cof.prm_dict.num_orgs }}</td>
           <td>{{ cof.prm_dict.num_fs }}</td>
