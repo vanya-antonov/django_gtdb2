@@ -203,7 +203,8 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         # P_aeruginosa org should have classfication params
         gbk_fn = self.get_full_path_to_test_file('P_aeruginosa.gbk')
         org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
-
+         
+        print(org.prm['taxonomy']) 
         self.assertEqual(org.prm.chel_synthesis_chl, 0)
         self.assertEqual(org.prm.chel_synthesis_b12, 1)
 
