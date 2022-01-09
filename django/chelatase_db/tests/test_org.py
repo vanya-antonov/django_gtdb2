@@ -52,6 +52,8 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         mf_chli = mf_chld.parent
         self.assertEqual(mf_chli.prm.chel_subunit, 'S')
 
+
+
     def test_org_get_or_create_feats_from_cof_by_tblastn_2(self):
         """Test creation of fshifts located on the minus strand."""
         # Create chld COF with 1 fshift only
@@ -80,6 +82,17 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         # Make sure the parent CDS was created as well
         self.assertTrue(feat.parent is not None)
         self.assertEqual(feat.parent.prm.chel_subunit, 'S')
+
+
+    def test_synthesis_classification_empty(self):
+
+        gbk_fn = self.get_full_path_to_test_file('P_aeruginosa.gbk')
+        org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)   
+        
+
+        pprint(org.prm)
+        
+
 
     def test_org_create_from_gbk(self):
         """Creates chlD and other pathway feats by tBLASTn."""
@@ -152,6 +165,23 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         self.assertEqual(len(chl_genes['chlD_bchD']), 1)
         self.assertEqual(len(chl_genes['chlH_bchH']), 0)
 
+    def test_org_create_from_gbk_witout_fs(self):
+        """Make sure that fs-chlD gene is NOT created, because
+        this bacteria already has full-length chlD gene and
+        frameshifting is not needed (it was a bug to create
+        fs-chlD gene).
+        """
+
+        # Number of fshifts before we create the new org
+        num_fs_before = ChelataseFshift.objects.count()
+
+        gbk_fn = self.get_full_path_to_test_file('R_sulfidophilum.gbk')
+        org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
+
+        # We should not create a new frameshift for this org
+        num_fs_after = ChelataseFshift.objects.count()
+        self.assertEqual(num_fs_before, num_fs_after)
+
     def test_org_make_params_kegg(self):
         # M. fervens org should be created together with the COF
         mf_org = ChelataseOrg.objects.filter(
@@ -168,4 +198,14 @@ class ChelataseOrgModelTests(ChelataseTestCase):
         ).first()
         ms_org._make_params_kegg()
         self.assertEqual(ms_org.prm.kegg_org_code, 'mfs')
+
+    def test_synthesis_classification(self):
+        # P_aeruginosa org should have classfication params
+        gbk_fn = self.get_full_path_to_test_file('P_aeruginosa.gbk')
+        org = ChelataseOrg.create_from_gbk(self.user, gbk_fn)
+         
+        print(org.prm['taxonomy']) 
+        self.assertEqual(org.prm.chel_synthesis_chl, 0)
+        self.assertEqual(org.prm.chel_synthesis_b12, 1)
+
 

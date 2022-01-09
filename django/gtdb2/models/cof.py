@@ -17,6 +17,14 @@ class Cof(AbstractUnit):
 
     class Meta:
         db_table = 'cofs'
+    
+    # Merge with parent prm_info: https://stackoverflow.com/a/38990/310453
+    PRM_INFO = dict(list(AbstractUnit.PRM_INFO.items()) + list({
+        'num_orgs': {'value_attr': 'num', 'type_fun': int},
+        'num_fs': {'value_attr': 'num', 'type_fun': int},
+        'num_plus_fs': {'value_attr': 'num', 'type_fun': int},
+        'num_minus_fs': {'value_attr': 'num', 'type_fun': int}
+    }.items()))
 
     @property
     def seed_fshifts(self):

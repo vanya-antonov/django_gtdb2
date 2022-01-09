@@ -17,9 +17,9 @@ from chelatase_db.models.seq import ChelataseSeq
 from gtdb2.lib.bio import get_overlapping_feats_from_list
 from gtdb2.models.org import Org
 
-
+#
 # from chelatase_db.models import ChelataseFeat
-#from dna_features_viewer import GraphicFeature, GraphicRecord
+# from dna_features_viewer import GraphicFeature, GraphicRecord
 # from gtdb2.models import Org
 # from gtdb2.models import Seq
 # from gtdb2.models import Fshift
@@ -40,7 +40,52 @@ class ChelataseOrg(Org):
         'chel_num_chld': {'value_attr': 'num', 'type_fun': int},
         'chel_genotype_genes': {},
         'kegg_org_code': {},
-    }.items()))
+        'chel_synthesis_chl': {'value_attr': 'num', 'type_fun': bool},
+        'chel_synthesis_b12': {'value_attr' : 'num', 'type_fun' : bool},
+        }.items()))
+
+    # Image location: https://github.com/vanya-antonov/django_gtdb2/tree/master/frontend/src/assets/images
+    CHLD_FUNCTIONS = {
+        'M_Mg': {
+            'image': 'chelTable0.png',
+            'title': 'Medium subunit of Mg-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Mg-chelatase'
+        },
+        'M_Mg_but_not_Co': {
+            'image': 'chelTable1.png',
+            'title': 'Medium subunit of Mg-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Mg-chelatase while ' +
+                     'Co-chelatase is encoded by a separate set of genes'
+        },
+        'M_Mg_and_M_Co': {
+            'image': 'chelTable2.png',
+            'title': 'Medium subunit of Mg- and Co-chelatase',
+            'descr': 'chlD gene encodes both the Medium subunit of Mg-chelatase ' +
+                     'and the Medium subunit of Co-chelatase'
+        },
+        'M_Co': {
+            'image': 'chelTable3.png',
+            'title': 'Medium subunit of Co-chelatase',
+            'descr': 'chlD gene encodes Medium subunit of Co-chelatase'
+        },
+        'M_and_S_Co_fs': {
+            'image': 'chelTable4.png',
+            'title': 'Medium and Small subunits of Co-chelatase',
+            'descr': 'Frameshifted chlD gene encodes both Medium and Small ' +
+                     'subunits of Co-chelatase (without frameshifting Small ' +
+                     'subunit is produced while frameshifting allows synthesis ' +
+                     'of the full-length Medium subunit)'
+        },
+        'M_and_S_Co': {
+            'image': 'chelTable5.png',
+            'title': 'Medium and Small subunits of Co-chelatase',
+            'descr': 'chlD gene encodes both Medium and Small ' +
+                     'subunits of Co-chelatase (without frameshifting Large ' +
+                     'subunit is synthesized while frameshifting changes the ' +
+                     'reading frame and Small subunit is produced due to out-of-frame ' +
+                     'prepature stop codon)'
+        }
+    }
 
     @property
     def chld_feat_set(self):
@@ -106,6 +151,7 @@ class ChelataseOrg(Org):
         self._make_params_chel_statistics()
         self._make_genotype_str()
         self._make_params_kegg()
+        self._make_params_synthesize_classification() # TODO проверить на корректность
 
     def create_annotation(self):
         """Creates feats homologous to the cholorophyll and B12
@@ -166,6 +212,16 @@ class ChelataseOrg(Org):
          - chel_num_M - total number of M chelatase subunits (cobT/chlD/bchD).
         """
         self.set_param('chel_num_chld', num=self.chld_feat_set.count())
+
+    def _make_params_synthesize_classification(self):
+        """Computes biochemistry path :
+         - chel_synthesis_chl - bool type if org synthesizes Chlorophyll
+         - chel_synthesis_b12 - bool type if org synthesizes b12.
+        """
+        Chlorophyll_bool, B12_bool = self.get_prediction_text(output2text=False, from_db=False)
+
+        self.set_param('chel_synthesis_chl', num=Chlorophyll_bool)
+        self.set_param('chel_synthesis_b12', num=B12_bool)
 
     def _make_genotype_str(self):
         """Creates the 'chel_genotype_genes' param like '1xcobN, 1xfs-chlD'.
@@ -237,6 +293,8 @@ class ChelataseOrg(Org):
                     "The identified chlD gene (%s) was not automatically "
                     "annotated as medium subunit and will be removed" %
                     chld.prm.location_str)
+                if chld.fshift is not None:
+                    chld.fshift.delete()
                 chld.delete()
         return chld_feats
 
@@ -314,6 +372,13 @@ class ChelataseOrg(Org):
 
     @property
     def plot_gen_diagram(self):
+
+        from chelatase_db.models import ChelataseFeat
+        from dna_features_viewer import GraphicFeature, GraphicRecord
+        from gtdb2.models import Org
+        from gtdb2.models import Seq
+        from gtdb2.models import Fshift
+
         id_org = self.id
 
         def calculate_label(x):
@@ -324,8 +389,11 @@ class ChelataseOrg(Org):
 
         def get_color(gene):
             if 'fsh' in gene: return "#f60a01"
-            if 'chl' in gene:
+
+         #   if 'chl' in gene:
+            if str(gene).startswith('bch') or str(gene).startswith('chl'):
                 return '#93d14f'  # '#ffcccc'
+            
             else:
                 return "#8fb5e5"
 
@@ -440,50 +508,100 @@ class ChelataseOrg(Org):
 
         return svg_pic.getvalue()
 
-    def get_prediction_text(self):
-        id_org = self.id
-        Magnesium = ['chlH_bchH', 'chlD_bchD', 'chlI_bchI']
-        Chlorophyll = ['bchE', 'chlB_bchB', 'chlG_bchG', 'chlL_bchL', 'chlM_bchM', 'chlN_bchN']
-        Cobalt = ['cobN', 'cobT', 'cobS']
-        Vitamin_B12 = ['cobD_cobC', 'cobO', 'cobP_cobU', 'cobQ', 'cobV_cobS', 'cysG_cobA']
+    def get_prediction_text(self, output2text=True, from_db=True):
 
+        """
+        return:
+            True/False - org ability to synthesize Chlorophyll (feature_12)
+            True/False - org ability to synthesize B12  (feature_34)
+        """
+
+        id_org = self.id
+        # Magnesium = ['chlH_bchH', 'chlD_bchD', 'chlI_bchI']
+        Chlorophyll = ['bchE', 'chlB_bchB', 'chlG_bchG', 'chlL_bchL', 'chlM_bchM', 'chlN_bchN']
+        # Cobalt = ['cobN', 'cobT', 'cobS']
+        Vitamin_B12 = ['cobD_cobC', 'cobO', 'cobP_cobU', 'cobQ', 'cobV_cobS', 'cysG_cobA']
         Vitamin_B12_genes, Chlorophyll_genes, all_genes_in_org = [], [], []
 
-        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)  # Берем Delftia acidovorans
-        f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=id_org)
 
-        for i in f_org:
-            if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
-                if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
-                    Chlorophyll_genes.append(i.prm.chel_gene_group)
-                elif i.prm.chel_pathway == "B12" and i.prm.chel_gene_group in Vitamin_B12:
-                    Vitamin_B12_genes.append(i.prm.chel_gene_group)
 
-                all_genes_in_org.append(i.prm.chel_gene_group)
+        if from_db:
+            feature_12 = c_org.prm['chel_synthesis_chl']
+            feature_34 = c_org.prm['chel_synthesis_b12']
 
-        feature_1_chlH = len([gen for gen in all_genes_in_org if 'chlH' in gen]) >= 1
-        feature_2_Chlorophyll = len(Chlorophyll_genes) / len(Chlorophyll) >= 0.5
-        feature_3_cobN = len([gen for gen in all_genes_in_org if 'cobN' in gen]) >= 1
-        feature_4_B12 = len(Vitamin_B12_genes) / len(Vitamin_B12) >= 0.5
+        else:
+            f_org = ChelataseFeat.objects.filter(seq__org=c_org).all()
+            for i in f_org:
+                if 'chel_pathway' in i.prm.keys() and i.prm.chel_evalue < 1e-50:
+                    if i.prm.chel_pathway == "Chlorophyll" and i.prm.chel_gene_group in Chlorophyll:
+                        Chlorophyll_genes.append(i.prm.chel_gene_group)
+                    elif i.prm.chel_pathway == "B12" and i.prm.chel_gene_group in Vitamin_B12:
+                        Vitamin_B12_genes.append(i.prm.chel_gene_group)
 
-        feature_12 = feature_1_chlH * feature_2_Chlorophyll
-        feature_34 = feature_3_cobN * feature_4_B12
+                    all_genes_in_org.append(i.prm.chel_gene_group)
 
-        def get_prediction(feature_12, feature_34):
-            if feature_12:
-                feature_12 = "YES"
+            feature_1_chlH = len([gen for gen in all_genes_in_org if 'chlH' in gen]) >= 1
+            feature_2_Chlorophyll = len(Chlorophyll_genes) / len(Chlorophyll) >= 0.5
+            feature_3_cobN = len([gen for gen in all_genes_in_org if 'cobN' in gen]) >= 1
+            feature_4_B12 = len(Vitamin_B12_genes) / len(Vitamin_B12) >= 0.5
+
+            feature_12 = feature_1_chlH * feature_2_Chlorophyll
+            feature_34 = feature_3_cobN * feature_4_B12
+
+            if  'Archaea' in c_org.prm['taxonomy']:
+                feature_12 *=0  # Archaea is not able to synthesize Chlorophyll
+
+        def get_prediction(feature_chl, feature_b12):
+            if feature_chl:
+                feature_chl = "YES"
             else:
-                feature_12 = 'NO'
-            if feature_34:
-                feature_34 = "YES"
+                feature_chl = 'NO'
+            if feature_b12:
+                feature_b12 = "YES"
             else:
-                feature_34 = 'NO'
+                feature_b12 = 'NO'
 
             return 'Chlorophyll biosynthesis - {}   |   Vitamin B12 biosynthesis {}'.format(
-                feature_12, feature_34)
+                feature_chl, feature_b12)
 
-        return get_prediction(feature_12, feature_34)
+        if output2text: return get_prediction(feature_12, feature_34)
+        else: return feature_12, feature_34
 
+
+    def classify_org(self):
+        """Returns possible function of the chlD gene in the current org
+        """
+        c_org = Org.objects.get(param_set__name='chel_genotype_genes', id=self.id)
+
+        num_fs_chlD = c_org.prm['num_fs_chlD']
+        num_cobN = c_org.prm['num_cobN']
+        num_cobT = c_org.prm['num_cobT']
+        num_cobS = c_org.prm['num_cobS']
+
+        num_chlH = c_org.prm['num_chlH']
+        num_chlD = c_org.prm['num_chlD']
+        num_chlI = c_org.prm['num_chlI']
+
+        if num_fs_chlD == 0:  # there are no shifts
+            if num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI > 0:  # M_Co_chel_and_M_Mg_chel
+                return self.CHLD_FUNCTIONS['M_Mg_but_not_Co']
+            elif num_cobN * num_cobT * num_cobS > 0 and num_chlH * num_chlD * num_chlI == 0:
+                return self.CHLD_FUNCTIONS['M_Mg'] # 'COchel.png' # M_Co_chel
+            elif num_cobN * num_cobT * num_cobS == 0 and num_chlH * num_chlD * num_chlI > 0:
+                return self.CHLD_FUNCTIONS['M_Co']
+            # TODO: find this case!
+            #elif num_chlH * num_chlD * num_chlI > 0 and num_cobN > 0 and num_cobT * num_cobS == 0:
+            #    return 'chelTable2.png'
+            elif num_cobN > 0 and num_chlD > 0 and num_chlI > 0 and num_cobT * num_cobS * num_chlH == 0:
+                return self.CHLD_FUNCTIONS['M_Co']
+        else:
+            if num_cobN > 0 and num_chlD > 0 and num_cobT * num_cobS * num_chlH * num_chlI == 0:
+                return self.CHLD_FUNCTIONS['M_and_S_Co_fs']
+            else:
+                return {}  # other / unknown
+
+        return {}
 
 def _get_or_create_parent_feat_from_tblastn_hits(user, seq, hsp_n, hsp_c):
     """For a given pair of tBLASTn hits create the parent feature that

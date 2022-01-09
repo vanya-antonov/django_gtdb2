@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.generic import ListView, DetailView
 
-from .models import Org
+from .models import Org, Cof
 
 
 class OrgListView(ListView):
@@ -11,6 +11,12 @@ class OrgListView(ListView):
     # template_name = 'gtdb2/org_list.html'
     # context_object_name = 'object_list'
     ordering = ['name']
+
+
+class CofListView(ListView):
+    model = Cof
+    template_name = 'gtdb2/cof_list.html'
+    context_object_name = 'object_list'
 
 
 class OrgDetailView(DetailView):

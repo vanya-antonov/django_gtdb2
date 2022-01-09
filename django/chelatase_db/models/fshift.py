@@ -3,6 +3,8 @@ import re
 
 import numpy as np
 
+from pprint import pprint
+
 from chelatase_db.lib.bio import get_stop_stop_seq
 from gtdb2.models.fshift import Fshift
 
@@ -129,6 +131,10 @@ class ChelataseFshift(Fshift):
     def _make_poly_a_slippery_site(self):
         if self.len != -1:
             return
+
+        if self.feat is None:
+            return
+
         poly_a_site = search_poly_a_slippery(
             self.feat.parent.seq.seq,
             self.feat.parent.strand,

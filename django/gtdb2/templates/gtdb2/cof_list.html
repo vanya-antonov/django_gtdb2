@@ -1,0 +1,29 @@
+{% extends "gtdb2/base.html" %}
+{% block content %}
+	<h1>ALL COFs!!!</h1>
+
+	<table class="table table-sm table-striped table-bordered">
+		<thead>
+			<tr>
+				<th scope="col">#</th>
+				<th scope="col">Id</th>
+			</tr>
+		</thead>
+    <tbody>
+      {% for cof in object_list %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ cof.id }}</td>
+          <td>
+            <a href="{% url 'gtdb2-org-detail' org.id %}">
+              {{ org.name }}
+            </a>
+          </td>
+          <td>{{ org.phylum }}</td>
+          <td>{{ org.kingdom }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+	</table>
+
+{% endblock content %}

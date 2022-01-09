@@ -1,0 +1,30 @@
+{% extends "gtdb2/base.html" %}
+{% block content %}
+	<h1>TTA-COFs with > 2 orgs</h1>
+
+	<table class="table table-sm table-striped table-bordered">
+		<thead>
+			<tr>
+				<th scope="col">#</th>
+				<th scope="col">Id</th>
+				<th scope="col">Name</th>
+				<th scope="col"># Orgs</th>
+				<th scope="col"># fs-genes</th>
+				<th scope="col"># tta-genes</th>
+			</tr>
+		</thead>
+    <tbody>
+      {% for cof in object_list %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td><a href="{% url 'tta-cof-detail' cof.id %}">{{ cof.id }}</a></td>
+          <td>{{ cof.name }}</td>
+          <td>{{ cof.prm_dict.num_orgs }}</td>
+          <td>{{ cof.prm_dict.num_fs }}</td>
+          <td>{{ cof.prm_dict.tta__num_tta_genes }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+	</table>
+
+{% endblock content %}

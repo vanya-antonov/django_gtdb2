@@ -1,0 +1,36 @@
+{% extends "chelatase_db/base.html" %}
+{% block content %}
+
+<h1>{{ object.name }}</h1>
+
+{{ object.descr }}
+
+<br>
+<br>
+<h2>Statistics</h2>
+<div class="row">
+	<div class="col-6">
+			<table class="table">
+				<tr>
+					<td>Number of unique orgs</td>
+					<td>{{ object.prm_dict.num_orgs }}</td>
+				</tr>
+				<tr>
+					<td>Number of fs-genes</td>
+					<td>{{ object.prm_dict.num_fs }}</td>
+				</tr>
+				<tr>
+					<td>Number of tta-genes</td>
+					<td>{{ object.prm_dict.tta__num_tta_genes }}</td>
+				</tr>
+				<tr>
+					<td>Number of tta-fs-genes</td>
+					<td>{{ object.prm_dict.tta__num_tta_fs_genes }}</td>
+				</tr>
+			</table>
+	</div>
+	<div class="col-6"></div>
+</div>
+
+
+{% endblock content %}
