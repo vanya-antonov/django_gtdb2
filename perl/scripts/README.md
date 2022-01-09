@@ -6,7 +6,7 @@ Creates a file (table) with statistics: **statistic_TTA-vs-FS_genes.tsv** or std
 
 ./search_TTA_genes.pl *file.gbk* [OPTIONS]
 
-Here *file.gbk* - input GenBank file only
+Here *file.gbk* is input GenBank file only
 
 Example:
 ```bash
@@ -38,17 +38,17 @@ Example:
 | 15     | WOFS\_IDs             | List of **Cluster_ID=gid1,gid2,...** without FS-genes | 1004907=NC_003155.5:m5172533.817.1,NC_003155.5:p9004239.817.1;... |
 | 16     | GENE\_IDs             | List of all CDS genes as **gid:locus_tag**         | NC_003155.5:m1002287.1724.0:SAVERM_RS04685;... |
 
-:star: **FS-TTA-gene_ID** is internal gene ID for FS-gene with TTA-codon, e.g. 74297
+:star: **FS-TTA-gene_ID** is internal gene ID for FS-gene with TTA-codon (from GTDB2), e.g. 74297
 
-:star: **Cluster_ID** is internal cluster ID, e.g. 1004907
+:star: **Cluster_ID** is internal cluster ID (from GTDB2), e.g. 1004907
 
-:star: **gid** is **acc_id:\<strand\>start.length.gtag**
+:star: **gid** is **acc_id:\<strand\>start.length.gtag**, e.g. NC_003155.5:p25699.4695.3
 
 :star: **acc_id** is Accession ID of sequence, e.g. NC_003155.5
 
-:star: **strand** is **p** (positive) for **(+)**, or **n** (negative) for **(-)** strand.
+:star: **strand** is **p** (positive) for **(+)**, or **m** (negative) for **(-)** strand.
 
-:star: **start** is 1-based start location of the CDS-gene (*sloc*).
+:star: **start** is 1-based start location of the CDS-gene (*GenBank sloc*).
 
 :star: **length** is length of the CDS-gene. This is mostly a positive integer. Sometimes it can be negative (*length=eloc-start*).
 
@@ -72,7 +72,7 @@ with statistics from *statistic_TTA-vs-FS_genes.tsv* file.
 
 ./add_TTA_genes_in_FEATS.pl *[statistic.tsv]* [OPTIONS]
 
-Here *statistic.tsv* - By default, *statistic_TTA-vs-FS_genes.tsv*.
+Here *statistic.tsv* is, by default, *statistic_TTA-vs-FS_genes.tsv* (*search_TTA_genes.pl* script results file. See above).
 
 Example:
 ```bash
@@ -83,13 +83,13 @@ Example:
 
 ## add_statistic_TTA-FS_in_ORG_PARAMS.pl
 Fills and/or updates **org_params** table of **GTDB2** database (default) with statistics
-from the *statistic.tsv* file
+from the *statistic.tsv* file.
 
 ### USAGE
 
 ./add_statistic_TTA-FS_in_ORG_PARAMS.pl *statistic.tsv* [OPTIONS]
 
-Here *statistic.tsv* - By default, for Bacteria is *statistic_TTA-vs-FS_genes.tsv*,
+Here *statistic.tsv* is, by default, for Bacteria is *statistic_TTA-vs-FS_genes.tsv*,
 for Viruses|Phages is *statistic_Streptomyces_phages_TTA-vs-FS_genes.tsv*.
 
 Example:
